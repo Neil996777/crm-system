@@ -1,0 +1,37 @@
+# Open Questions
+
+These questions must not be silently assumed. Any question that blocks a P0/P1
+acceptance item must be recorded as `Blocked` in downstream artifacts until the
+sponsor or required owner resolves it.
+
+## Question Register
+
+| ID | Question | Owner | Impact | Status | Resolution / Notes |
+|---|---|---|---|---|---|
+| OQ-001 | What is the exact production deployment target for v1, including hosting provider, domain, database, backup location, and environment ownership? | Architecture | Production readiness | Reopened | Reopened by architecture reset on 2026-05-29. New Architecture Design must reselect or confirm the production target before MDA and task planning. |
+| OQ-002 | For Sales Manager visibility, should managers see all team records, only directly assigned team records, or records under a department/team boundary? | Product Manager / Security Compliance | Permissions / acceptance | Resolved | v1 has one sales team. Sales Manager sees all team records. |
+| OQ-003 | For Sales users, should they see only owned records, records shared with them, or all records in the team? | Product Manager / Security Compliance | Permissions / acceptance | Resolved | Sales sees owned/assigned records and related child records only. No broad team visibility in v1. |
+| OQ-004 | What fields are mandatory for lead, company, contact, opportunity, quote, contract, and payment records? | Business Analyst | Business rules / validation | Resolved for G3 | Minimum required fields are defined in `docs/product/prd.md`. |
+| OQ-005 | What are the exact opportunity stages and allowed transitions for v1? | Product Manager / Business Analyst | Pipeline behavior / acceptance | Resolved for G3 | Opportunity states and transitions are defined in `docs/product/prd.md`. |
+| OQ-006 | When should an opportunity be considered won: contract signed, first payment received, full payment received, or a configured business decision? | Product Manager / Business Analyst | Win/loss closure / reporting | Resolved | v1 considers an opportunity Won only after full payment is recorded. |
+| OQ-007 | What contract statuses are required in v1? | Business Analyst | Contract lifecycle | Resolved for G3 | Pending Signature, Signed, Active, Completed, Terminated. |
+| OQ-008 | What payment statuses are required in v1, and how should partial payment and overdue payment be represented? | Business Analyst | Payment lifecycle | Resolved for G3 | Unpaid, Partially Paid, Paid, Overdue. Partial payment is supported. Overdue means due date passed with unpaid amount remaining. |
+| OQ-009 | Are contract attachments required in v1, or are structured contract notes sufficient for the first release? | Product Manager | Contract P0 completion standard | Resolved | Structured contract note is P0 required. Attachment upload is not required for P0. |
+| OQ-010 | What duplicate-detection fields should be used for companies, contacts, and leads? | Business Analyst / QA TDD | P1 duplicate warning | Resolved for G3 | Exact company name, contact phone/email, and lead company/contact matches trigger a warning. |
+| OQ-011 | Which import/export formats are required for v1: CSV, XLSX, or both? | Product Manager | P1 import/export | Resolved | CSV only for v1. |
+| OQ-012 | What reminder channels are required for v1: in-app only, email, or another channel? | Product Manager | P1 reminders | Resolved | In-app reminders only for v1. |
+| OQ-013 | What audit events are required for administrator review before launch? | Security Compliance | P1 audit logs / security | Resolved for G3 | Required event IDs are listed in `docs/product/prd.md`; Security Compliance may strengthen later. |
+| OQ-014 | What customer/contact/payment data classifications and retention expectations apply? | Security Compliance | Privacy / compliance | Resolved | Resolved in `docs/security/privacy-requirements.md`. v1 data classifications, visibility, masking, retention, archive, deletion, import/export, log, and report handling are defined there. |
+| OQ-015 | Are multiple organizations or tenants required in v1? Current discussion supports one team, but this needs explicit confirmation. | Product Manager | Architecture / permissions | Resolved | v1 is single team / single organization. Multi-tenant SaaS organization management is out of v1 P0/P1 scope. |
+| OQ-016 | What data migration or initial seed data is needed before production launch? | Product Manager / Business Analyst | Launch readiness | Open | Must be resolved before production launch planning. |
+| OQ-017 | Which CRM objects can be deleted, which can only be closed or archived, and who can perform those actions? | Business Analyst / Security Compliance | Data integrity / permissions | Resolved for G3 | No hard deletion of core CRM records in v1. Administrator and Sales Manager may archive eligible records; Sales cannot archive. |
+| OQ-018 | After an opportunity is won or lost, which fields remain editable and who can edit them? | Business Analyst | Business rules / audit | Resolved for G3 | Won and Lost are terminal in v1. Reopen is not allowed. Post-close edits are limited to notes/tasks through normal permissions. |
+| OQ-019 | Can one opportunity have multiple quotes, and if so which quote is considered accepted or contract-linked? | Business Analyst | Quote lifecycle | Resolved | One opportunity may have multiple quotes; only one quote can be Accepted at a time and contracts can link only to an Accepted quote. |
+| OQ-020 | Can an expired quote be linked to a contract, or must a new/accepted quote be created first? | Business Analyst | Quote and contract rules | Resolved | Expired quotes cannot be linked to new contracts. |
+| OQ-021 | If contract amount differs from quote amount, should the system allow it, block it, or require a difference reason? | Business Analyst | Amount consistency | Resolved | Allowed only when a difference reason is recorded. |
+| OQ-022 | Should payment amount greater than contract amount be blocked, allowed with warning, or allowed with a reason? | Business Analyst / Finance Stakeholder | Payment integrity | Resolved | Overpayment is blocked in v1. |
+| OQ-023 | Are multi-currency, tax rate, discount, tax-inclusive, or tax-exclusive amount fields required for v1? | Product Manager / Business Analyst | Quote/contract/payment amount model | Resolved | v1 uses one currency. Multi-currency, tax, and discount automation are out of v1 P0/P1 scope. |
+| OQ-024 | What is the overdue-payment rule: based on due date only, business days, grace period, or manual status? | Business Analyst | Payment lifecycle / reminders | Resolved | Overdue is based on due date passed and unpaid amount remaining. |
+| OQ-025 | When an owner changes, should open tasks and follow-ups transfer automatically, remain with the original owner, or require manual reassignment? | Business Analyst | Collaboration workflow | Resolved | Open tasks and follow-ups transfer with the parent owner unless manually reassigned during transfer. |
+| OQ-026 | Can lost opportunities be reopened, and who is allowed to reopen them? | Business Analyst | Opportunity lifecycle | Resolved | Lost opportunities cannot be reopened in v1. |
+| OQ-027 | Can Administrators or Sales Managers create activities or payment records on behalf of a Sales user? | Product Manager / Security Compliance | Permissions / audit | Resolved | Administrators and Sales Managers act as themselves. No silent acting on behalf of Sales users in v1. |
