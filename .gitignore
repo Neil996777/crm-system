@@ -14,6 +14,5 @@ __pycache__/
 .cache/
 *.log
 
-# Local-only compliance and intellectual-property preparation materials.
-docs/compliance/
-docs/ip/
+# Local-only private materials.
+local/
