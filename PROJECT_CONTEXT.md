@@ -121,18 +121,6 @@ Security:
 - `docs/security/abuse-cases.md`
 - `docs/security/compliance-risks.md`
 
-Compliance:
-
-- `docs/compliance/README.md`
-- `docs/compliance/cmmi-process-standard.md`
-- `docs/compliance/evidence-register-template.md`
-
-Intellectual Property:
-
-- `docs/ip/README.md`
-- `docs/ip/software-copyright-standard.md`
-- `docs/ip/patent-readiness-standard.md`
-
 ## Current Open Questions
 
 - OQ-001: Exact production deployment target, domain, database, backup

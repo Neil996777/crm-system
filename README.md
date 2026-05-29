@@ -23,6 +23,4 @@ Do not write implementation code before Gate G8 passes.
 - `docs/business/` - Business processes, rules, scenarios, permissions, edge cases, and glossary.
 - `docs/ux-ui/` - UX flows, UI specifications, component behavior, states, and responsive requirements.
 - `docs/security/` - Security, permission, privacy, audit-log, abuse-case, and compliance requirements.
-- `docs/compliance/` - CMMI-oriented process and evidence standards.
-- `docs/ip/` - Software copyright and patent-readiness standards.
 - `archive/` - Historical review evidence. It is not current design authority after the architecture reset.
