@@ -7,19 +7,35 @@ opportunities, quotes, contracts, payments, activities, and follow-ups.
 
 ## Current Phase
 
-- Phase: Architecture Reset
-- Current Gate: G5 Architecture Design Required
+- Phase: G5 Architecture Design Passed
+- Current Gate: G6 MDA Modeling Required
 - Current Status: Previous architecture, MDA, task planning, implementation,
   QA, integration, audit, deployment, and project-specific implementation-agent
-  artifacts were discarded by user direction on 2026-05-29.
+  artifacts were discarded by user direction on 2026-05-29. Product,
+  Business Analyst, UX/UI, and Security added service-boundary-first input
+  supplements. Architecture produced a new G5 design, repaired it through two
+  review rounds, and G5 passed on 2026-05-30 with all required reviewers
+  (including project-added Infrastructure Ops) returning Pass. See
+  `archive/reviews/g5-architecture/g5-architecture-final-decision-2026-05-30.md`.
 
 ## Current Goal
 
-Restart architecture design from the retained product, business, UX/UI, and
-security inputs. New architecture must not reuse discarded engineering
-artifacts as design authority. After the new architecture passes G5, the
-project must proceed through MDA, traceability/test model, task planning, and
-later implementation gates again.
+G5 Architecture Design has passed. The project proceeds to G6 MDA Modeling:
+Domain Modeling and Architecture build CIM/PIM/PSM, service mapping, state
+machines, domain events, and traceability that faithfully represent the accepted
+architecture. Per project interpretation (GAP-PROC-003), G6 does not re-litigate
+accepted architecture decisions. Implementation remains blocked until G8.
+
+The current immediate goal is the G6 MDA package, reviewed by Product Manager,
+Business Analyst, UX Designer, UI Designer, Security Compliance, and QA TDD. The
+accepted architecture defines the service list, owner agents, contracts, data
+ownership, and deployment decisions that MDA must trace, not redefine.
+
+Production deployment target (accepted at G5): runtime host
+`srv-volcengine-sh-01` (Volcengine ECS, Shanghai, 4 vCPU / 8 GiB); off-server
+backup target `srv-aliyun-bj-01` (Alibaba Cloud ECS, Beijing). Off-server backup
+copy evidence, restore rehearsal, and HTTPS/TLS endpoint evidence remain release
+blockers, correctly deferred to release.
 
 ## Reset Boundary
 
@@ -86,6 +102,7 @@ Product:
 - `docs/product/requirements.md`
 - `docs/product/prd.md`
 - `docs/product/acceptance-matrix.md`
+- `docs/product/business-capability-map.md`
 - `docs/product/open-questions.md`
 - `docs/product/out-of-scope.md`
 - `docs/product/decision-log.md`
@@ -100,6 +117,7 @@ Business:
 - `docs/business/role-permission-scenarios.md`
 - `docs/business/edge-cases.md`
 - `docs/business/business-glossary.md`
+- `docs/business/service-governance-inputs.md`
 
 UX/UI:
 
@@ -111,6 +129,7 @@ UX/UI:
 - `docs/ux-ui/ui-spec.md`
 - `docs/ux-ui/component-spec.md`
 - `docs/ux-ui/responsive-spec.md`
+- `docs/ux-ui/service-state-mapping.md`
 
 Security:
 
@@ -120,17 +139,45 @@ Security:
 - `docs/security/privacy-requirements.md`
 - `docs/security/abuse-cases.md`
 - `docs/security/compliance-risks.md`
+- `docs/security/service-boundary-security.md`
+
+Architecture:
+
+- `docs/architecture/architecture.md`
+- `docs/architecture/module-boundaries.md`
+- `docs/architecture/api-spec.md`
+- `docs/architecture/data-design.md`
+- `docs/architecture/integration-design.md`
+- `docs/architecture/authz-architecture.md`
+- `docs/architecture/frontend-backend-contract.md`
+- `docs/architecture/deployment-notes.md`
+- `docs/architecture/risk-register.md`
+- `docs/architecture/service-architecture-adr.md`
+- `docs/architecture/service-architecture-acceptance.md`
+- `docs/architecture/service-acceptance-map.md`
 
 ## Current Open Questions
 
-- OQ-001: Exact production deployment target, domain, database, backup
-  location, and environment ownership were reopened by the architecture reset
-  and must be resolved by new Architecture Design.
+- OQ-001: Architecture decision recorded; production release evidence remains
+  pending. The draft selects Alibaba Cloud ECS, Docker Compose, multiple Go
+  service containers, self-hosted PostgreSQL, encrypted local automatic backup
+  with 7-day retention, HTTPS-only production ingress, and Architecture plus
+  Infrastructure Ops ownership. Pre-release validation may use the ECS IP.
+  Production release requires HTTPS endpoint/TLS evidence, security group
+  evidence, monitoring evidence, restore rehearsal, and encrypted off-server
+  backup evidence. Same-host-only backup is a release blocker, not accepted
+  P0/P1 completion.
 - OQ-016: Data migration or initial seed data requirements remain launch
   planning inputs before production release.
 
 ## Current Blockers
 
-- Architecture is not currently accepted. No MDA, task planning, or
-  implementation work may proceed until new architecture design passes the
-  required Gate.
+- No open G5 architecture blocker. G5 passed on 2026-05-30.
+- G6 MDA Modeling has not yet started; task planning and implementation remain
+  gated until G6, G7, and G8 pass.
+- Carried-forward release blockers (not gate blockers now): encrypted off-server
+  backup copy + restore rehearsal evidence, HTTPS/TLS endpoint evidence,
+  security-group and monitoring evidence. These block production release, not G6.
+- Company-layer follow-up (deferred to workspace discussion): infrastructure
+  registers should name CRM as the consuming project for the runtime host. See
+  `docs/process/process-gap-register.md`.

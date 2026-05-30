@@ -27,6 +27,7 @@ Before doing project work, read:
 - `../../agents/ui-designer.md`
 - `../../agents/domain-modeling.md`
 - `../../agents/architecture.md`
+- `../../agents/infrastructure-ops.md`
 - `../../agents/security-compliance.md`
 - `../../agents/task-planner.md`
 - `../../agents/frontend-engineer.md`
