@@ -18,7 +18,7 @@
 ## Overview
 
 The CRM System is a production-ready team collaboration CRM for ToB sales. The
-v1 release must support the complete sales business loop from lead entry through
+committed release must support the complete sales business loop from lead entry through
 customer, contact, opportunity, quote, contract, payment, follow-up, task
 management, and won/lost closure.
 
@@ -34,7 +34,7 @@ architecture work after the relevant gates.
 ## Goals
 
 - Provide one shared CRM workspace for a ToB sales team.
-- Let users manage the full v1 CRM loop: lead, qualification, company/customer,
+- Let users manage the full committed CRM loop: lead, qualification, company/customer,
   contact, opportunity, quote, contract, payment, activity, task, and closure.
 - Support the three confirmed roles: Administrator, Sales Manager, and Sales.
 - Preserve ownership, stage, status, quote, contract, payment, activity, and
@@ -208,7 +208,7 @@ Acceptance coverage:
 | PRD-005 | P0 | Users can manage ToB companies/customers and customer status. | REQ-005 | ACC-005 |
 | PRD-006 | P0 | Users can manage multiple contacts under a company/customer. | REQ-006 | ACC-006 |
 | PRD-007 | P0 | Users can create and manage opportunities linked to customer, contacts, owner, amount, expected close date, stage, and status. | REQ-007 | ACC-007 |
-| PRD-008 | P0 | Users can move opportunities through the v1 sales pipeline. | REQ-008 | ACC-008 |
+| PRD-008 | P0 | Users can move opportunities through the sales pipeline. | REQ-008 | ACC-008 |
 | PRD-009 | P0 | Users can create and manage quote records linked to opportunities and customers. | REQ-009 | ACC-009 |
 | PRD-010 | P0 | Users can create and manage record-based contract records linked to customer, opportunity, and quote. | REQ-010 | ACC-010 |
 | PRD-011 | P0 | Users can manage payment plans and actual payment records linked to contracts. | REQ-011 | ACC-011 |
@@ -217,20 +217,20 @@ Acceptance coverage:
 | PRD-014 | P0 | Authorized users can review collaboration and change history for core CRM records. | REQ-014 | ACC-014 |
 | PRD-015 | P0 | Core CRM entities provide list, detail, search, and basic filtering views. | REQ-015 | ACC-015 |
 | PRD-016 | P0 | All core CRM data is persisted and survives refresh, logout/login, and service restart. | REQ-016 | ACC-016 |
-| PRD-017 | P0 | The v1 system can be deployed and operated with real configuration and real persisted data. | REQ-017 | ACC-017 |
+| PRD-017 | P0 | The system can be deployed and operated with real configuration and real persisted data. | REQ-017 | ACC-017 |
 | PRD-018 | P1 | Sales Managers can view a team overview for core sales work. | REQ-018 | ACC-018 |
 | PRD-019 | P1 | Users receive likely duplicate warnings for companies, contacts, or leads. | REQ-019 | ACC-019 |
 | PRD-020 | P1 | Authorized users can import and export core CRM records. | REQ-020 | ACC-020 |
 | PRD-021 | P1 | Users receive reminders for due or overdue follow-up tasks, contracts, and payments. | REQ-021 | ACC-021 |
 | PRD-022 | P1 | Administrators can review key operation logs. | REQ-022 | ACC-022 |
 | PRD-023 | P1 | Administrators and Sales Managers can view basic sales reports for core CRM records. | REQ-023 | ACC-023 |
-| PRD-024 | P2 | The system may support email and calendar integration. | REQ-024 | Not in v1 acceptance scope |
-| PRD-025 | P2 | The system may support advanced reporting, forecasting, and performance analytics. | REQ-025 | Not in v1 acceptance scope |
-| PRD-026 | P2 | The system may support quote approval, contract approval, discount approval, and workflow rules. | REQ-026 | Not in v1 acceptance scope |
-| PRD-027 | P2 | The system may support electronic signature and contract template generation. | REQ-027 | Not in v1 acceptance scope |
-| PRD-028 | P2 | The system may support invoice management. | REQ-028 | Not in v1 acceptance scope |
-| PRD-029 | P2 | The system may support external collaboration and finance integrations. | REQ-029 | Not in v1 acceptance scope |
-| PRD-030 | P2 | The system may support AI sales summaries, next-step suggestions, and risk hints. | REQ-030 | Not in v1 acceptance scope |
+| PRD-024 | P2 | The system may support email and calendar integration. | REQ-024 | Not in committed acceptance scope |
+| PRD-025 | P2 | The system may support advanced reporting, forecasting, and performance analytics. | REQ-025 | Not in committed acceptance scope |
+| PRD-026 | P2 | The system may support quote approval, contract approval, discount approval, and workflow rules. | REQ-026 | Not in committed acceptance scope |
+| PRD-027 | P2 | The system may support electronic signature and contract template generation. | REQ-027 | Not in committed acceptance scope |
+| PRD-028 | P2 | The system may support invoice management. | REQ-028 | Not in committed acceptance scope |
+| PRD-029 | P2 | The system may support external collaboration and finance integrations. | REQ-029 | Not in committed acceptance scope |
+| PRD-030 | P2 | The system may support AI sales summaries, next-step suggestions, and risk hints. | REQ-030 | Not in committed acceptance scope |
 
 ## Non-Functional Requirements
 
@@ -238,7 +238,7 @@ Acceptance coverage:
 |---|---|---|---|---|
 | NFR-001 | P0 | Persistent core data | P0 CRM data survives refresh, logout/login, and service restart; no core path depends on mock, static-only, TODO, in-memory-only, or non-persistent behavior. | ACC-016 |
 | NFR-002 | P0 | Authorization enforcement | Protected P0 data and actions are enforced by role and record visibility rules, not only hidden in the UI. | ACC-002 |
-| NFR-003 | P0 | Production deployment readiness | The committed v1 system can be deployed with real configuration and connected persistent services. | ACC-017 |
+| NFR-003 | P0 | Production deployment readiness | The committed system can be deployed with real configuration and connected persistent services. | ACC-017 |
 | NFR-004 | P0 | Audit-sensitive history | Ownership, stage, quote, contract, payment, and key business changes are retained for collaboration and audit review. | ACC-014 |
 | NFR-005 | P1 | Operational audit query | Administrator can review key operation logs for committed P1 audit needs. | ACC-022 |
 | NFR-006 | P1 | Data import/export integrity | Import errors do not corrupt existing data; export reflects authorized persisted records. | ACC-020 |
@@ -256,7 +256,7 @@ G3 acceptance testability.
 |---|---|---|---|
 | Administrator | Manage users, roles, and critical CRM configuration | Yes | Exact user lifecycle and configuration scope remain downstream. |
 | Administrator | View and govern CRM records and operation logs | Yes | Must respect audit and privacy requirements. |
-| Sales Manager | View team CRM records | Yes | v1 has one sales team; manager scope is all team records. |
+| Sales Manager | View team CRM records | Yes | The committed scope has one sales team; manager scope is all team records. |
 | Sales Manager | Assign or transfer team work | Yes | Open tasks and follow-ups transfer with the parent owner unless manually reassigned. |
 | Sales | Manage owned or assigned CRM records | Yes | Sales can view and edit records where they are owner or assignee. |
 | Sales | View non-owned CRM records | No | Non-owned data is hidden unless later shared by a formal permission rule. |
@@ -290,7 +290,7 @@ G3 acceptance testability.
 | Archive eligible records | Yes | Yes for team records | No |
 
 Rules:
-- v1 does not allow hard deletion of core CRM records.
+- The committed scope does not allow hard deletion of core CRM records.
 - Administrators and Sales Managers act as themselves; they do not silently act
   as another Sales user.
 - Any owner, stage, status, amount, contract, payment, archive, import, or
@@ -355,7 +355,7 @@ Forbidden:
 | Any non-terminal stage | Lost | Sales, Sales Manager | lost reason | Opportunity lost |
 
 Forbidden:
-- Won and Lost are terminal for v1. Reopen is not allowed in v1.
+- Won and Lost are terminal for the committed scope. Reopen is not allowed in the committed scope.
 - Opportunity cannot move to Won without full payment recorded.
 
 ### Quote Transitions
@@ -392,7 +392,7 @@ Rules:
 - Signed, Active, Completed, and post-signature Terminated contracts require
   signed/effective date.
 - Contract amount may differ from accepted quote amount only when a difference reason is recorded.
-- Contract approval, electronic signature, and template generation are not part of v1 P0/P1.
+- Contract approval, electronic signature, and template generation are not part of committed P0/P1.
 
 ### Payment Transitions
 
@@ -404,8 +404,8 @@ Rules:
 | Unpaid, Partially Paid | Overdue | System or authorized user | due date is past and unpaid amount remains | Payment overdue |
 
 Rules:
-- v1 uses one currency for all quote, contract, and payment amounts.
-- Tax, discount, and multi-currency automation are out of v1 P0/P1 scope.
+- The committed scope uses one currency for all quote, contract, and payment amounts.
+- Tax, discount, and multi-currency automation are out of committed P0/P1 scope.
 - Overpayment is blocked.
 - Negative or zero actual payment amounts are rejected.
 - Partial payment is supported.
@@ -425,10 +425,10 @@ Rules:
 
 ## P1 Minimum Behavior
 
-| Capability | Minimum v1 Behavior |
+| Capability | Minimum Committed Behavior |
 |---|---|
 | Duplicate warnings | Warn on exact company name match; warn on contact phone or email match; warn on lead company/contact match. Warning does not block save. |
-| Import/export | CSV only for v1. Import validates required fields row by row and reports failed rows without changing valid existing records. Export includes authorized records only. |
+| Import/export | CSV only for the committed release. Import validates required fields row by row and reports failed rows without changing valid existing records. Export includes authorized records only. |
 | Reminders | In-app reminders only for due or overdue tasks, contracts pending signature past their required expected signed date, and due/overdue payments. Completed/cancelled tasks, signed contracts, terminated contracts, and fully paid contracts do not create active reminders. |
 | Admin operation logs | Global admin query covers login/access failures, owner changes, stage/status changes, quote acceptance, contract status changes, payment records, archive actions, import/export. |
 | Basic reports | Counts and sums for leads by status, opportunities by stage, quotes by status/amount, contracts by status/amount, payments by status/amount. Reports are based only on persisted authorized records. |
@@ -440,7 +440,7 @@ Rules:
 | Record-local business history | P0 | Shows business timeline on the related lead, customer, opportunity, quote, contract, payment, activity, or task. | Visible according to record permissions. |
 | Admin/global operation log | P1 | Gives Administrators a cross-record operational audit query. | Administrator only. |
 
-Shared event IDs for v1:
+Shared event IDs for the committed release:
 - EVT-OWNER-CHANGED
 - EVT-STAGE-CHANGED
 - EVT-STATUS-CHANGED
@@ -457,7 +457,7 @@ Shared event IDs for v1:
 
 ## Release Boundary
 
-The v1 release is valid only when every P0 and P1 item in this PRD has:
+The committed release is valid only when every P0 and P1 item in this PRD has:
 
 - acceptance matrix coverage
 - downstream business, UX, security, modeling, architecture, task, and test

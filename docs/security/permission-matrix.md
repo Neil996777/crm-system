@@ -20,8 +20,8 @@
 
 | Scope | Definition |
 |---|---|
-| Governed records | All CRM records in the single v1 team workspace. |
-| Team records | All CRM records in the single v1 sales team workspace. |
+| Governed records | All CRM records in the single committed team workspace. |
+| Team records | All CRM records in the single committed sales team workspace. |
 | Owned/assigned records | Records owned by or assigned to the Sales user. |
 | Related child records | Contacts, quotes, contracts, payments, activities, notes, tasks, and history linked to an owned/assigned parent record. |
 | Archived records | Non-deleted records removed from active/default views and available only through explicit archived filters, history, logs, or audit/report context. |

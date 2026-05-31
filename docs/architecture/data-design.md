@@ -10,7 +10,7 @@
 
 ## Data Strategy
 
-The CRM uses one self-hosted PostgreSQL instance in v1, with service-level data
+The CRM uses one self-hosted PostgreSQL instance in the committed scope, with service-level data
 ownership enforced by database or schema boundaries and independent database
 users.
 
@@ -56,7 +56,7 @@ database/schema through its own credentials.
 | Lead | lead-service | Conversion marker prevents duplicate conversion. |
 | Account / Customer | account-service | No hard delete; archive or lifecycle state only. |
 | Contact | account-service | Contact details require restricted handling. |
-| Opportunity | opportunity-service | Won/Lost are terminal in v1. |
+| Opportunity | opportunity-service | Won/Lost are terminal in the committed scope. |
 | Quote | commercial-service | Only one Accepted quote per opportunity. |
 | Contract | commercial-service | Pending Signature requires expected signed date and note. |
 | Payment Plan / Actual Payment | commercial-service | Blocks zero, negative, and overpayment amounts. |
@@ -141,7 +141,7 @@ authorized records only.
 
 PostgreSQL backup uses encrypted timestamped backup files on the ECS host and
 must copy encrypted backup evidence to an off-server target before production
-release. Backups retain the whole PostgreSQL instance for v1, including
+release. Backups retain the whole PostgreSQL instance for the committed release, including
 service-owned databases/schemas, history, operation logs, reporting
 projections, and import/export run metadata.
 
@@ -187,7 +187,7 @@ summary. Services must not silently overwrite stale user edits.
 
 ## Lifecycle Protection
 
-- Won/Lost opportunity states are terminal in v1.
+- Won/Lost opportunity states are terminal in the committed scope.
 - Closed opportunities reject ordinary update and stage transition commands.
 - Post-close notes and follow-up tasks are stored in work-service and reference
   the closed opportunity without editing it.

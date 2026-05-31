@@ -91,7 +91,7 @@ current architecture, MDA, task, test, integration, audit, or release authority.
 | Service architecture | `architecture.md`, service list, service owner agents, data ownership, contracts, deployment notes, risk register | architecture |
 | MDA/PSM rebuild | PSM service mapping, contracts, data ownership, events, permissions, traceability | domain-modeling |
 | Task plan | `tasks.md` with service, service owner agent, contract reference, acceptance ID, tests, and forbidden boundary access | task-planner |
-| Test model | Service contract tests, boundary tests, P0/P1 acceptance tests, integration scenarios | qa-tdd |
+| Test model | Service contract tests, boundary tests, P0/P1 acceptance tests, integration scenarios | qa-test-design |
 | Integration plan | Service-chain evidence plan, environment checks, correlation ID expectations | integration-owner |
 | Infrastructure review | Deployment environment request, server/database/domain/port requirements, backup and monitoring expectations | infrastructure-ops |
 | Final audit plan | Reverse trace from acceptance to service, model, task, test, integration, and infrastructure evidence | audit |
@@ -166,11 +166,13 @@ current architecture, MDA, task, test, integration, audit, or release authority.
 - After G8, implement only against accepted service ownership, data ownership,
   API/event/error/permission contracts, and tasks.
 
-### qa-tdd
+### qa-test-design (planning) / qa-execution (execution)
 
-- Define tests from P0/P1 acceptance, service contracts, permissions,
-  persistence, and boundary rules.
-- Treat missing testability for P0/P1 service-backed capabilities as blocked.
+- qa-test-design defines tests from P0/P1 acceptance, service contracts,
+  permissions, persistence, and boundary rules; treats missing testability for
+  P0/P1 service-backed capabilities as blocked.
+- qa-execution implements and runs those tests and produces QA evidence during
+  execution (G9–G11).
 
 ### integration-owner
 

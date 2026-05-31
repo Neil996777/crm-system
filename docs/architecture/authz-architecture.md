@@ -14,7 +14,7 @@ Authorization is enforced by backend services. Frontend navigation, disabled
 buttons, and hidden UI elements are convenience hints only and are never the
 security boundary.
 
-The CRM uses a single-team, three-role model for v1:
+The CRM uses a single-team, three-role model for the committed release:
 
 - Administrator
 - Sales Manager

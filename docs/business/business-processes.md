@@ -10,7 +10,7 @@
 
 ## Process Principles
 
-- The v1 business loop starts at lead entry and ends at won/lost opportunity
+- The committed business loop starts at lead entry and ends at won/lost opportunity
   closure with preserved history.
 - P0/P1 process behavior must stay traceable to product acceptance IDs.
 - Business processes may clarify or strengthen P0/P1 behavior, but must not
@@ -119,7 +119,7 @@ Trigger:
 Main flow:
 1. User creates an opportunity linked to customer, owner, stage, status,
    expected amount, and expected close date.
-2. User advances stage through the v1 pipeline.
+2. User advances stage through the sales pipeline.
 3. Each allowed stage transition creates record-local history.
 4. Sales closure as Won requires full payment.
 5. Sales closure as Lost requires lost reason.
@@ -129,8 +129,8 @@ Business outcome:
 
 Exception flow:
 - Forbidden transitions are rejected.
-- Won and Lost are terminal in v1.
-- Reopen is unavailable in v1.
+- Won and Lost are terminal in the committed scope.
+- Reopen is unavailable in the committed scope.
 
 Acceptance:
 - ACC-007, ACC-008, ACC-013, ACC-014
@@ -157,7 +157,7 @@ Exception flow:
 - Contract amount differing from accepted quote amount requires difference
   reason.
 - Contract approval, electronic signature, and template generation are out of
-  v1 P0/P1 scope.
+  committed P0/P1 scope.
 
 Acceptance:
 - ACC-009, ACC-010, ACC-014
@@ -181,8 +181,8 @@ Business outcome:
 
 Exception flow:
 - Zero, negative, or overpayment amounts are rejected.
-- Single currency applies in v1.
-- Tax, discount, and multi-currency automation are out of v1 P0/P1 scope.
+- Single currency applies in the committed scope.
+- Tax, discount, and multi-currency automation are out of committed P0/P1 scope.
 
 Acceptance:
 - ACC-011, ACC-013, ACC-014
@@ -218,7 +218,7 @@ Trigger:
 - Sales Manager or Administrator reviews team work or transfers ownership.
 
 Main flow:
-1. Sales Manager views all team records in v1.
+1. Sales Manager views all team records in the committed scope.
 2. Sales Manager assigns or transfers team work.
 3. Open tasks and follow-ups transfer with the parent owner unless manually
    reassigned during transfer.
@@ -253,13 +253,13 @@ Main flow:
 6. Export includes authorized records only.
 
 Business outcome:
-- Bulk data work supports v1 operations without corrupting existing records or
+- Bulk data work supports committed operations without corrupting existing records or
   exposing unauthorized data.
 
 Exception flow:
 - Unsupported formats are rejected.
 - Invalid rows do not corrupt existing records.
-- Sales users cannot import/export in v1.
+- Sales users cannot import/export in the committed scope.
 
 Acceptance:
 - ACC-020

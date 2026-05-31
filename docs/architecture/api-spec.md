@@ -503,7 +503,7 @@ authorized user applies an explicit archived filter.
 
 ### Import And Export Runs
 
-V1 import/export scope covers leads, accounts, contacts, opportunities, quotes,
+Committed import/export scope covers leads, accounts, contacts, opportunities, quotes,
 contracts, payments, tasks/activities, and notes only when the target service
 has a supported domain command/query contract. Unsupported object types must be
 rejected before row mutation.

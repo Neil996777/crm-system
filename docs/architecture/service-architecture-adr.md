@@ -30,10 +30,10 @@ Cloud ECS) serves as the off-server backup target only, not a runtime host.
 
 ### Consequences
 
-- Service runtime boundaries exist from v1.
+- Service runtime boundaries exist from the committed release.
 - Deployment and debugging are more complex than a modular monolith.
-- Docker Compose is sufficient for v1 scale and current infrastructure.
-- Kubernetes is not required for v1.
+- Docker Compose is sufficient for the committed scale and current infrastructure.
+- Kubernetes is not required for the committed scope.
 - The runtime host is co-located with existing personal workloads, so CRM must
   honor disk/memory headroom and reverse-proxy/port-80 co-location constraints
   recorded in `deployment-notes.md`.

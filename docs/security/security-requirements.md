@@ -45,7 +45,7 @@ G8 passes.
 | SEC-012 | P1 | CSV export must include only authorized records, require explicit confirmation, and create an export operation-log event. | ACC-020, ACC-022 | Architecture, Backend, QA, Audit |
 | SEC-013 | P1 | Basic reports must use authorized persisted records only and must not leak unauthorized aggregates. | ACC-018, ACC-023 | Architecture, Backend, QA |
 | SEC-014 | P0/P1 | Sensitive data display, errors, logs, import results, and reports must follow data classification and masking rules. | ACC-002, ACC-014, ACC-020, ACC-022, ACC-023 | Frontend, Backend, QA, Audit |
-| SEC-015 | P0/P1 | Retention, archive, and deletion boundaries must follow the v1 privacy requirements. | ACC-002, ACC-014, ACC-016, ACC-022 | Architecture, Backend, Audit |
+| SEC-015 | P0/P1 | Retention, archive, and deletion boundaries must follow the committed privacy requirements. | ACC-002, ACC-014, ACC-016, ACC-022 | Architecture, Backend, Audit |
 | SEC-016 | P0/P1 | Authentication and authorization failures must be logged at the appropriate level without exposing sensitive details to unauthorized users. | ACC-001, ACC-002, ACC-022 | Architecture, Backend, QA |
 | SEC-017 | P0/P1 | Security controls must be verifiable with positive, negative, abuse-case, and audit-log tests. | ACC-001 to ACC-023 | QA, Integration, Audit |
 | SEC-018 | P0 | No P0/P1 core CRM path may rely on mock, static-only, in-memory-only, or non-persistent behavior. | ACC-016, ACC-017 | Architecture, QA, Audit |

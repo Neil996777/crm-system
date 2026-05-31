@@ -9,7 +9,7 @@
 
 ## Business Goal
 
-Build a production-ready ToB CRM system for a sales team. The v1 release must
+Build a production-ready ToB CRM system for a sales team. The committed release must
 cover the complete sales business loop from lead capture through customer,
 opportunity, quote, contract, payment, follow-up, and final win/loss tracking.
 
@@ -55,7 +55,7 @@ or non-persistent behavior.
 - Team collaboration history for authorized users.
 - Core list/detail/search/filter experiences for CRM entities.
 - Data persistence for all core CRM records.
-- Production deployment readiness for the committed v1 scope.
+- Production deployment readiness for the committed scope.
 
 ## Out Of Scope Summary
 
@@ -77,11 +77,11 @@ Detailed scope exclusions are maintained in `docs/product/out-of-scope.md`.
 | P0 traceability | Every P0 requirement maps to at least one acceptance item before implementation planning. | Requirements and acceptance matrix review. |
 | Data persistence | Core CRM records survive refresh, logout/login, and service restart in the target environment. | QA, integration, and audit evidence before Done. |
 | Role correctness | Administrator, Sales Manager, and Sales can perform only authorized actions. | Permission tests and manual verification. |
-| Production readiness | The v1 system can be deployed and operated with real data. | Deployment runbook, environment verification, and integration evidence. |
+| Production readiness | The system can be deployed and operated with real data. | Deployment runbook, environment verification, and integration evidence. |
 
 ## Constraints
 
-- Business: v1 must support team collaboration for ToB sales.
+- Business: the committed release must support team collaboration for ToB sales.
 - Technical: frontend and backend must remain separated; shared contracts/types belong in `packages/shared/`.
 - Time: no implementation work may begin before Gate G8 passes.
 - Compliance: customer, contact, contract, and payment data require access control and audit-sensitive handling.
@@ -94,4 +94,4 @@ Detailed scope exclusions are maintained in `docs/product/out-of-scope.md`.
 | RISK-001 | Payment and contract business rules may require more policy detail than currently confirmed. | P0 acceptance items may become blocked until rules are clarified. | Product Manager / Business Analyst |
 | RISK-002 | Role visibility rules are confirmed only at a high level. | Permission design and verification may be blocked if manager/sales visibility boundaries are unclear. | Product Manager / Security Compliance |
 | RISK-003 | Production deployment target is not yet defined. | Architecture and release readiness cannot be completed without environment decisions. | Architecture |
-| RISK-004 | Reporting expectations may expand beyond core v1 loop. | Scope pressure may affect G2/G3 unless P1/P2 boundaries are preserved. | Product Manager |
+| RISK-004 | Reporting expectations may expand beyond the committed core loop. | Scope pressure may affect G2/G3 unless P1/P2 boundaries are preserved. | Product Manager |

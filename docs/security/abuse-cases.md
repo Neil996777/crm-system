@@ -37,7 +37,7 @@
 ## Release-Blocking Security Expectations
 
 - Open P0 abuse-case failures block release.
-- Open P1 abuse-case failures block committed v1 release unless formally
+- Open P1 abuse-case failures block the committed release unless formally
   removed by sponsor scope change.
 - Abuse-case verification must include backend/API tests, not only UI tests.
 - Any implementation that satisfies a core path with mock, static-only,

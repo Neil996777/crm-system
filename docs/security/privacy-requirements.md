@@ -9,7 +9,7 @@
 
 ## OQ-014 Resolution
 
-OQ-014 is resolved for v1 as follows:
+OQ-014 is resolved for the committed release as follows:
 
 - CRM data is classified into Internal, Confidential, Restricted, and Security
   Critical classes.
@@ -17,7 +17,7 @@ OQ-014 is resolved for v1 as follows:
   require role and record-scope visibility controls.
 - Core CRM records are retained for business continuity and auditability; no
   normal product workflow hard-deletes core CRM records.
-- v1 retention expectations are explicit below and must be implemented or
+- the committed retention expectations are explicit below and must be implemented or
   carried into Architecture risk tracking without weakening P0/P1 acceptance.
 
 This is a product security policy for the project, not formal legal advice.
@@ -57,7 +57,7 @@ sponsor scope change.
 
 ## Retention Policy
 
-| Data Class | Minimum v1 Retention |
+| Data Class | Minimum Committed Retention |
 |---|---|
 | Core active CRM records | Retained while active and in use. |
 | Archived core CRM records | Retained 7 years after archive or final related business closure, whichever is later. |
@@ -71,7 +71,7 @@ sponsor scope change.
 
 ## Deletion And Archive Boundary
 
-- Normal v1 CRM workflows do not hard-delete core CRM records.
+- Normal committed CRM workflows do not hard-delete core CRM records.
 - Archive is the normal way to remove records from active work views.
 - Archived records remain available through explicit archived filters,
   record-local history, operation logs, and audit/report evidence according to

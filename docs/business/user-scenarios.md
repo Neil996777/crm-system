@@ -86,7 +86,7 @@ Alternative path:
 Failure paths:
 - Zero, negative, or overpayment amounts are rejected.
 - Won is rejected without full payment.
-- Won/Lost cannot be reopened in v1.
+- Won/Lost cannot be reopened in the committed scope.
 
 ### SCN-004: Sales Manages Follow-Up Work
 
@@ -161,7 +161,7 @@ Main path:
 Failure paths:
 - Unsupported file formats are rejected.
 - Invalid rows do not corrupt existing records.
-- Sales users cannot import/export in v1.
+- Sales users cannot import/export in the committed scope.
 
 ### SCN-008: Sales Manager Or Administrator Reviews Basic Sales Reports
 

@@ -52,10 +52,14 @@ this project closes the gaps locally by strengthening its own G5+ review rules.
 
 ### GAP-PROC-003 — G5/G6 gate semantics are ambiguous (Severity: Low)
 
-- Finding: The G5 transition label reads "Business/UX/UI/Security Design ->
-  Architecture Design" (entry), but the G5 pass condition and Phase 6 require
-  architecture **outputs** to already exist, and G6 again re-states architecture
-  acceptance. Where architecture is formally accepted is ambiguous.
+- Finding: The G5 transition label previously read "Business/UX/UI/Security
+  Design -> Architecture Design" (entry), but the G5 pass condition and Phase 6
+  require architecture **outputs** to already exist, and G6 again re-states
+  architecture acceptance. Where architecture is formally accepted is ambiguous.
+- Update (2026-05-30): The company layer split the old single G4 into G4a–G4d
+  and relabeled the G5 transition to `Design Closure -> Architecture Design`.
+  The label ambiguity below is partly superseded; the binding interpretation
+  still holds.
 - Project interpretation (binding for this project):
   - **G5 = Architecture Acceptance.** G5 passes only when the architecture
     outputs (service strategy, service list, owner agents, contracts, data

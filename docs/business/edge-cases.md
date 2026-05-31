@@ -22,7 +22,7 @@
 | EDGE-008 | P0 | Opportunity moves through forbidden transition | Transition rejected; no data mutation | ACC-008 | Accepted as Architecture Input |
 | EDGE-009 | P0 | Opportunity is marked Won without full payment | Won closure rejected | ACC-013 | Accepted as Architecture Input |
 | EDGE-010 | P0 | Opportunity is marked Lost without lost reason | Lost closure rejected | ACC-013 | Accepted as Architecture Input |
-| EDGE-011 | P0 | Won or Lost opportunity is reopened | Reopen rejected in v1 | ACC-008, ACC-013 | Accepted as Architecture Input |
+| EDGE-011 | P0 | Won or Lost opportunity is reopened | Reopen rejected in the committed scope | ACC-008, ACC-013 | Accepted as Architecture Input |
 | EDGE-012 | P0 | Multiple quotes are accepted for same opportunity | System prevents multiple Accepted quotes from remaining active | ACC-009 | Accepted as Architecture Input |
 | EDGE-013 | P0 | Expired quote is linked to new contract | Link rejected | ACC-009, ACC-010 | Accepted as Architecture Input |
 | EDGE-014 | P0 | Pending Signature contract lacks expected signed date | Save rejected | ACC-010, ACC-021 | Accepted as Architecture Input |

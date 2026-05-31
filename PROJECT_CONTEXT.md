@@ -27,7 +27,8 @@ architecture. Per project interpretation (GAP-PROC-003), G6 does not re-litigate
 accepted architecture decisions. Implementation remains blocked until G8.
 
 The current immediate goal is the G6 MDA package, reviewed by Product Manager,
-Business Analyst, UX Designer, UI Designer, Security Compliance, and QA TDD. The
+Business Analyst, UX Designer, UI Designer, Security Compliance, and QA Test
+Design. The
 accepted architecture defines the service list, owner agents, contracts, data
 ownership, and deployment decisions that MDA must trace, not redefine.
 
@@ -180,4 +181,4 @@ Architecture:
   security-group and monitoring evidence. These block production release, not G6.
 - Company-layer follow-up (deferred to workspace discussion): infrastructure
   registers should name CRM as the consuming project for the runtime host. See
-  `docs/process/process-gap-register.md`.
+  `process/process-gap-register.md`.

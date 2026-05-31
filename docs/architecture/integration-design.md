@@ -46,114 +46,114 @@ All cross-service interactions must include:
 
 ```mermaid
 sequenceDiagram
-  participant U as Sales
-  participant G as gateway-bff
-  participant P as identity-authz-service
-  participant L as lead-service
-  participant A as account-service
-  participant O as opportunity-service
-  participant H as audit-history-service
-  participant R as reporting-service
+  participant U as Sales 销售
+  participant G as gateway-bff 网关
+  participant P as identity-authz-service 身份鉴权服务
+  participant L as lead-service 线索服务
+  participant A as account-service 客户服务
+  participant O as opportunity-service 商机服务
+  participant H as audit-history-service 审计历史服务
+  participant R as reporting-service 报表服务
 
-  U->>G: Convert lead
-  G->>P: Check permission
-  P-->>G: Allowed
-  G->>L: ConvertLead(command, idempotencyKey)
-  L->>L: Validate state and conversion-once guard
-  L->>A: CreateOrLinkAccountContact
-  A-->>L: Account/contact references
-  L->>O: CreateOpportunity
-  O-->>L: Opportunity reference
-  L->>L: Persist converted state
-  L-->>H: LeadConverted event
-  O-->>H: OpportunityCreated event
-  L-->>R: LeadConverted event
-  O-->>R: OpportunityCreated event
-  L-->>G: Conversion result
-  G-->>U: Converted lead and opportunity link
+  U->>G: Convert lead 转换线索
+  G->>P: Check permission 校验权限
+  P-->>G: Allowed 允许
+  G->>L: ConvertLead(command, idempotencyKey) 转换线索(命令,幂等key)
+  L->>L: Validate state and conversion-once guard 校验状态与"仅转换一次"约束
+  L->>A: CreateOrLinkAccountContact 创建或关联客户/联系人
+  A-->>L: Account/contact references 客户/联系人引用
+  L->>O: CreateOpportunity 创建商机
+  O-->>L: Opportunity reference 商机引用
+  L->>L: Persist converted state 持久化已转换状态
+  L-->>H: LeadConverted event 事件:线索已转换
+  O-->>H: OpportunityCreated event 事件:商机已创建
+  L-->>R: LeadConverted event 事件:线索已转换
+  O-->>R: OpportunityCreated event 事件:商机已创建
+  L-->>G: Conversion result 转换结果
+  G-->>U: Converted lead and opportunity link 已转换线索与商机关联
 ```
 
 ## Payment To Won Sequence
 
 ```mermaid
 sequenceDiagram
-  participant U as Sales
-  participant G as gateway-bff
-  participant P as identity-authz-service
-  participant C as commercial-service
-  participant O as opportunity-service
-  participant H as audit-history-service
-  participant R as reporting-service
+  participant U as Sales 销售
+  participant G as gateway-bff 网关
+  participant P as identity-authz-service 身份鉴权服务
+  participant C as commercial-service 商务服务(报价/合同/回款)
+  participant O as opportunity-service 商机服务
+  participant H as audit-history-service 审计历史服务
+  participant R as reporting-service 报表服务
 
-  U->>G: Record payment
-  G->>P: Check commercial permission
-  P-->>G: Allowed
-  G->>C: RecordPayment(command, idempotencyKey)
-  C->>C: Validate amount and overpayment
-  C-->>H: PaymentRecorded event
-  C-->>R: PaymentRecorded event
-  C-->>G: Payment status
+  U->>G: Record payment 记录回款
+  G->>P: Check commercial permission 校验商务权限
+  P-->>G: Allowed 允许
+  G->>C: RecordPayment(command, idempotencyKey) 记录回款(命令,幂等key)
+  C->>C: Validate amount and overpayment 校验金额与超额支付
+  C-->>H: PaymentRecorded event 事件:回款已记录
+  C-->>R: PaymentRecorded event 事件:回款已记录
+  C-->>G: Payment status 回款状态
 
-  U->>G: Close opportunity Won
-  G->>P: Check opportunity close permission
-  P-->>G: Allowed
-  G->>O: CloseWon(command, idempotencyKey)
-  O->>C: GetPaymentStatusSummary
-  C-->>O: Paid / not paid
-  O->>O: Persist terminal Won if fully paid
-  O-->>H: OpportunityClosed event
-  O-->>R: OpportunityClosed event
-  O-->>G: Won result
-  G-->>U: Won state
+  U->>G: Close opportunity Won 关闭商机为赢单
+  G->>P: Check opportunity close permission 校验商机关闭权限
+  P-->>G: Allowed 允许
+  G->>O: CloseWon(command, idempotencyKey) 赢单关闭(命令,幂等key)
+  O->>C: GetPaymentStatusSummary 获取回款状态摘要
+  C-->>O: Paid / not paid 已全额/未全额
+  O->>O: Persist terminal Won if fully paid 全额则持久化终态"赢单"
+  O-->>H: OpportunityClosed event 事件:商机已关闭
+  O-->>R: OpportunityClosed event 事件:商机已关闭
+  O-->>G: Won result 赢单结果
+  G-->>U: Won state 赢单状态
 ```
 
 ## Import Sequence
 
 ```mermaid
 sequenceDiagram
-  participant U as Admin/Manager
-  participant G as gateway-bff
-  participant P as identity-authz-service
-  participant I as import-export-service
-  participant T as target domain service
-  participant H as audit-history-service
+  participant U as Admin/Manager 管理员/经理
+  participant G as gateway-bff 网关
+  participant P as identity-authz-service 身份鉴权服务
+  participant I as import-export-service 导入导出服务
+  participant T as target domain service 目标领域服务
+  participant H as audit-history-service 审计历史服务
 
-  U->>G: Start CSV import
-  G->>P: Check import permission
-  P-->>G: Allowed
-  G->>I: StartImport(file metadata)
-  I->>I: Parse and validate rows
-  loop each valid row
-    I->>T: Domain command with idempotency key
-    T-->>I: Success or safe row error
+  U->>G: Start CSV import 启动CSV导入
+  G->>P: Check import permission 校验导入权限
+  P-->>G: Allowed 允许
+  G->>I: StartImport(file metadata) 启动导入(文件元数据)
+  I->>I: Parse and validate rows 解析并逐行校验
+  loop each valid row 每个有效行
+    I->>T: Domain command with idempotency key 领域命令(带幂等key)
+    T-->>I: Success or safe row error 成功或安全的行级错误
   end
-  I-->>H: ImportRunCompleted event
-  I-->>G: Run result summary
-  G-->>U: Row-level import result
+  I-->>H: ImportRunCompleted event 事件:导入运行完成
+  I-->>G: Run result summary 运行结果摘要
+  G-->>U: Row-level import result 行级导入结果
 ```
 
 ## Archive Eligibility Sequence
 
 ```mermaid
 sequenceDiagram
-  participant G as gateway-bff
-  participant R as record-owning service
-  participant W as work-service
-  participant C as commercial-service
-  participant H as audit-history-service
+  participant G as gateway-bff 网关
+  participant R as record-owning service 记录所属服务
+  participant W as work-service 工作服务(活动/任务/提醒)
+  participant C as commercial-service 商务服务(报价/合同/回款)
+  participant H as audit-history-service 审计历史服务
 
-  G->>R: GetArchiveEligibility(recordId)
-  R->>W: Query active obligations
-  R->>C: Query commercial obligations
-  W-->>R: Open task/follow-up obligations
-  C-->>R: Pending signature/payment/quote obligations
-  alt obligations exist
-    R-->>G: ARCHIVE_BLOCKED with activeObligations[]
-    R-->>H: ArchiveBlocked event when required
-  else clear
-    G->>R: ArchiveRecord(expectedVersion, reason)
-    R-->>H: RecordArchived event
-    R-->>G: Archived result
+  G->>R: GetArchiveEligibility(recordId) 获取归档资格(记录ID)
+  R->>W: Query active obligations 查在途义务
+  R->>C: Query commercial obligations 查商务义务
+  W-->>R: Open task/follow-up obligations 在途任务/跟进义务
+  C-->>R: Pending signature/payment/quote obligations 待签署/回款/报价义务
+  alt obligations exist 存在义务
+    R-->>G: ARCHIVE_BLOCKED with activeObligations[] 归档被阻塞(含在途义务数组)
+    R-->>H: ArchiveBlocked event when required 必要时记录归档被阻塞事件
+  else clear 无义务
+    G->>R: ArchiveRecord(expectedVersion, reason) 归档记录(期望版本,原因)
+    R-->>H: RecordArchived event 事件:记录已归档
+    R-->>G: Archived result 归档结果
   end
 ```
 
@@ -176,7 +176,7 @@ Required recovery behavior:
 
 ## Import / Export Integration Scope
 
-V1 import/export target routing:
+Committed import/export target routing:
 
 | Object Type | Target Service | Mutation / Query Rule |
 |---|---|---|
@@ -210,7 +210,7 @@ tables directly.
 
 ## Event Delivery Strategy
 
-For v1, Architecture requires an outbox-equivalent reliable publication pattern
+For the committed release, Architecture requires an outbox-equivalent reliable publication pattern
 for P0/P1 events. The exact implementation may be:
 
 - database outbox table per producing service plus background dispatcher, or

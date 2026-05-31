@@ -1,12 +1,15 @@
-# CRM System Agent Entry
+# CRM System — Codex Entry (Execution)
 
-This project inherits workspace-level agent rules and standards.
+This project inherits workspace-level agent rules and standards. On Codex, this
+project is in the execution phase (G9–G11). Planning (G1–G8) and audit (G12) run
+on Claude — see `CLAUDE.md` and `../../company/collaboration-model.md`.
 
 ## Required Workspace Context
 
 Before working on this project, read:
 
 - `../../AGENTS.md`
+- `../../company/collaboration-model.md`
 - `../../company/operating-model.md`
 - `../../standards/acceptance-matrix-standard.md`
 - `../../standards/status-and-priority-standard.md`
@@ -27,13 +30,14 @@ Before doing project work, read:
 - `../../agents/ui-designer.md`
 - `../../agents/domain-modeling.md`
 - `../../agents/architecture.md`
-- `../../agents/infrastructure-ops.md`
 - `../../agents/security-compliance.md`
 - `../../agents/task-planner.md`
+- `../../agents/qa-test-design.md`
 - `../../agents/frontend-engineer.md`
 - `../../agents/backend-engineer.md`
-- `../../agents/qa-tdd.md`
+- `../../agents/qa-execution.md`
 - `../../agents/integration-owner.md`
+- `../../agents/infrastructure-ops.md`
 - `../../agents/audit.md`
 
 ## Editable Scope

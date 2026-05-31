@@ -69,7 +69,7 @@ Actors:
 - Administrator, Sales Manager, Sales
 
 Rule:
-- v1 does not allow hard deletion of core CRM records.
+- The system does not allow hard deletion of core CRM records.
 - Administrator and Sales Manager may archive eligible records.
 - Sales cannot archive records.
 
@@ -126,8 +126,8 @@ Rule:
 - Opportunity transitions must follow the PRD transition table.
 - Won requires full payment recorded.
 - Lost requires lost reason.
-- Won and Lost are terminal in v1.
-- Reopen is not allowed in v1.
+- Won and Lost are terminal in the committed scope.
+- Reopen is not allowed in the committed scope.
 
 Exception behavior:
 - Forbidden stage transitions are rejected without data mutation.
@@ -156,20 +156,20 @@ Rule:
 - Contract amount may differ from accepted quote amount only with a difference
   reason.
 
-Out of v1 P0/P1 scope:
+Out of committed P0/P1 scope:
 - Contract approval, electronic signature, and template generation.
 
 ### BR-008: Payment Amount And Status Rules
 
 Rule:
-- v1 uses one currency for quote, contract, and payment amounts.
+- The system uses one currency for quote, contract, and payment amounts.
 - Payment amount must be greater than zero.
 - Overpayment is blocked.
 - Partial payment is supported.
 - Overdue means due date passed and unpaid amount remains.
 - Full payment is required before opportunity Won.
 
-Out of v1 P0/P1 scope:
+Out of committed P0/P1 scope:
 - Multi-currency, tax, and discount automation.
 
 ### BR-009: Activity, Note, And Task Rules
@@ -204,12 +204,12 @@ Rule:
 - Warn on contact phone or email match.
 - Warn on lead company/contact match.
 - Warning does not block save.
-- No automatic merge or overwrite occurs in v1.
+- No automatic merge or overwrite occurs in the committed scope.
 
 ### BR-012: CSV Import/Export Rules
 
 Rule:
-- CSV is the only required import/export format for v1.
+- CSV is the only required import/export format for the committed release.
 - Import validates required fields row by row.
 - Invalid rows are reported with row-level errors.
 - Valid existing records must not be corrupted by failed rows.
@@ -250,7 +250,7 @@ Verification:
 ### BR-016: Archive Eligibility And Archived-Record Behavior
 
 Rule:
-- Eligible archive targets in v1 are Lead, Company/customer, Contact,
+- Eligible archive targets in the committed scope are Lead, Company/customer, Contact,
   Opportunity, Quote, Contract, Payment plan, Actual payment, Activity, Note,
   and Task.
 - Administrator can archive eligible records.
@@ -293,12 +293,12 @@ Exception behavior:
 ### BR-018: CSV Import/Export Object Scope
 
 Rule:
-- v1 CSV import/export minimum objects are Lead, Company/customer, Contact,
+- The committed CSV import/export minimum objects are Lead, Company/customer, Contact,
   Opportunity, Quote, Contract, Payment plan, Actual payment, Activity, Note,
   and Task.
 - Administrator may import/export governed records.
 - Sales Manager may import/export team records.
-- Sales cannot import/export in v1.
+- Sales cannot import/export in the committed scope.
 - Import validates each row against required fields, permissions, and related
   record references.
 - Invalid rows are reported with row-level errors and do not corrupt existing
@@ -329,7 +329,7 @@ Exception behavior:
 ### BR-020: Post-Close Editability
 
 Rule:
-- Won and Lost opportunities are terminal in v1.
+- Won and Lost opportunities are terminal in the committed scope.
 - After Won/Lost closure, opportunity stage/status and close data are not
   editable through normal Sales workflow.
 - Post-close notes and tasks may still be added through normal permissions.

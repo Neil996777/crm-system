@@ -10,7 +10,7 @@
 
 ## Deployment Target
 
-The v1 production runtime host is one Volcengine ECS server, with a second
+The committed production runtime host is one Volcengine ECS server, with a second
 Alibaba Cloud ECS server as the off-server backup target. Both assets are
 recorded in `company/infrastructure/server-inventory.md`.
 
@@ -55,7 +55,7 @@ empty host.
 
 ## Container Deployment
 
-Docker Compose manages the v1 runtime. Each service has:
+Docker Compose manages the committed runtime. Each service has:
 
 - independent image
 - independent environment configuration
@@ -117,7 +117,7 @@ Architecture selects this endpoint strategy for ACC-017:
 
 ## PostgreSQL Backup
 
-The v1 backup strategy is:
+The committed backup strategy is:
 
 - automatic PostgreSQL backup
 - local ECS backup directory
@@ -157,7 +157,7 @@ Backups stored only on the same ECS host as the database do not satisfy
 production release expectations. ECS disk loss, host compromise, or accidental
 deletion could affect database and backups together.
 
-Local backup remains part of v1 operations, but same-host-only backup is a
+Local backup remains part of the committed operations, but same-host-only backup is a
 release blocker. Acceptable production closure uses the defined encrypted
 off-server backup target `srv-aliyun-bj-01` (Alibaba Cloud, Beijing), plus
 restore rehearsal evidence. The Alibaba host already runs the Alibaba Cloud

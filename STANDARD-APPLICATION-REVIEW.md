@@ -193,11 +193,11 @@ test model 准备好后工作。
 
 需要补齐：
 
-- `docs/planning/tasks.md`
-- `docs/planning/task-dependencies.md`
-- `docs/planning/delivery-plan.md`
-- `docs/planning/acceptance-task-map.md`
-- `docs/planning/blockers.md`
+- `planning/tasks.md`
+- `planning/task-dependencies.md`
+- `planning/delivery-plan.md`
+- `planning/acceptance-task-map.md`
+- `planning/blockers.md`
 
 每个 service-backed 任务必须包含：
 

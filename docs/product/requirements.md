@@ -3,7 +3,7 @@
 ## Requirement Notes
 
 This accepted baseline captures the confirmed G1/G2 discussion for a production ToB CRM
-system. The v1 scope is team-based and must support a complete business loop:
+system. The committed scope is team-based and must support a complete business loop:
 lead, qualification, customer/company, contact, opportunity, quote, contract,
 payment, activity, task, and win/loss closure.
 
@@ -15,9 +15,9 @@ complete without the required evidence.
 
 | Priority | Meaning In This Project |
 |---|---|
-| P0 | Required for the v1 CRM to be valid and production-launchable. |
-| P1 | Required for the committed v1 release quality, but not the minimum existence of the CRM loop. |
-| P2 | Important enhancement planned after the core v1 loop unless promoted by the sponsor. |
+| P0 | Required for the CRM to be valid and production-launchable. |
+| P1 | Required for the committed release quality, but not the minimum existence of the CRM loop. |
+| P2 | Important enhancement planned after the committed core loop unless promoted by the sponsor. |
 | P3 | Future improvement or convenience capability. |
 
 ## Accepted Requirements
@@ -40,7 +40,7 @@ complete without the required evidence.
 | REQ-014 | P0 | Authorized team members must be able to review collaboration history, ownership changes, stage changes, and key business updates. | Sponsor discussion | Accepted as Architecture Input |
 | REQ-015 | P0 | Core CRM entities must provide list, detail, search, and basic filtering views. | Sponsor discussion | Accepted as Architecture Input |
 | REQ-016 | P0 | All core CRM data must be persisted and must survive refresh, logout/login, and service restart. | Workspace no-downgrade rule | Accepted as Architecture Input |
-| REQ-017 | P0 | The v1 system must be deployable to a production target with real configuration and real persisted data. | Sponsor discussion | Accepted as Architecture Input |
+| REQ-017 | P0 | The system must be deployable to a production target with real configuration and real persisted data. | Sponsor discussion | Accepted as Architecture Input |
 | REQ-018 | P1 | Sales Managers should have a team overview for leads, opportunities, quotes, contracts, payments, tasks, and pipeline status. | Product recommendation accepted by sponsor | Accepted as Architecture Input |
 | REQ-019 | P1 | The system should warn users about likely duplicate companies, contacts, or leads during creation or update. | Product recommendation accepted by sponsor | Accepted as Architecture Input |
 | REQ-020 | P1 | The system should support data import/export for core CRM records. | Product recommendation accepted by sponsor | Accepted as Architecture Input |

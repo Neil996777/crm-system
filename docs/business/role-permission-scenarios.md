@@ -12,7 +12,7 @@
 
 - Permission rules must identify actor, action, resource, condition, and
   expected result.
-- Sales Manager scope is all team records in v1.
+- Sales Manager scope is all team records in the committed scope.
 - Sales scope is owned/assigned records and related child records only.
 - Administrator and Sales Manager act as themselves; no silent acting on behalf
   of Sales users.
