@@ -4,7 +4,7 @@ Consolidated end-to-end traceability — the fourth MDA artifact (G6). One row p
 product acceptance item (ACC-001..023, all P0 and P1). Each cited ID is a real ID
 that exists in its source document; no ID is invented. The CIM/PIM/PSM/Contract/
 Service/ARCH-ACC chain reuses the already-audited PSM Traceability table
-(`docs/modeling/PSM.md`) verbatim and stays consistent with it. Left-column
+(`modeling/PSM.md`) verbatim and stays consistent with it. Left-column
 references (PRD/BR/UX/UI/Security/Architecture) were verified against their source
 docs. Task/Test/Audit are forward placeholders produced at later gates.
 
@@ -43,8 +43,8 @@ docs. Task/Test/Audit are forward placeholders produced at later gates.
 - Architecture ID — `docs/architecture/service-architecture-adr.md`
   (ADR-ARCH-001..005) and `docs/architecture/risk-register.md` (ARCH-RISK-001..014),
   cited per ACC via the audited `PSM.md` "Architecture Acceptance" Source column.
-- CIM-* — `docs/modeling/CIM.md`; PIM-* — `docs/modeling/PIM.md`; PSM-* /
-  ARCH-ACC-* — `docs/modeling/PSM.md` (reused from the audited PSM Traceability +
+- CIM-* — `modeling/CIM.md`; PIM-* — `modeling/PIM.md`; PSM-* /
+  ARCH-ACC-* — `modeling/PSM.md` (reused from the audited PSM Traceability +
   Architecture Acceptance tables).
 
 ## Matrix

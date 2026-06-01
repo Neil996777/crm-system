@@ -13,7 +13,7 @@
 
 ## Scope of the Gate
 
-The G6 MDA package consists of five artifacts under `docs/modeling/`:
+The G6 MDA package consists of five artifacts under `modeling/`:
 
 - `CIM.md` — Computation Independent Model (47 active business concepts + 24 processes; CIM-016 retired)
 - `PIM.md` — Platform Independent Model (domain objects, 10 active state machines + 1 retired, invariants, behaviors)

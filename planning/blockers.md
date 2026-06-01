@@ -29,9 +29,9 @@ audits. Each is a genuine upstream-source gap that MDA correctly declined to inv
 | BLK-003 | Second-quote-accept observable outcome is unspecified. The "at most one Accepted quote per opportunity" invariant is fixed, but EDGE-012 does not specify the observable business result of accepting a second quote (reject the second accept vs auto-demote the current Accepted quote). A product decision is required before deterministic test design. | Product Manager | G7 test design / G8 handoff | ACC-009 (P0) | Resolved — Formal Scope Change by User (DEC-018) | 2026-06-01 |
 
 ### Source pointers
-- BLK-001: `docs/modeling/CIM.md` CIM-016; `docs/modeling/PIM.md` PIM-SM-003, PIM-OPEN-003; `docs/product/acceptance-matrix.md` ACC-007; PRD-007.
-- BLK-002: `docs/modeling/PIM.md` PIM-SM-006, PIM-INV-007/023/025, PIM-OPEN-005; `docs/business/business-rules.md` BR-008; `docs/product/decision-log.md` DEC-012; `docs/business/edge-cases.md` EDGE-019.
-- BLK-003: `docs/modeling/CIM.md` CIM-PROC-008 Open/Blocked; `docs/modeling/PIM.md` PIM-SM-004, PIM-OPEN-001; `docs/business/edge-cases.md` EDGE-012; ACC-009.
+- BLK-001: `modeling/CIM.md` CIM-016; `modeling/PIM.md` PIM-SM-003, PIM-OPEN-003; `docs/product/acceptance-matrix.md` ACC-007; PRD-007.
+- BLK-002: `modeling/PIM.md` PIM-SM-006, PIM-INV-007/023/025, PIM-OPEN-005; `docs/business/business-rules.md` BR-008; `docs/product/decision-log.md` DEC-012; `docs/business/edge-cases.md` EDGE-019.
+- BLK-003: `modeling/CIM.md` CIM-PROC-008 Open/Blocked; `modeling/PIM.md` PIM-SM-004, PIM-OPEN-001; `docs/business/edge-cases.md` EDGE-012; ACC-009.
 
 ## Architecture / PSM-deferred (not PM/BA blockers; tracked for G7/PSM)
 

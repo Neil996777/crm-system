@@ -16,20 +16,21 @@
 审计或发布权威。本报告不写实现代码，不决定最终服务拆分，不修改
 P0/P1 等级或完成标准。
 
-## 2. 当前 Gate 状态
+## 2. 当前 Gate 状态（更新于 2026-06-01）
 
-- 当前阶段：Architecture Reset
-- 当前 Gate：G5 Architecture Design Required
-- G5 状态：未通过，等待新架构设计
-- G6/G7/G8 状态：不可进入
+- 当前阶段：G6 已通过，进入 G7 任务规划
+- G5 Architecture Design：Gate Passed（2026-05-30）
+- G6 MDA Modeling：Gate Passed（2026-06-01，六角色会签；
+  `archive/reviews/g6-mda/g6-mda-gate-decision-2026-06-01.md`）
+- 当前 Gate：G7 Task Planning（Domain Modeling + QA Test Design）
+- G8 状态：未进入
 - 实现状态：Blocked，G8 通过前不得实现
 
-当前项目已保留产品、业务、UX/UI、安全输入，但旧架构、旧 MDA、旧任务、
-旧实现、旧测试、旧部署、旧 QA/集成/审计材料均已废弃。
-
-公司标准已要求正式项目默认采用微服务导向治理，最低要求是
-service-boundary-first。当前 CRM 尚未补齐服务治理链路，因此不能进入
-MDA、任务规划或实现。
+历史（2026-05-29 重置）：项目曾保留产品、业务、UX/UI、安全输入并废弃旧架构/
+MDA/任务/实现/测试/部署/QA-集成-审计材料。此后已**重建并通过** G5 架构
+(service-boundary-first，SVC-001..010) 与 G6 MDA 包（`modeling/`：CIM/PIM/PSM/
+traceability-matrix/test-model），服务治理链路已补齐。下方各"补齐项/GAP"按
+2026-06-01 进度核对。
 
 ## 3. Agent 后续补齐项
 
@@ -193,11 +194,14 @@ test model 准备好后工作。
 
 需要补齐：
 
-- `planning/tasks.md`
-- `planning/task-dependencies.md`
-- `planning/delivery-plan.md`
-- `planning/acceptance-task-map.md`
-- `planning/blockers.md`
+- `delivery/tasks.md`
+- `delivery/task-dependencies.md`
+- `delivery/delivery-plan.md`
+- `delivery/acceptance-task-map.md`
+- `planning/blockers.md` （治理，已存在于 `planning/`）
+
+> 2026-06-01 决定：执行类任务产物放顶层 `delivery/`（与 `docs/` 设计、`modeling/`
+> MDA、`planning/` 治理、`process/` 过程分离）；`blockers.md` 属治理，留在 `planning/`。
 
 每个 service-backed 任务必须包含：
 
@@ -318,6 +322,16 @@ test model 准备好后工作。
 | GAP-G8-014 | P1 | 基础设施环境需求、server/database/domain/port/backup/monitoring ownership 记录缺失 | OQ-001 未关闭 | infrastructure-ops, architecture |
 | GAP-G8-015 | P1 | OQ-016 初始数据/迁移需求未定 | Open | product-manager, business-analyst |
 | GAP-G8-016 | P0 | project `AGENTS.md` 未列出 infrastructure-ops，但当前标准要求该 agent 参与基础设施审查 | 项目入口不完整 | audit / project maintainer |
+
+> **GAP 状态更新（2026-06-01）**：上表为 2026-05-29 重置期快照。随 G5（2026-05-30）
+> 与 G6（2026-06-01）通过，以下已解决：
+> - GAP-G8-007（服务信任边界/S2S 权限）— `docs/security/service-boundary-security.md`，G5 通过。
+> - GAP-G8-008 / 部分 GAP-G8-014（OQ-001 生产部署目标）— `docs/architecture/deployment-notes.md` 已定；剩余为发布期证据（备份/恢复、TLS、安全组、监控），G11/G12 验证。
+> - GAP-G8-009（架构文档）— `docs/architecture/` 已建，G5 通过。
+> - GAP-G8-010（MDA/PSM/service mapping/traceability）— `modeling/` 已建（CIM/PIM/PSM/traceability-matrix），G6 通过。
+> - GAP-G8-011（test model）— `modeling/test-model.md`，G6 通过。
+>
+> 仍 Open：GAP-G8-012（task plan，G7 产出，落 `delivery/`）、GAP-G8-013（集成证据计划，G7/G8）、GAP-G8-015（OQ-016 初始数据/迁移，发布规划）、GAP-G8-016（`AGENTS.md` 列入 infrastructure-ops）。
 
 ## 5. 建议的下一步执行顺序
 

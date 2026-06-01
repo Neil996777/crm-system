@@ -87,12 +87,13 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
 - Project-layer strengthening (`process/process-gap-register.md`):
   Infrastructure Ops is a required reviewer at G5/G8/G11/G12; every CRM
   cross-capability flow must name a `Primary Flow Owner Agent`.
-- OPEN (decide at G8): where the G8 task/delivery artifacts live —
-  `tasks.md`, `task-dependencies.md`, `delivery-plan.md`,
-  `acceptance-task-map.md`, `blockers.md`. On 2026-05-31, `planning/` and
-  `process/` were moved out of `docs/` (design-only). `STANDARD-APPLICATION-REVIEW.md`
-  currently lists these task files under `planning/`. The discarded 2026-05-29
-  G8 cycle had placed them in a top-level `delivery/` folder (referenced only in
-  `archive/reviews/g8-task-planning/`; that folder no longer exists). Decide then
-  whether G8 rebuilds them under `planning/` or a new `delivery/`, keeping
-  governance (gate-status, blockers) separate from execution artifacts.
+- DECIDED (2026-06-01) — repository layout, separating concerns:
+  - `docs/` = design only (product, business, ux-ui, security, architecture).
+  - `modeling/` = the MDA package (CIM/PIM/PSM/traceability-matrix/test-model),
+    moved out of `docs/` on 2026-06-01 so modeling is not mixed with design.
+  - `planning/` = gate governance only (`gate-status.md`, `blockers.md`).
+  - `delivery/` = G7/G8 execution artifacts (`tasks.md`, `task-dependencies.md`,
+    `delivery-plan.md`, `acceptance-task-map.md`) — to be created at G7/G8.
+  - `process/` = process register.
+  This keeps governance (gate-status, blockers) separate from execution artifacts.
+  `STANDARD-APPLICATION-REVIEW.md` updated to list the task files under `delivery/`.
