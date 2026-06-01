@@ -20,10 +20,10 @@
 | EDGE-006 | P0 | Converted lead is converted again | Conversion rejected | ACC-004 | Accepted as Architecture Input |
 | EDGE-007 | P0 | Contact save without related company/customer | Save blocked | ACC-006 | Accepted as Architecture Input |
 | EDGE-008 | P0 | Opportunity moves through forbidden transition | Transition rejected; no data mutation | ACC-008 | Accepted as Architecture Input |
-| EDGE-009 | P0 | Opportunity is marked Won without full payment | Won closure rejected | ACC-013 | Accepted as Architecture Input |
+| EDGE-009 | P0 | Opportunity is marked Won without a Signed contract | Won closure rejected | ACC-013 | Accepted as Architecture Input — amended 2026-06-01 (DEC-017): Won precondition is a Signed contract, not full payment |
 | EDGE-010 | P0 | Opportunity is marked Lost without lost reason | Lost closure rejected | ACC-013 | Accepted as Architecture Input |
 | EDGE-011 | P0 | Won or Lost opportunity is reopened | Reopen rejected in the committed scope | ACC-008, ACC-013 | Accepted as Architecture Input |
-| EDGE-012 | P0 | Multiple quotes are accepted for same opportunity | System prevents multiple Accepted quotes from remaining active | ACC-009 | Accepted as Architecture Input |
+| EDGE-012 | P0 | A second quote is created for an opportunity that already has one | Blocked — each opportunity has exactly one quote | ACC-009 | Accepted as Architecture Input — amended 2026-06-01 (DEC-018): one quote per opportunity; previous multiple-Accepted scenario no longer applies |
 | EDGE-013 | P0 | Expired quote is linked to new contract | Link rejected | ACC-009, ACC-010 | Accepted as Architecture Input |
 | EDGE-014 | P0 | Pending Signature contract lacks expected signed date | Save rejected | ACC-010, ACC-021 | Accepted as Architecture Input |
 | EDGE-015 | P0 | Pending Signature contract lacks signed/effective date | Save allowed if other required fields exist | ACC-010 | Accepted as Architecture Input |
@@ -47,7 +47,7 @@
 | EDGE-033 | P1 | Duplicate company name differs only by case or leading/trailing spaces | Duplicate warning shown | ACC-019 | Accepted as Architecture Input |
 | EDGE-034 | P1 | Duplicate contact phone differs only by spaces, hyphens, or parentheses | Duplicate warning shown | ACC-019 | Accepted as Architecture Input |
 | EDGE-035 | P1 | Duplicate contact email differs only by case or leading/trailing spaces | Duplicate warning shown | ACC-019 | Accepted as Architecture Input |
-| EDGE-036 | P0 | User tries to edit opportunity stage/status after Won or Lost | Edit rejected; only notes/tasks may be added through normal permissions | ACC-008, ACC-013, ACC-014 | Accepted as Architecture Input |
+| EDGE-036 | P0 | User tries to edit opportunity stage after Won or Lost | Edit rejected; only notes/tasks may be added through normal permissions | ACC-008, ACC-013, ACC-014 | Accepted as Architecture Input — amended 2026-06-01 (DEC-020): `status` removed |
 | EDGE-037 | P1 | Reminder due date is evaluated around local date boundary | Workspace business date is used; deployment timezone detail remains Architecture input | ACC-021 | Accepted as Architecture Input |
 
 ## G4 Blocking Edge Cases

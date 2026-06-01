@@ -72,7 +72,7 @@ The final matrix belongs to Architecture and PSM. These inputs must be preserved
 |---|---|---|---|
 | SVC-CAND-QUERY-EXPERIENCE | Record-owning candidates | Authorized list/detail/search/filter views | Actor context, scope check, archived filter rule, safe error. |
 | SVC-CAND-LEAD | SVC-CAND-ACCOUNT / SVC-CAND-OPPORTUNITY | Lead conversion to customer/contact/opportunity context | Conversion-once guard, permission check, transactional or reliable consistency strategy, history event. |
-| SVC-CAND-COMMERCIAL | SVC-CAND-OPPORTUNITY | Payment status and Won eligibility | Full-payment verification, no direct unauthorized data access, correlation ID. |
+| SVC-CAND-COMMERCIAL | SVC-CAND-OPPORTUNITY | Contract status (Signed) and Won eligibility | Signed-contract verification, no direct unauthorized data access, correlation ID. |
 | SVC-CAND-WORK | Record-owning candidates | Reminder related-record display and eligibility | Scope check, inactive record exclusion, safe related record summary. |
 | SVC-CAND-REPORTING | Record-owning candidates | Authorized metrics and overview | Authorization before aggregation, no unauthorized rows or aggregates. |
 | SVC-CAND-IMPORT-EXPORT | Record-owning candidates | Import/export rows through normal business rules | Authorization per scope, row validation, safe row errors, operation log. |

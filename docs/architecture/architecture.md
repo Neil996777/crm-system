@@ -201,7 +201,7 @@ interaction. Dotted arrows are not database access.
 | ARCH-FLOW-001 | Sign in and protected work | gateway-bff, identity-authz-service | target service, audit-history-service | ACC-001, ACC-002, ACC-022 | See sequence below. |
 | ARCH-FLOW-002 | Lead to opportunity | lead-service, account-service, opportunity-service | gateway-bff, identity-authz-service, audit-history-service, reporting-service | ACC-003 to ACC-007, ACC-014, ACC-019 | See sequence below. |
 | ARCH-FLOW-003 | Opportunity to quote and contract | opportunity-service, commercial-service | identity-authz-service, audit-history-service, reporting-service | ACC-007 to ACC-010, ACC-014 | See sequence below. |
-| ARCH-FLOW-004 | Payment to Won | commercial-service, opportunity-service | identity-authz-service, audit-history-service, reporting-service | ACC-011, ACC-013, ACC-014 | See sequence below. |
+| ARCH-FLOW-004 | Contract signing to Won (payment tracked post-sale) | commercial-service, opportunity-service | identity-authz-service, audit-history-service, reporting-service | ACC-010, ACC-013, ACC-014 | Won fires on contract Signed (DEC-017); payment decoupled (DEC-019). See sequence below. |
 | ARCH-FLOW-005 | Work reminders | work-service, commercial-service | record-owning services, identity-authz-service | ACC-012, ACC-021 | See sequence below. |
 | ARCH-FLOW-006 | Import/export | import-export-service, target domain services | identity-authz-service, audit-history-service | ACC-016, ACC-020, ACC-022 | See sequence below. |
 | ARCH-FLOW-007 | Reports and overview | reporting-service | source service events/APIs, identity-authz-service | ACC-018, ACC-023 | See sequence below. |
@@ -306,7 +306,10 @@ sequenceDiagram
   C-->>G: Contract result 合同结果
 ```
 
-## Sequence: Payment To Won
+## Sequence: Contract Signing To Won (payment tracked post-sale)
+
+Won fires when the related contract is Signed (DEC-017). Payment recording is a
+separate post-sale flow (decoupled from Won, DEC-019) and does not gate closure.
 
 ```mermaid
 sequenceDiagram
@@ -318,22 +321,22 @@ sequenceDiagram
   participant H as audit-history-service 审计历史服务
   participant R as reporting-service 报表服务
 
-  U->>G: Record payment 记录回款
+  U->>G: Sign contract 签订合同
   G->>P: Check commercial permission 校验商务权限
   P-->>G: Allowed 允许
-  G->>C: RecordPayment(command, idempotencyKey) 记录回款(命令,幂等key)
-  C->>C: Validate amount and overpayment 校验金额与超额支付
-  C-->>H: PaymentRecorded event 事件:回款已记录
-  C-->>R: PaymentRecorded event 事件:回款已记录
-  C-->>G: Payment status 回款状态
+  G->>C: SignContract(command, expectedVersion) 签约(命令)
+  C->>C: Validate signed/effective date 校验签署/生效日期
+  C-->>H: ContractStatusChanged(Signed) event 事件:合同已签
+  C-->>O: ContractSigned summary/event 合同已签摘要/事件
+  C-->>G: Contract result 合同结果
 
   U->>G: Close opportunity Won 关闭商机为赢单
   G->>P: Check opportunity close permission 校验商机关闭权限
   P-->>G: Allowed 允许
   G->>O: CloseWon(command, idempotencyKey) 赢单关闭(命令,幂等key)
-  O->>C: GetPaymentStatusSummary 获取回款状态摘要
-  C-->>O: Paid / not paid 已全额/未全额
-  O->>O: Persist terminal Won if fully paid 全额则持久化终态"赢单"
+  O->>C: GetContractStatusSummary 获取合同状态摘要
+  C-->>O: Signed / not signed 已签/未签
+  O->>O: Persist terminal Won if related contract Signed 合同已签则持久化终态"赢单"
   O-->>H: OpportunityClosed event 事件:商机已关闭
   O-->>R: OpportunityClosed event 事件:商机已关闭
   O-->>G: Won result 赢单结果

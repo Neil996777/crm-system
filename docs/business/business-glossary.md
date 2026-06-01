@@ -21,9 +21,9 @@
 | Invalid Lead | Lead marked not suitable with invalid reason. | PRD-004 | Cannot convert unless restored |
 | Company / Customer | ToB account or organization record used for contacts, opportunities, quotes, contracts, and payments. | PRD-005 | The system uses company/customer concept together |
 | Contact | Person or role linked under a company/customer. | PRD-006 | Requires contact name and contact method or role note |
-| Opportunity | Sales deal record linked to customer, owner, expected amount, expected close date, stage, and status. | PRD-007 | Moves through the sales pipeline |
+| Opportunity | Sales deal record linked to customer, owner, expected amount, expected close date, and stage. | PRD-007 | Moves through the sales pipeline; `status` removed 2026-06-01 (DEC-020) |
 | Pipeline Stage | Business state describing opportunity progress. | PRD-008 | Includes terminal Won/Lost states |
-| Quote | Commercial offer linked to opportunity and customer. | PRD-009 | Multiple quotes allowed; one Accepted quote per opportunity |
+| Quote | Commercial offer linked to opportunity and customer. | PRD-009 | Exactly one quote per opportunity (DEC-018); records the result, not negotiation |
 | Accepted Quote | Quote selected for contract linkage. | PRD-009 | Contract can link only to Accepted quote |
 | Expired Quote | Quote whose validity end date has passed. | PRD-009 | Cannot link to new contract |
 | Contract | Record-based contract object linked to customer, opportunity, and Accepted quote. | PRD-010 | Contract note is P0 required |
@@ -56,6 +56,6 @@
 | Due Amount | Amount expected by a payment plan. | PRD-011, PRD-023 | Used for payment plan reporting |
 | Paid Amount | Actual amount recorded as payment. | PRD-011, PRD-023 | Used for actual payment reporting |
 | Business Date | Workspace local date used for due/overdue reminder evaluation until Architecture defines timezone handling. | PRD-021 | Deployment timezone is Architecture input |
-| Won | Terminal opportunity state after full payment is recorded. | PRD-013 | Cannot reopen in the committed scope |
+| Won | Terminal opportunity state reached when the related contract is Signed. | PRD-013 | Cannot reopen; full-payment gate removed 2026-06-01 (DEC-017) |
 | Lost | Terminal opportunity state requiring lost reason. | PRD-013 | Cannot reopen in the committed scope |
 | No-Downgrade Rule | Governance rule that P0/P1 items cannot be downgraded, deleted, weakened, merged away, or accepted as partial work. | Project rules | Applies to all downstream artifacts |

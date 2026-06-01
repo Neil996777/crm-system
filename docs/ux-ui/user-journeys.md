@@ -109,7 +109,7 @@ Journey:
 Required states:
 - Forbidden stage transition blocked with reason.
 - Expired quote cannot be linked to new contract.
-- Only one Accepted quote remains per opportunity.
+- Each opportunity has exactly one quote (DEC-018).
 - Contract amount mismatch requires reason.
 - Pending Signature does not require signed/effective date.
 
@@ -128,13 +128,13 @@ Journey:
 1. Sales creates payment plan on contract.
 2. Sales records actual payment.
 3. UX shows unpaid, partially paid, paid, or overdue status.
-4. Sales attempts Won closure only after full payment.
+4. Sales attempts Won closure once the related contract is Signed (DEC-017).
 5. Sales closes as Lost with lost reason when applicable.
 6. UX confirms terminal closure and preserves history.
 
 Required states:
 - Zero, negative, or overpayment amount blocked.
-- Won blocked before full payment.
+- Won blocked without a Signed contract (DEC-017).
 - Lost requires reason.
 - Won/Lost cannot be reopened.
 

@@ -75,15 +75,15 @@
 ### Success
 
 - Success feedback must identify the saved or changed record.
-- Stage/status/payment updates must refresh visible status.
+- Stage/payment updates must refresh visible state (DEC-020).
 - History-relevant changes should expose a path to record-local history.
 
 ### Disabled Or Blocked
 
 - Disabled actions should explain missing required data or permission where
   safe.
-- Blocked business transitions must state the business reason, such as full
-  payment required before Won.
+- Blocked business transitions must state the business reason, such as a Signed
+  contract required before Won (DEC-017).
 - Archive blocked by active obligations must list related obligations and
   provide entry points.
 

@@ -27,9 +27,9 @@
 | IX-004 | P0 | Qualify lead | Select Valid or Invalid | Status confirmation and history update | Invalid requires reason; Unassigned Sales action denied | ACC-004 |
 | IX-005 | P0 | Convert lead | Select convert action | Customer/contact/opportunity flow opens | Invalid or converted lead blocked with reason | ACC-004, ACC-007 |
 | IX-006 | P0 | Change opportunity stage | Select stage action | Stage change confirmation and history update | Forbidden transition shows reason and required data | ACC-008, ACC-014 |
-| IX-007 | P0 | Close opportunity Won | Select Won | Confirmation, then terminal Won state | Blocked until full payment recorded | ACC-013 |
+| IX-007 | P0 | Close opportunity Won | Select Won | Confirmation, then terminal Won state | Blocked until the related contract is Signed (DEC-017) | ACC-013 |
 | IX-008 | P0 | Close opportunity Lost | Select Lost | Lost reason prompt, confirmation, terminal Lost state | Lost reason required | ACC-013 |
-| IX-009 | P0 | Accept quote | Select Accept | Accepted quote indicator | Prevents multiple Accepted quotes for same opportunity | ACC-009 |
+| IX-009 | P0 | Accept quote | Select Accept | Accepted quote indicator | Each opportunity has exactly one quote (DEC-018) | ACC-009 |
 | IX-010 | P0 | Create contract | Select Accepted quote | Contract form opens with quote/customer/opportunity context | Expired quote blocked; amount mismatch needs reason | ACC-010 |
 | IX-011 | P0 | Sign contract | Change to Signed | Signed/effective date prompt and confirmation | Missing signed/effective date blocks transition | ACC-010 |
 | IX-012 | P0 | Record payment | Submit payment | Payment status updates | Zero, negative, or overpayment blocked | ACC-011 |

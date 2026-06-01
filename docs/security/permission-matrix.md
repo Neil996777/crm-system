@@ -48,7 +48,7 @@
 | PM-015 | P0 | Sales | Assign/transfer | Lead or parent record | Any condition | Deny | Denied mutation creates no owner change. | ACC-002, ACC-003 |
 | PM-016 | P0 | Sales | Create/view/edit | Company/customer or contact | Related to owned/assigned record or created by user in allowed workflow | Allow | Record-local history for mutations. | ACC-005, ACC-006, ACC-014 |
 | PM-017 | P0 | Sales | View/edit | Company/customer or contact | No owned/assigned relation | Deny | No existence or sensitive value exposure. | ACC-002, ACC-005, ACC-006 |
-| PM-018 | P0 | Sales | Create/view/edit/change stage/close | Opportunity | Owned/assigned opportunity and business rules pass | Allow | Record-local history for stage/status/closure. | ACC-007, ACC-008, ACC-013, ACC-014 |
+| PM-018 | P0 | Sales | Create/view/edit/change stage/close | Opportunity | Owned/assigned opportunity and business rules pass | Allow | Record-local history for stage/closure. | ACC-007, ACC-008, ACC-013, ACC-014 |
 | PM-019 | P0 | Sales | View/edit/change stage/close | Opportunity | Non-owned/non-assigned opportunity | Deny | No mutation or restricted data exposure. | ACC-002, ACC-007, ACC-008 |
 | PM-020 | P0 | Sales | Create/view/edit/status change | Quote | Related opportunity is owned/assigned and quote rules pass | Allow | Record-local history and operation log for accepted quote. | ACC-009, ACC-014, ACC-022 |
 | PM-021 | P0 | Sales | Create/view/edit/status change | Contract | Related opportunity/contract is owned/assigned and contract rules pass | Allow | Record-local history and operation log for signature, termination, status changes. | ACC-010, ACC-014, ACC-022 |

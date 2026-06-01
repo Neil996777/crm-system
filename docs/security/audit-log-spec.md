@@ -75,14 +75,14 @@ factors must never be stored in audit events.
 | EVT-LEAD-CONVERTED | P0 | Record-local history | Lead converted to customer/opportunity context | Sales or Sales Manager | Lead | related customer/opportunity ids | ACC-004, ACC-005, ACC-007, ACC-014 |
 | EVT-STAGE-CHANGED | P0 | Record-local history and operation log where applicable | Opportunity stage changes | Sales or Sales Manager | Opportunity | old/new stage, required data summary | ACC-008, ACC-014, ACC-022 |
 | EVT-STATUS-CHANGED | P0 | Record-local history and operation log where applicable | Status changes on quote, contract, payment, task, or other CRM record | Authorized user or system | CRM record | old/new status, result | ACC-009 to ACC-014, ACC-022 |
-| EVT-QUOTE-ACCEPTED | P0/P1 | Record-local history and operation log | Quote accepted | Sales or Sales Manager | Quote | opportunity, quote id, prior accepted quote handling | ACC-009, ACC-014, ACC-022 |
+| EVT-QUOTE-ACCEPTED | P0/P1 | Record-local history and operation log | Quote accepted | Sales or Sales Manager | Quote | opportunity, quote id | ACC-009, ACC-014, ACC-022 |
 | EVT-CONTRACT-SIGNED | P0/P1 | Record-local history and operation log | Contract becomes Signed | Sales or Sales Manager | Contract | signed/effective date, amount summary | ACC-010, ACC-014, ACC-022 |
 | EVT-CONTRACT-TERMINATED | P0/P1 | Record-local history and operation log | Contract terminated | Sales Manager or Administrator | Contract | termination reason | ACC-010, ACC-014, ACC-022 |
 | EVT-PAYMENT-RECORDED | P0/P1 | Record-local history and operation log | Actual payment recorded | Sales or Sales Manager | Payment | amount summary, contract id, status result | ACC-011, ACC-014, ACC-022 |
 | EVT-PAYMENT-OVERDUE | P0/P1 | Record-local history and operation log where applicable | Payment becomes overdue | System or authorized user | Payment | due date, unpaid summary | ACC-011, ACC-021, ACC-022 |
 | EVT-TASK-COMPLETED | P0 | Record-local history | Task completed | Task owner, Sales Manager, Administrator | Task | completion timestamp | ACC-012, ACC-014 |
 | EVT-TASK-CANCELLED | P0 | Record-local history | Task cancelled | Task owner, Sales Manager, Administrator | Task | cancellation reason | ACC-012, ACC-014 |
-| EVT-OPPORTUNITY-WON | P0 | Record-local history and operation log where applicable | Opportunity closed Won | Sales or Sales Manager | Opportunity | full payment evidence summary | ACC-013, ACC-014, ACC-022 |
+| EVT-OPPORTUNITY-WON | P0 | Record-local history and operation log where applicable | Opportunity closed Won | Sales or Sales Manager | Opportunity | closure evidence summary (related contract Signed) | ACC-013, ACC-014, ACC-022 |
 | EVT-OPPORTUNITY-LOST | P0 | Record-local history and operation log where applicable | Opportunity closed Lost | Sales or Sales Manager | Opportunity | lost reason | ACC-013, ACC-014, ACC-022 |
 | EVT-RECORD-ARCHIVED | P0/P1 | Record-local history and operation log | Eligible record archived | Administrator or Sales Manager | CRM record | archive target, downstream obligation result | ACC-002, ACC-014, ACC-022 |
 | EVT-IMPORT-RUN | P1 | Admin/global operation log | CSV import run completes or fails | Administrator or Sales Manager | Import | object type, scope, total rows, success count, failure count, result | ACC-020, ACC-022 |

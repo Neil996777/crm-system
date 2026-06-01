@@ -355,7 +355,7 @@ Purpose:
 - Manage sales pipeline and closure.
 
 Layout:
-- Opportunity header with stage, status, expected amount, expected close date.
+- Opportunity header with stage, expected amount, expected close date (DEC-020: no separate Status field).
 - Stage path or stepper.
 - Required next data panel.
 - Related quote, contract, payment, task, and history sections.
@@ -370,7 +370,7 @@ Components:
 States:
 - Forbidden transition.
 - Missing required data.
-- Won blocked until full payment.
+- Won blocked until the related contract is Signed (DEC-017).
 - Lost reason required.
 - Terminal Won/Lost.
 
@@ -446,7 +446,7 @@ States:
 - Unpaid, Partially Paid, Paid, Overdue.
 - Zero/negative amount blocked.
 - Overpayment blocked.
-- Full payment unlocks Won path.
+- Payment tracking is post-sale; it does not gate Won (DEC-019).
 
 ### UI-011: Reminder Center
 

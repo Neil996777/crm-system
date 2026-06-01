@@ -102,7 +102,7 @@ Screen path:
 
 Error path:
 - Forbidden transition -> blocked stage message.
-- Won before full payment -> payment requirement message.
+- Won without a Signed contract -> blocked close with Signed-contract requirement message (DEC-017).
 - Lost without reason -> close reason required.
 
 Exit:
@@ -120,7 +120,7 @@ Screen path:
 
 Error path:
 - Expired quote selected -> blocked contract action.
-- Accepted quote conflict -> accepted quote resolution message.
+- Each opportunity has exactly one quote (DEC-018).
 - Missing expected signed date -> contract form error.
 - Amount mismatch -> difference reason required.
 
@@ -140,7 +140,7 @@ Screen path:
 Error path:
 - Invalid payment amount -> payment form error.
 - Overpayment -> blocked payment with remaining amount context.
-- Won before full payment -> blocked close.
+- Won without a Signed contract -> blocked close (DEC-017).
 
 Exit:
 - Opportunity Detail in Won or Lost state.

@@ -31,7 +31,7 @@ All cross-service interactions must include:
 | INT-FLOW-001 | Sign in and protected work | backend-engineer | gateway-bff, identity-authz-service, target service, audit-history-service | auth/session, permission check | UserSignedIn, UserAccessDenied | Deny safely; no target mutation. | Required |
 | INT-FLOW-002 | Lead to opportunity | backend-engineer | gateway-bff, identity-authz-service, lead-service, account-service, opportunity-service, audit-history-service, reporting-service | permission, create/link account/contact, create opportunity | LeadConverted, OpportunityCreated | Idempotent conversion; converted lead cannot convert again; failed downstream call leaves no false success. | Required |
 | INT-FLOW-003 | Opportunity to quote/contract | backend-engineer | opportunity-service, commercial-service, audit-history-service, reporting-service | opportunity summary, commercial commands | QuoteAccepted, ContractStatusChanged | Reject invalid links; maintain history on successful mutation. | Required |
-| INT-FLOW-004 | Payment to Won | backend-engineer | commercial-service, opportunity-service, audit-history-service, reporting-service | payment status verification | PaymentRecorded, OpportunityClosed | Overpayment/early Won rejected; retry safe by idempotency key. | Required |
+| INT-FLOW-004 | Contract signing to Won (payment tracked post-sale) | backend-engineer | commercial-service, opportunity-service, audit-history-service, reporting-service | contract signed verification | ContractStatusChanged(Signed), OpportunityClosed | Won requires Signed contract (DEC-017); payment decoupled (DEC-019), overpayment still rejected on payment; early Won rejected; retry safe by idempotency key. | Required |
 | INT-FLOW-005 | Work reminders | backend-engineer | work-service, commercial-service, opportunity-service, account-service, audit-history-service | related record summary/eligibility | TaskStatusChanged, PaymentOverdue, ContractStatusChanged | Hide unauthorized/inactive records; stale reminder refresh. | Required |
 | INT-FLOW-006 | Record history and operation logs | backend-engineer | source services, audit-history-service | append/query log APIs where needed | OperationLogAppended, HistoryEventAppended | Source operation must define behavior if audit append fails. P0 sensitive mutations require reliable history path. | Required |
 | INT-FLOW-007 | Reports and overview | backend-engineer | source services, reporting-service, identity-authz-service | report query, optional projection rebuild | source domain events, ReportProjectionUpdated | Rebuild projection from approved contracts if projection stale. | Required |
@@ -73,7 +73,10 @@ sequenceDiagram
   G-->>U: Converted lead and opportunity link 已转换线索与商机关联
 ```
 
-## Payment To Won Sequence
+## Contract Signing To Won Sequence (payment tracked post-sale)
+
+Won fires when the related contract is Signed (DEC-017). Payment recording is a
+separate post-sale flow (decoupled from Won, DEC-019) and does not gate closure.
 
 ```mermaid
 sequenceDiagram
@@ -85,22 +88,22 @@ sequenceDiagram
   participant H as audit-history-service 审计历史服务
   participant R as reporting-service 报表服务
 
-  U->>G: Record payment 记录回款
+  U->>G: Sign contract 签订合同
   G->>P: Check commercial permission 校验商务权限
   P-->>G: Allowed 允许
-  G->>C: RecordPayment(command, idempotencyKey) 记录回款(命令,幂等key)
-  C->>C: Validate amount and overpayment 校验金额与超额支付
-  C-->>H: PaymentRecorded event 事件:回款已记录
-  C-->>R: PaymentRecorded event 事件:回款已记录
-  C-->>G: Payment status 回款状态
+  G->>C: SignContract(command, expectedVersion) 签约(命令)
+  C->>C: Validate signed/effective date 校验签署/生效日期
+  C-->>H: ContractStatusChanged(Signed) event 事件:合同已签
+  C-->>O: ContractSigned summary/event 合同已签摘要/事件
+  C-->>G: Contract result 合同结果
 
   U->>G: Close opportunity Won 关闭商机为赢单
   G->>P: Check opportunity close permission 校验商机关闭权限
   P-->>G: Allowed 允许
   G->>O: CloseWon(command, idempotencyKey) 赢单关闭(命令,幂等key)
-  O->>C: GetPaymentStatusSummary 获取回款状态摘要
-  C-->>O: Paid / not paid 已全额/未全额
-  O->>O: Persist terminal Won if fully paid 全额则持久化终态"赢单"
+  O->>C: GetContractStatusSummary 获取合同状态摘要
+  C-->>O: Signed / not signed 已签/未签
+  O->>O: Persist terminal Won if related contract Signed 合同已签则持久化终态"赢单"
   O-->>H: OpportunityClosed event 事件:商机已关闭
   O-->>R: OpportunityClosed event 事件:商机已关闭
   O-->>G: Won result 赢单结果

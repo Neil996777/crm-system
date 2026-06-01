@@ -30,8 +30,8 @@ complete without the required evidence.
 | REQ-004 | P0 | Users must be able to qualify leads as valid, invalid, or needing follow-up, with recorded result and reason where relevant. | Sponsor discussion | Accepted as Architecture Input |
 | REQ-005 | P0 | Users must be able to manage ToB companies/customers and distinguish prospects from converted or active customers. | Sponsor discussion | Accepted as Architecture Input |
 | REQ-006 | P0 | Users must be able to manage multiple contacts under a company/customer, including role, title, contact method, and notes. | Sponsor discussion | Accepted as Architecture Input |
-| REQ-007 | P0 | Users must be able to create and manage sales opportunities linked to company/customer, contacts, owner, amount, expected close date, stage, and status. | Sponsor discussion | Accepted as Architecture Input |
-| REQ-008 | P0 | Users must be able to move opportunities through a sales pipeline covering new opportunity, qualification, quote, contract, payment, won, and lost outcomes. | Sponsor discussion | Accepted as Architecture Input |
+| REQ-007 | P0 | Users must be able to create and manage sales opportunities linked to company/customer, contacts, owner, amount, expected close date, and stage. _(amended 2026-06-01 DEC-020: `status` dimension removed)_ | Sponsor discussion | Accepted as Architecture Input |
+| REQ-008 | P0 | Users must be able to move opportunities through a sales pipeline covering new opportunity, qualification, quote, contract negotiation, won, and lost outcomes. _(amended 2026-06-01 DEC-017: Won = contract signed; payment is tracked post-sale, not a pipeline stage)_ | Sponsor discussion | Accepted as Architecture Input |
 | REQ-009 | P0 | Users must be able to create and manage quote records linked to opportunities, customers, amount, validity period, status, and owner. | Sponsor discussion | Accepted as Architecture Input |
 | REQ-010 | P0 | Users must be able to create and manage contract records linked to customer, opportunity, and quote, including amount, status, signed/effective date, attachment or notes. | Sponsor decision DEC-006 | Accepted as Architecture Input |
 | REQ-011 | P0 | Users must be able to manage payment plans and actual payment records linked to contracts, including due amount, due date, paid amount, payment date, and payment status. | Sponsor discussion | Accepted as Architecture Input |
@@ -81,7 +81,7 @@ refined before G3/G4.
 | Object | States |
 |---|---|
 | Lead | Unassigned, Pending Qualification, Valid, Invalid, Converted To Opportunity |
-| Opportunity | New Opportunity, Needs Confirmed, Quote, Contract Negotiation, Contract Signed, Payment In Progress, Won, Lost |
+| Opportunity | New Opportunity, Needs Confirmed, Quote, Contract Negotiation, Won, Lost _(amended 2026-06-01 DEC-017: Won = contract Signed; Contract Signed / Payment In Progress stages removed)_ |
 | Quote | Draft, Sent, Accepted, Rejected, Expired |
 | Contract | Pending Signature, Signed, Active, Completed, Terminated |
 | Payment | Unpaid, Partially Paid, Paid, Overdue |

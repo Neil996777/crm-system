@@ -391,8 +391,10 @@ Success:
 }
 ```
 
-The opportunity-service must verify full payment with commercial-service or an
-accepted event-backed payment status projection before persisting Won.
+The opportunity-service must verify the related contract is Signed with
+commercial-service or an accepted event-backed contract status projection before
+persisting Won (DEC-017). Full payment is not a Won precondition; payment is
+tracked post-sale and decoupled from Won (DEC-019).
 
 ### Reminder Query
 

@@ -88,7 +88,7 @@ Rule:
 - Company/customer requires company name, customer status, and owner.
 - Contact requires contact name, related company/customer, and at least one
   contact method or role note.
-- Opportunity requires related company/customer, owner, stage, status, expected
+- Opportunity requires related company/customer, owner, stage, expected
   amount, and expected close date.
 - Quote requires related opportunity, related company/customer, quote amount,
   status, validity end date, and owner.
@@ -124,25 +124,33 @@ History:
 
 Rule:
 - Opportunity transitions must follow the PRD transition table.
-- Won requires full payment recorded.
+- Won occurs when the related contract is Signed (DEC-017); full payment is not a
+  Won precondition.
 - Lost requires lost reason.
 - Won and Lost are terminal in the committed scope.
-- Reopen is not allowed in the committed scope.
+- Reopen is not allowed in the committed scope (post-signing breach is handled at
+  the contract level via Terminated; the opportunity stays Won).
 
 Exception behavior:
 - Forbidden stage transitions are rejected without data mutation.
 
+Amended 2026-06-01 (DEC-017): Won is reached at contract signing, not full payment;
+the `Payment In Progress` stage is removed from the pipeline.
+
 ### BR-006: Quote Lifecycle And Accepted Quote Constraint
 
 Rule:
-- One opportunity may have multiple quotes.
-- Only one quote can be Accepted for a given opportunity at a time.
-- A contract can reference only an Accepted quote.
-- Expired quotes cannot be linked to new contracts.
+- Each opportunity has exactly one quote (DEC-018); the system records the quote
+  result, not multi-round negotiation.
+- The quote moves through Draft, Sent, Accepted, Rejected, Expired.
+- A contract can reference only the opportunity's Accepted quote.
+- An Expired quote cannot be linked to a new contract.
 
 Exception behavior:
-- Accepting a quote must not leave multiple Accepted quotes for the same
-  opportunity.
+- Forbidden quote transitions are rejected without data mutation.
+
+Amended 2026-06-01 (DEC-018): one quote per opportunity; the previous
+multiple-quotes / one-Accepted-at-a-time constraint is removed.
 
 ### BR-007: Contract Lifecycle And Expected Signed Date
 
@@ -167,10 +175,15 @@ Rule:
 - Overpayment is blocked.
 - Partial payment is supported.
 - Overdue means due date passed and unpaid amount remains.
-- Full payment is required before opportunity Won.
+- Payment tracking is post-sale collection follow-up and is decoupled from Won
+  (DEC-019); it is not a closing precondition.
 
 Out of committed P0/P1 scope:
 - Multi-currency, tax, and discount automation.
+
+Amended 2026-06-01 (DEC-019): removed "full payment required before Won"; payment
+plans, actual payments, status, overdue reminders, and reports are retained as
+collection/visibility, decoupled from the Won decision.
 
 ### BR-009: Activity, Note, And Task Rules
 
@@ -330,7 +343,7 @@ Exception behavior:
 
 Rule:
 - Won and Lost opportunities are terminal in the committed scope.
-- After Won/Lost closure, opportunity stage/status and close data are not
+- After Won/Lost closure, opportunity stage and close data are not
   editable through normal Sales workflow.
 - Post-close notes and tasks may still be added through normal permissions.
 - Related quote, contract, and payment records remain governed by their own

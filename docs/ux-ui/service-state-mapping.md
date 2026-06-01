@@ -31,9 +31,9 @@ database schemas, or implementation architecture.
 |---|---|---|---|---|
 | SF-001 | Sign in to role workspace | CAP-001 | ACC-001, ACC-002 | Auth loading, invalid credentials, disabled user, expired session, permission-filtered navigation. |
 | SF-002 | Lead create and qualification | CAP-002, CAP-003, CAP-004, CAP-008 | ACC-003, ACC-004, ACC-005, ACC-006, ACC-007, ACC-014 | Save pending, validation errors, owner transfer, invalid restore block, conversion success/failure, duplicate warning. |
-| SF-003 | Opportunity pipeline | CAP-004, CAP-005, CAP-008 | ACC-007, ACC-008, ACC-013, ACC-014 | Stage transition pending, forbidden transition, required data prompt, Won-before-payment block, lost reason required. |
-| SF-004 | Quote and contract | CAP-005, CAP-008 | ACC-009, ACC-010, ACC-014 | Accepted quote conflict, expired quote block, missing expected signed date, amount mismatch reason, contract lifecycle status. |
-| SF-005 | Payment and closure | CAP-004, CAP-005, CAP-008 | ACC-011, ACC-013, ACC-014 | Payment validation, overpayment block, partial/full payment status, early Won block, terminal close confirmation. |
+| SF-003 | Opportunity pipeline | CAP-004, CAP-005, CAP-008 | ACC-007, ACC-008, ACC-013, ACC-014 | Stage transition pending, forbidden transition, required data prompt, Won-without-Signed-contract block (DEC-017), lost reason required. |
+| SF-004 | Quote and contract | CAP-005, CAP-008 | ACC-009, ACC-010, ACC-014 | Exactly one quote per opportunity (DEC-018), expired quote block, missing expected signed date, amount mismatch reason, contract lifecycle status. |
+| SF-005 | Payment and closure | CAP-004, CAP-005, CAP-008 | ACC-011, ACC-013, ACC-014 | Payment validation, overpayment block, partial/full payment status, Won-without-Signed-contract block (DEC-017), terminal close confirmation. |
 | SF-006 | Tasks and reminders | CAP-006, CAP-007, CAP-012 | ACC-012, ACC-021 | Reminder list loading, inactive reminder exclusion, permission-denied related record, stale reminder refresh. |
 | SF-007 | Team overview | CAP-001, CAP-009 | ACC-018, ACC-023 | Manager-only access, empty team state, authorized aggregate loading, unauthorized aggregate exclusion. |
 | SF-008 | Import/export | CAP-010, CAP-008, CAP-011 | ACC-020, ACC-022, ACC-016 | CSV validation, long-running progress, row-level partial failure, export scope confirmation, unsupported format, permission denied. |

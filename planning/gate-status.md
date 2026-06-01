@@ -20,7 +20,7 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
 | G4c | UX Design -> UI Design | UI Designer | Claude | Gate Passed | | | |
 | G4d | UI Design -> Security Design (Design Closure) | Security Compliance | Claude | Gate Passed | PM, BA, UX, UI (retroactive closure) | 2026-05-30 | |
 | G5 | Design Closure -> Architecture Design | Architecture | Claude | Gate Passed | all required reviewers (incl. Infrastructure Ops) | 2026-05-30 | |
-| G6 | Architecture Design -> MDA Modeling | Domain Modeling + Architecture | Claude | Gate Draft | PM, BA, UX, UI, Security, QA Test Design | | Not started — next gate; MDA package not yet created |
+| G6 | Architecture Design -> MDA Modeling | Domain Modeling + Architecture | Claude | Gate Passed | PM, BA, UX, UI, Security, QA Test Design (all signed off 2026-06-01) | 2026-06-01 | MDA package (CIM/PIM/PSM/Traceability/Test Model) complete, multi-agent audited, and signed off by all six reviewer roles. Formal Scope Change by User 2026-06-01 (DEC-017..020) applied across baseline → architecture → MDA → UX/UI → security and re-audited; BLK-001/002/003 RESOLVED. Decision: `archive/reviews/g6-mda/g6-mda-gate-decision-2026-06-01.md`. |
 | G7 | MDA + Test Model -> Task Planning | Domain Modeling + QA Test Design | Claude | Gate Draft | | | |
 | G8 | Task Planning -> Implementation **[HANDOFF: Claude -> Codex]** | Task Planner | Claude -> Codex | Gate Draft | | | |
 | G9 | Implementation -> QA | Frontend / Backend Engineer | Codex | Gate Draft | | | |
@@ -40,6 +40,32 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
   disk (see `company/collaboration-model.md`).
 - On a kickback, set the affected gate back to `Gate Blocked`, record it here and
   in `planning/blockers.md`, and return to Claude.
+- G6 MDA progress (2026-06-01): CIM and PIM authored by the Domain Modeling role
+  and each passed independent multi-agent audit (author ≠ reviewer), including a
+  dedicated tier-altitude (CIM/PIM/PSM boundary) pass. The audits surfaced three
+  upstream-source gaps that MDA correctly declined to invent; they are registered
+  in `planning/blockers.md` as BLK-001 (Opportunity Status enumeration, ACC-007),
+  BLK-002 (multi-plan contract full-payment aggregation, ACC-011/013), and BLK-003
+  (second-quote-accept observable outcome, ACC-009). Per the no-downgrade rule
+  these P0-touching items must be resolved by PM/BA (or formally scope-changed by
+  the user) before the G8 handoff. BLK-A01 (overdue-evaluation trigger) is
+  PSM/Architecture-deferred for G7/PSM, not a PM/BA blocker.
+- Formal Scope Change by User (2026-06-01): the owner revised four committed P0
+  rules — DEC-017 (Won = related contract Signed, not full payment; `Contract
+  Signed`/`Payment In Progress` opportunity stages removed), DEC-018 (exactly one
+  quote per opportunity), DEC-019 (payment tracking retained but decoupled from
+  Won), DEC-020 (Opportunity `Status` field removed). Recorded in
+  `decision-log.md` (originals retained + annotated). Cascade applied and
+  re-audited (author ≠ reviewer) across: G3/G4 baseline (prd, requirements,
+  business-rules, acceptance-matrix, edge-cases, business-glossary,
+  business-processes, user-scenarios, business-capability-map,
+  service-governance-inputs, open-questions), G5 architecture (consistency
+  reconciliation only — service decomposition unchanged: api-spec, architecture,
+  integration-design, data-design, module-boundaries), and the full G6 MDA
+  (CIM/PIM/PSM/Traceability/Test Model; affected IDs retired in place, not
+  renumbered). This resolved BLK-001/002/003 (see `planning/blockers.md`
+  Resolution Log). No P0/P1 capability dropped (payment tracking retained).
+  Process tracker: `planning/scope-change-2026-06-01-TEMP.md`.
 - G12 audit is mandatory and performed on Claude before any release decision.
 - Carried-forward release blockers (not current gate blockers): encrypted
   off-server backup copy + restore rehearsal, HTTPS/TLS endpoint, security-group,
@@ -52,6 +78,12 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
   - G4d closure: `archive/reviews/g4-design-closure/g4d-design-closure-decision-2026-05-30.md`
   - G5 final decision: `archive/reviews/g5-architecture/g5-architecture-final-decision-2026-05-30.md`
   - Pre-G6 design audit: `archive/reviews/g5-to-g6-handoff/pre-g6-design-audit-2026-05-30.md`
+  - G6 MDA gate decision (Gate Passed, six-role sign-off): `archive/reviews/g6-mda/g6-mda-gate-decision-2026-06-01.md`
+  - Pre-G6 re-verification (2026-05-31, Domain Modeling role): after the v1
+    wording cleanup and the planning/process folder move, the design set was
+    re-audited and confirmed `Ready for G6` — no semantic drift, no new
+    inconsistency, MDA/PSM input sufficiency intact. Held in session record;
+    not separately filed (user elected to proceed to G6).
 - Project-layer strengthening (`process/process-gap-register.md`):
   Infrastructure Ops is a required reviewer at G5/G8/G11/G12; every CRM
   cross-capability flow must name a `Primary Flow Owner Agent`.

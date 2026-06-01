@@ -117,15 +117,15 @@ Trigger:
 - A valid business need is ready to track as an opportunity.
 
 Main flow:
-1. User creates an opportunity linked to customer, owner, stage, status,
+1. User creates an opportunity linked to customer, owner, stage,
    expected amount, and expected close date.
 2. User advances stage through the sales pipeline.
 3. Each allowed stage transition creates record-local history.
-4. Sales closure as Won requires full payment.
+4. Sales closure as Won occurs when the related contract is Signed (DEC-017).
 5. Sales closure as Lost requires lost reason.
 
 Business outcome:
-- Opportunity progress, status, value, and closure rationale are traceable.
+- Opportunity progress, value, and closure rationale are traceable.
 
 Exception flow:
 - Forbidden transitions are rejected.
@@ -141,10 +141,10 @@ Trigger:
 - An opportunity reaches quote or contract negotiation work.
 
 Main flow:
-1. User creates one or more quotes linked to opportunity and customer.
-2. User sends, accepts, rejects, or lets quotes expire according to quote rules.
-3. Only one quote can be Accepted for an opportunity at a time.
-4. User creates a Pending Signature contract from an Accepted quote.
+1. User creates one quote linked to opportunity and customer (DEC-018: one per opportunity).
+2. User sends, accepts, rejects, or lets the quote expire according to quote rules.
+3. The opportunity has exactly one quote; the system records its result.
+4. User creates a Pending Signature contract from the Accepted quote.
 5. Pending Signature contract requires expected signed date and contract note.
 6. Signed/Active/Completed/post-signature Terminated contracts require
    signed/effective date.
@@ -173,11 +173,12 @@ Main flow:
 3. Partial payment updates status to Partially Paid.
 4. Full payment updates status to Paid.
 5. Overdue status applies when due date has passed and unpaid amount remains.
-6. Opportunity can move to Won only after full payment is recorded.
+6. Payment tracking is post-sale collection and does not gate the Won decision
+   (DEC-019); Won occurs at contract signing (see BP-004).
 
 Business outcome:
-- Payment plan, actual payments, overdue state, and opportunity closure are
-  auditable.
+- Payment plan, actual payments, and overdue state are auditable; payment history
+  is preserved on opportunity closure.
 
 Exception flow:
 - Zero, negative, or overpayment amounts are rejected.

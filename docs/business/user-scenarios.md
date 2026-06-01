@@ -78,14 +78,14 @@ Main path:
 2. Sales records actual payment.
 3. Partial payment sets payment status to Partially Paid.
 4. Full payment sets payment status to Paid.
-5. Sales closes opportunity as Won after full payment.
+5. Sales closes opportunity as Won when the related contract is Signed (DEC-017).
 
 Alternative path:
 - Sales closes opportunity as Lost with lost reason before terminal Won.
 
 Failure paths:
 - Zero, negative, or overpayment amounts are rejected.
-- Won is rejected without full payment.
+- Won is rejected without a Signed contract.
 - Won/Lost cannot be reopened in the committed scope.
 
 ### SCN-004: Sales Manages Follow-Up Work

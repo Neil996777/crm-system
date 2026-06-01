@@ -26,7 +26,7 @@ database/schema through its own credentials.
 | identity-authz-service | users, roles, sessions, permission policy metadata | `identity_authz` | `crm_identity_authz_user` | All CRM business record tables. |
 | lead-service | leads, lead owner/status, lead qualification, lead conversion marker | `lead` | `crm_lead_user` | account, contact, opportunity, commercial, work, audit, reporting tables. |
 | account-service | accounts/customers, contacts, account ownership/status | `account` | `crm_account_user` | lead, opportunity, commercial, work, audit, reporting tables. |
-| opportunity-service | opportunities, stages, statuses, closure data | `opportunity` | `crm_opportunity_user` | lead, account, commercial payment/contract tables, work, audit, reporting tables. |
+| opportunity-service | opportunities, stages, stage history, closure data | `opportunity` | `crm_opportunity_user` | lead, account, commercial payment/contract tables, work, audit, reporting tables. |
 | commercial-service | quotes, contracts, payment plans, actual payments, payment status | `commercial` | `crm_commercial_user` | opportunity source tables, lead, account, work, audit, reporting tables. |
 | work-service | activities, notes, tasks, reminder projection data | `work` | `crm_work_user` | source CRM record tables, commercial source tables, audit, reporting tables. |
 | audit-history-service | record-local history, operation logs, security/audit events | `audit_history` | `crm_audit_history_user` | source domain tables. |
@@ -57,7 +57,7 @@ database/schema through its own credentials.
 | Account / Customer | account-service | No hard delete; archive or lifecycle state only. |
 | Contact | account-service | Contact details require restricted handling. |
 | Opportunity | opportunity-service | Won/Lost are terminal in the committed scope. |
-| Quote | commercial-service | Only one Accepted quote per opportunity. |
+| Quote | commercial-service | Exactly one quote per opportunity (DEC-018); it is the Accepted quote linked to the contract. |
 | Contract | commercial-service | Pending Signature requires expected signed date and note. |
 | Payment Plan / Actual Payment | commercial-service | Blocks zero, negative, and overpayment amounts. |
 | Activity / Note / Task | work-service | Related record reference must be validated through public contract. |

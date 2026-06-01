@@ -87,7 +87,7 @@ record-local history or admin/global operation-log events as specified.
 | Grant or remove Administrator | P0 | Required before save | Admin/global operation log; blocked if it would leave no active Administrator. | ACC-001, ACC-002, ACC-022 |
 | Owner assignment or transfer | P0 | Required for transfer | Record-local history and operation log where applicable. | ACC-003, ACC-014, ACC-022 |
 | Opportunity terminal Won/Lost closure | P0 | Required | Record-local history; operation log where applicable. | ACC-013, ACC-014 |
-| Quote acceptance | P0 | Required when changing accepted quote | Record-local history and operation log. | ACC-009, ACC-014, ACC-022 |
+| Quote acceptance | P0 | Required for quote acceptance | Record-local history and operation log. | ACC-009, ACC-014, ACC-022 |
 | Contract signature, activation, completion, termination | P0 | Required for termination and high-impact status change | Record-local history and operation log. | ACC-010, ACC-014, ACC-022 |
 | Actual payment record creation or status update | P0 | Required for high-impact payment change | Record-local history and operation log. | ACC-011, ACC-014, ACC-022 |
 | Archive eligible record | P0/P1 | Required | Record-local history and operation log; no hard delete. | ACC-002, ACC-014, ACC-022 |

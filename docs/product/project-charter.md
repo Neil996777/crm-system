@@ -46,8 +46,8 @@ or non-persistent behavior.
 - Lead creation, editing, qualification, assignment, owner changes, search, and filtering.
 - ToB company/customer management.
 - Contact management with multiple contacts per company/customer.
-- Opportunity management with owner, amount, expected close date, pipeline stage, and close status.
-- Sales pipeline progression from new opportunity through quote, contract, payment, won, or lost.
+- Opportunity management with owner, amount, expected close date, and pipeline stage (including terminal Won/Lost). _(amended 2026-06-01 DEC-020: separate close status removed)_
+- Sales pipeline progression from new opportunity through quote and contract to won or lost; payment is tracked post-sale and decoupled from Won. _(amended 2026-06-01 DEC-017/DEC-019)_
 - Quote records linked to customer, opportunity, and owner.
 - Contract records with status, amount, effective or signed date, related quote/opportunity/customer, and attachment or notes.
 - Payment plans and actual payment records linked to contracts.

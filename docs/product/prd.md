@@ -207,7 +207,7 @@ Acceptance coverage:
 | PRD-004 | P0 | Users can qualify leads and record qualification result and reason where applicable. | REQ-004 | ACC-004 |
 | PRD-005 | P0 | Users can manage ToB companies/customers and customer status. | REQ-005 | ACC-005 |
 | PRD-006 | P0 | Users can manage multiple contacts under a company/customer. | REQ-006 | ACC-006 |
-| PRD-007 | P0 | Users can create and manage opportunities linked to customer, contacts, owner, amount, expected close date, stage, and status. | REQ-007 | ACC-007 |
+| PRD-007 | P0 | Users can create and manage opportunities linked to customer, contacts, owner, amount, expected close date, and stage. _(amended 2026-06-01 DEC-020: `status` dimension removed)_ | REQ-007 | ACC-007 |
 | PRD-008 | P0 | Users can move opportunities through the sales pipeline. | REQ-008 | ACC-008 |
 | PRD-009 | P0 | Users can create and manage quote records linked to opportunities and customers. | REQ-009 | ACC-009 |
 | PRD-010 | P0 | Users can create and manage record-based contract records linked to customer, opportunity, and quote. | REQ-010 | ACC-010 |
@@ -304,7 +304,7 @@ Rules:
 | Lead | lead name or company name, source, status; owner is required before Pending Qualification or later states |
 | Company/customer | company name, customer status, owner |
 | Contact | contact name, related company/customer, at least one contact method or role note |
-| Opportunity | related company/customer, owner, stage, status, expected amount, expected close date |
+| Opportunity | related company/customer, owner, stage, expected amount, expected close date |
 | Quote | related opportunity, related company/customer, quote amount, status, validity end date, owner |
 | Contract | related customer, related opportunity, accepted quote, contract amount, status, contract note; expected signed date is required while status is Pending Signature; signed/effective date is required when status is Signed, Active, Completed, or Terminated after signing |
 | Payment plan | related contract, due amount, due date, status |
@@ -321,7 +321,7 @@ or strengthening P0/P1 behavior.
 | Object | States |
 |---|---|
 | Lead | Unassigned, Pending Qualification, Valid, Invalid, Converted To Opportunity |
-| Opportunity | New Opportunity, Needs Confirmed, Quote, Contract Negotiation, Contract Signed, Payment In Progress, Won, Lost |
+| Opportunity | New Opportunity, Needs Confirmed, Quote, Contract Negotiation, Won, Lost _(amended 2026-06-01 DEC-017: Won = related contract Signed; `Contract Signed` and `Payment In Progress` stages removed; `status` dimension removed per DEC-020)_ |
 | Quote | Draft, Sent, Accepted, Rejected, Expired |
 | Contract | Pending Signature, Signed, Active, Completed, Terminated |
 | Payment | Unpaid, Partially Paid, Paid, Overdue |
@@ -348,15 +348,17 @@ Forbidden:
 |---|---|---|---|---|
 | New Opportunity | Needs Confirmed | Sales, Sales Manager | related customer/contact | Stage changed |
 | Needs Confirmed | Quote | Sales, Sales Manager | need summary and expected amount | Stage changed |
-| Quote | Contract Negotiation | Sales, Sales Manager | at least one Sent or Accepted quote | Stage changed |
-| Contract Negotiation | Contract Signed | Sales, Sales Manager | related signed contract | Stage changed |
-| Contract Signed | Payment In Progress | Sales, Sales Manager | payment plan exists | Stage changed |
-| Payment In Progress | Won | Sales, Sales Manager | full payment recorded | Opportunity won |
+| Quote | Contract Negotiation | Sales, Sales Manager | the quote is Sent or Accepted | Stage changed |
+| Contract Negotiation | Won | Sales, Sales Manager | related contract is Signed | Opportunity won |
 | Any non-terminal stage | Lost | Sales, Sales Manager | lost reason | Opportunity lost |
 
 Forbidden:
 - Won and Lost are terminal for the committed scope. Reopen is not allowed in the committed scope.
-- Opportunity cannot move to Won without full payment recorded.
+- Opportunity reaches Won when the related contract is Signed; it cannot reach Won without a Signed contract.
+
+Amended 2026-06-01 (DEC-017): Won is reached at contract signing, not full payment;
+the `Contract Signed` and `Payment In Progress` stages are removed. Post-signing
+breach is handled at the contract level (Terminated); the opportunity stays Won.
 
 ### Quote Transitions
 
@@ -368,10 +370,13 @@ Forbidden:
 | Sent | Expired | System or authorized user | validity end date passed | Quote expired |
 
 Rules:
-- One opportunity may have multiple quotes.
-- Only one quote can be Accepted for a given opportunity at a time.
-- A contract can only reference an Accepted quote.
+- Each opportunity has exactly one quote (DEC-018).
+- A contract can only reference the opportunity's Accepted quote.
 - Expired quotes cannot be linked to new contracts.
+
+Amended 2026-06-01 (DEC-018): one quote per opportunity; the system records the
+quote result, not multi-round negotiation; previous multiple-quotes / one-Accepted
+constraint removed.
 
 ### Contract Transitions
 

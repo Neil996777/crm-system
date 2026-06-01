@@ -113,7 +113,8 @@ Main flow:
 Failure and recovery:
 - Forbidden transition shows blocked reason.
 - Missing required data links user to the relevant form section.
-- Won before full payment is blocked.
+- Won is reached when the related contract is Signed; closing Won without a
+  Signed contract is blocked (DEC-017).
 - Lost without reason is blocked.
 
 Required screen states:
@@ -135,7 +136,7 @@ Main flow:
 
 Failure and recovery:
 - Expired quote cannot start contract.
-- Multiple Accepted quote conflict is prevented.
+- Each opportunity has exactly one quote (DEC-018).
 - Contract amount mismatch requires reason.
 - Missing expected signed date blocks Pending Signature save.
 
@@ -152,12 +153,13 @@ Main flow:
 1. User creates payment plan.
 2. User records actual payment.
 3. UX updates payment status.
-4. User closes opportunity as Won after full payment or Lost with lost reason.
+4. User closes opportunity as Won when the related contract is Signed, or Lost
+   with lost reason (DEC-017).
 
 Failure and recovery:
 - Zero, negative, and overpayment values are blocked.
 - Terminal close requires confirmation.
-- Closed opportunity disables stage/status edits and allows notes/tasks.
+- Closed opportunity disables stage edits and allows notes/tasks (DEC-020).
 
 Required screen states:
 - Payment empty state, validation errors, overdue status, terminal close
