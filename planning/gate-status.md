@@ -21,7 +21,7 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
 | G4d | UI Design -> Security Design (Design Closure) | Security Compliance | Claude | Gate Passed | PM, BA, UX, UI (retroactive closure) | 2026-05-30 | |
 | G5 | Design Closure -> Architecture Design | Architecture | Claude | Gate Passed | all required reviewers (incl. Infrastructure Ops) | 2026-05-30 | |
 | G6 | Architecture Design -> MDA Modeling | Domain Modeling + Architecture | Claude | Gate Passed | PM, BA, UX, UI, Security, QA Test Design (all signed off 2026-06-01) | 2026-06-01 | MDA package (CIM/PIM/PSM/Traceability/Test Model) complete, multi-agent audited, and signed off by all six reviewer roles. Formal Scope Change by User 2026-06-01 (DEC-017..020) applied across baseline → architecture → MDA → UX/UI → security and re-audited; BLK-001/002/003 RESOLVED. Decision: `archive/reviews/g6-mda/g6-mda-gate-decision-2026-06-01.md`. |
-| G7 | MDA + Test Model -> Task Planning | Domain Modeling + QA Test Design | Claude | Gate Draft | | | |
+| G7 | MDA + Test Model -> Task Planning | Domain Modeling + QA Test Design | Claude | Gate Passed | PM, Architecture, Security, QA Test Design, Infrastructure Ops, Task Planner (all signed off 2026-06-01) | 2026-06-01 | Acceptance-driven delivery plan in `delivery/` (40 tasks, ACC 23/23, Codex-executable, multi-agent audited). Decision: `archive/reviews/g7-task-planning/g7-gate-decision-2026-06-01.md`. Pre-G8 entry condition: Security Compliance review of operator-access (deployment-notes), recorded on TASK-039. |
 | G8 | Task Planning -> Implementation **[HANDOFF: Claude -> Codex]** | Task Planner | Claude -> Codex | Gate Draft | | | |
 | G9 | Implementation -> QA | Frontend / Backend Engineer | Codex | Gate Draft | | | |
 | G10 | QA -> Integration | QA Execution | Codex | Gate Draft | | | |
@@ -79,6 +79,7 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
   - G5 final decision: `archive/reviews/g5-architecture/g5-architecture-final-decision-2026-05-30.md`
   - Pre-G6 design audit: `archive/reviews/g5-to-g6-handoff/pre-g6-design-audit-2026-05-30.md`
   - G6 MDA gate decision (Gate Passed, six-role sign-off): `archive/reviews/g6-mda/g6-mda-gate-decision-2026-06-01.md`
+  - G7 task-planning gate decision (Gate Passed, six-role sign-off): `archive/reviews/g7-task-planning/g7-gate-decision-2026-06-01.md`
   - Pre-G6 re-verification (2026-05-31, Domain Modeling role): after the v1
     wording cleanup and the planning/process folder move, the design set was
     re-audited and confirmed `Ready for G6` — no semantic drift, no new

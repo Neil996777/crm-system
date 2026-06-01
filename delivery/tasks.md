@@ -1480,12 +1480,17 @@ TASK-007..038; deployment/release evidence TASK-039..040.
      container/backup monitoring + thresholds.
    - `docs/release/acc-017-evidence-template.md` (endpoint, TLS status, security-group inbound
      rules, opened ports, health URL, timestamp, operator, smoke result).
-8. **Owner agent:** backend-engineer (+ infrastructure-ops for environment evidence)
+   - `deploy/ops/operator-access.md` (named least-privilege deploy/ops user; root restricted to
+     provisioning/emergency only; SSH key ownership + sudo boundary) — per `deployment-notes.md`
+     "Operator Access".
+8. **Owner agent:** backend-engineer (implementation) + infrastructure-ops (runtime environment + release evidence, per `deployment-notes.md` / `process/process-gap-register.md`)
 9. **Prerequisites:** TASK-001..038 (a complete deployable system).
 10. **Definition of Done:** Stack runs on `srv-volcengine-sh-01` via Compose; HTTPS endpoint
     with valid TLS (or release blocked until configured); HTTP→HTTPS redirect; secure cookies;
     security headers set; PostgreSQL/internal ports/backup dir NOT publicly exposed; per-service
-    health green; monitoring + thresholds recorded; ACC-017 evidence template completed at G11.
+    health green; monitoring + thresholds recorded; a named least-privilege deploy/ops user exists
+    with root restricted to provisioning/emergency and SSH key ownership + sudo boundary documented
+    (deployment-notes "Operator Access"); ACC-017 evidence template completed at G11.
 11. **Acceptance method:** ACC-017 — deployment smoke (reachable, configured, persistent
     services connected); release-evidence verified at G11/G12 (HTTPS/TLS, security group,
     monitoring).
@@ -1502,7 +1507,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     are `Release-evidence pending` and proven at G11, audited at G12.
 17. **Blocker:** A valid HTTPS endpoint / TLS certificate (and domain, if used) must be available
     for production release; absence blocks production closure per deployment-notes.md (record here
-    if unavailable at G11 — do not guess a domain).
+    if unavailable at G11 — do not guess a domain). **Pre-G8 condition:** Security Compliance must
+    review the operator-access design (SSH access, key ownership, sudo boundary) before G8
+    implementation tasks are approved (deployment-notes "Operator Access").
 
 ### TASK-040 — Encrypted off-server backup + restore rehearsal (release evidence)
 

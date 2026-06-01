@@ -52,6 +52,12 @@ Each task in `tasks.md` carries all 17 fields. Codex executes a task by:
 - **Frontend:** React + TypeScript under `frontend/`, talking ONLY to
   gateway-bff (`frontend-backend-contract.md`; `module-boundaries.md` Gateway
   Boundary). Screens per `ui-spec.md` UI-001..017. Owner agent `frontend-engineer`.
+- **Deployment / operations:** owner agent `infrastructure-ops` (recognized project
+  role — `AGENTS.md`, `process/process-gap-register.md`; required reviewer at
+  G5/G8/G11/G12) for runtime environment, deployment, and release-evidence tasks
+  (TASK-039/040: deploy, HTTPS/TLS, security group, monitoring, operator access,
+  off-server backup + restore), with `backend-engineer` doing the in-repo
+  implementation. Release-evidence items are proven at G11 and audited at G12.
 - **Tests:** Go `testing` + `testcontainers` (unit/integration against REAL
   PostgreSQL — no mocks for P0/P1 persistence, SVC-ACC-011, DEC-008); Playwright
   (E2E) under `e2e/`. Test types per `test-model.md` Test-type convention.
