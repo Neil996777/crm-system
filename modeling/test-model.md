@@ -137,7 +137,7 @@ logic is Unit-eligible).
 | PIM-SM-007 Task | Open | Overdue | Due date passes incomplete | Business date > due AND incomplete (on-read) | TEST-TASK-LIFECYCLE-003 |
 | PIM-SM-007 Task | Completed/Cancelled | (no reminder) | Due date reached | **No active reminder** (PIM-INV-028) | TEST-TASK-LIFECYCLE-004 |
 | PIM-SM-008 Ownership | Unassigned | Assigned | Assign | Manager/admin, target in team scope; **Sales denied; out-of-scope target rejected** | TEST-OWNER-TRANSFER-001 / -003 |
-| PIM-SM-008 Ownership | Assigned | Assigned(new) | Transfer | Manager/admin; open tasks cascade unless reassigned | TEST-OWNER-TRANSFER-002 |
+| PIM-SM-008 Ownership | Assigned | Assigned(new) | Transfer | Manager/admin; open tasks/follow-ups cascade to new owner unless reassigned (EDGE-024) | TEST-OWNER-TRANSFER-002 (transfer) / TEST-OWNER-TRANSFER-004 (open-work cascade, PIM-INV-030/033) |
 | PIM-SM-009 Opp Close | Contract Negotiation | Won | Close won | **Related contract Signed** (DEC-017); history preserved; **Won without a Signed contract rejected** | TEST-OPP-CLOSE-001 / -002 |
 | PIM-SM-009 Opp Close | any open | Lost | Close lost | **Lost reason recorded**; **no-reason rejected** | TEST-OPP-CLOSE-003 / -004 |
 | PIM-SM-009 Opp Close | Won/Lost | (rejected) | Reopen/rollback/re-close | **Rejected — terminal** (PIM-INV-009/037) | TEST-OPP-CLOSE-005 |
@@ -255,7 +255,7 @@ EDGE-020/021/023/037 are designable as deterministic tests.
 | EDGE-021 | Pending Signature past expected signed date → reminder | TEST-REMINDER-002 |
 | EDGE-022 | Signed/terminated/fully-paid contract in reminders → none | TEST-REMINDER-004 |
 | EDGE-023 | Completed/cancelled task at due date → no reminder | TEST-TASK-LIFECYCLE-004 |
-| EDGE-024 | Parent owner change with open tasks → tasks transfer | TEST-OWNER-TRANSFER-002 |
+| EDGE-024 | Parent owner change with open tasks → tasks/follow-ups transfer unless reassigned | TEST-OWNER-TRANSFER-004 |
 | EDGE-025 | Duplicate data entered → warning, save may continue | TEST-DUPLICATE-WARN-005 |
 | EDGE-026 | CSV mixed valid/invalid rows → valid import, invalid reported, no corruption | TEST-CSV-IMPORT-002 |
 | EDGE-027 | Sales CSV export → denied | TEST-CSV-EXPORT-002 |
