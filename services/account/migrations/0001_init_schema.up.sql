@@ -1,0 +1,13 @@
+CREATE SCHEMA IF NOT EXISTS account;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'crm_account_user') THEN
+    CREATE ROLE crm_account_user LOGIN PASSWORD 'crm_account_dev_password';
+  END IF;
+END
+$$;
+
+GRANT USAGE, CREATE ON SCHEMA account TO crm_account_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA account GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO crm_account_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA account GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO crm_account_user;

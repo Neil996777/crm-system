@@ -1,0 +1,2 @@
+DROP SCHEMA IF EXISTS reporting CASCADE;
+DROP ROLE IF EXISTS crm_reporting_user;

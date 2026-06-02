@@ -1,0 +1,278 @@
+x-go-healthcheck: &go-healthcheck
+  test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null 2>&1"]
+  interval: 10s
+  timeout: 5s
+  retries: 12
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: crm_system
+      POSTGRES_USER: crm_admin
+      POSTGRES_PASSWORD: crm_admin_dev_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./services/identity-authz/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/001_identity_authz.sql:ro
+      - ./services/identity-authz/migrations/0002_users_sessions.up.sql:/docker-entrypoint-initdb.d/002_identity_authz_users_sessions.sql:ro
+      - ./services/identity-authz/migrations/0003_permission_policy.up.sql:/docker-entrypoint-initdb.d/003_identity_authz_permission_policy.sql:ro
+      - ./services/lead/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/004_lead.sql:ro
+      - ./services/account/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/005_account.sql:ro
+      - ./services/account/migrations/0002_accounts.up.sql:/docker-entrypoint-initdb.d/006_account_accounts.sql:ro
+      - ./services/account/migrations/0003_contacts.up.sql:/docker-entrypoint-initdb.d/007_account_contacts.sql:ro
+      - ./services/opportunity/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/008_opportunity.sql:ro
+      - ./services/opportunity/migrations/0002_opportunities.up.sql:/docker-entrypoint-initdb.d/009_opportunity_opportunities.sql:ro
+      - ./services/commercial/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/010_commercial.sql:ro
+      - ./services/commercial/migrations/0002_quotes.up.sql:/docker-entrypoint-initdb.d/011_commercial_quotes.sql:ro
+      - ./services/commercial/migrations/0003_contracts.up.sql:/docker-entrypoint-initdb.d/012_commercial_contracts.sql:ro
+      - ./services/commercial/migrations/0004_payments.up.sql:/docker-entrypoint-initdb.d/013_commercial_payments.sql:ro
+      - ./services/work/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/014_work.sql:ro
+      - ./services/audit-history/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/015_audit_history.sql:ro
+      - ./services/audit-history/migrations/0002_history_oplog.up.sql:/docker-entrypoint-initdb.d/016_audit_history_events.sql:ro
+      - ./services/reporting/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/017_reporting.sql:ro
+      - ./services/import-export/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/018_import_export.sql:ro
+      - ./services/lead/migrations/0002_leads.up.sql:/docker-entrypoint-initdb.d/019_lead_leads.sql:ro
+      - ./services/lead/migrations/0003_lead_qualification.up.sql:/docker-entrypoint-initdb.d/020_lead_qualification.sql:ro
+      - ./services/account/migrations/0004_duplicate_warnings.up.sql:/docker-entrypoint-initdb.d/021_account_duplicate_warnings.sql:ro
+      - ./services/account/migrations/0005_archive.up.sql:/docker-entrypoint-initdb.d/022_account_archive.sql:ro
+      - ./services/lead/migrations/0004_duplicate_warnings.up.sql:/docker-entrypoint-initdb.d/023_lead_duplicate_warnings.sql:ro
+      - ./services/work/migrations/0002_work.up.sql:/docker-entrypoint-initdb.d/024_work_items.sql:ro
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm_admin -d crm_system"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - crm_internal
+
+  gateway-bff:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/gateway-bff:/app
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: gateway-bff
+      PORT: "8080"
+    expose:
+      - "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+      - crm_edge
+
+  identity-authz:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/identity-authz:/app
+      - ./.cache/go-mod:/go/pkg/mod:ro
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: identity-authz
+      PORT: "8080"
+      COOKIE_SECURE: "true"
+      DATABASE_URL: postgres://crm_identity_authz_user:crm_identity_authz_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=identity_authz
+      SERVICE_ID: identity-authz
+      SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+    expose:
+      - "8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+
+  lead:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/lead:/app
+      - ./.cache/go-mod:/go/pkg/mod:ro
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: lead
+      SERVICE_ID: lead
+      PORT: "8080"
+      DATABASE_URL: postgres://crm_lead_user:crm_lead_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=lead
+      ACCOUNT_SERVICE_URL: http://account:8080
+      OPPORTUNITY_SERVICE_URL: http://opportunity:8080
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+      SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+    expose:
+      - "8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+
+  account:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/account:/app
+      - ./.cache/go-mod:/go/pkg/mod:ro
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: account
+      SERVICE_ID: account
+      PORT: "8080"
+      DATABASE_URL: postgres://crm_account_user:crm_account_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=account
+      SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+      WORK_SERVICE_URL: http://work:8080
+    expose:
+      - "8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+
+  opportunity:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/opportunity:/app
+      - ./.cache/go-mod:/go/pkg/mod:ro
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: opportunity
+      SERVICE_ID: opportunity
+      PORT: "8080"
+      DATABASE_URL: postgres://crm_opportunity_user:crm_opportunity_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=opportunity
+      SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+      COMMERCIAL_SERVICE_URL: http://commercial:8080
+    expose:
+      - "8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+
+  commercial:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/commercial:/app
+      - ./.cache/go-mod:/go/pkg/mod:ro
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: commercial
+      SERVICE_ID: commercial
+      PORT: "8080"
+      DATABASE_URL: postgres://crm_commercial_user:crm_commercial_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=commercial
+      SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+    expose:
+      - "8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+
+  work:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/work:/app
+      - ./.cache/go-mod:/go/pkg/mod:ro
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: work
+      SERVICE_ID: work
+      PORT: "8080"
+      DATABASE_URL: postgres://crm_work_user:crm_work_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=work
+      SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+      COMMERCIAL_SERVICE_URL: http://commercial:8080
+    expose:
+      - "8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+
+  audit-history:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/audit-history:/app
+      - ./.cache/go-mod:/go/pkg/mod:ro
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: audit-history
+      PORT: "8080"
+      DATABASE_URL: postgres://crm_audit_history_user:crm_audit_history_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=audit_history
+      SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+    expose:
+      - "8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+
+  reporting:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/reporting:/app
+      - ./.cache/go-mod:/go/pkg/mod:ro
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: reporting
+      PORT: "8080"
+      DATABASE_URL: postgres://crm_reporting_user:crm_reporting_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=reporting
+    expose:
+      - "8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+
+  import-export:
+    image: golang:1.26
+    working_dir: /app
+    volumes:
+      - ./services/import-export:/app
+      - ./.cache/go-mod:/go/pkg/mod:ro
+    command: ["go", "run", "./cmd/server"]
+    environment:
+      SERVICE_NAME: import-export
+      PORT: "8080"
+      DATABASE_URL: postgres://crm_import_export_user:crm_import_export_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=import_export
+    expose:
+      - "8080"
+    healthcheck: *go-healthcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crm_internal
+
+networks:
+  crm_internal:
+    internal: true
+  crm_edge:
+
+volumes:
+  postgres_data:

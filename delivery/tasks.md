@@ -21,7 +21,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-001 — Monorepo, Docker Compose, PostgreSQL, migrate scaffold, shared contracts
 
 1. **Task ID:** TASK-001
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** A running monorepo skeleton: Docker Compose brings up PostgreSQL
    and an empty-but-healthy container per service (SVC-001..010), each service a
    Go module with a `/health` endpoint and a `golang-migrate` scaffold against its
@@ -69,7 +69,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-002 — identity-authz: authentication + session
 
 1. **Task ID:** TASK-002
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** A user signs in with valid credentials and receives a persisted
    session bound to their single assigned role; invalid credentials, disabled
    accounts, and unauthenticated access are denied with one unified failure message.
@@ -116,7 +116,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-003 — identity-authz: permission decisions, three-role scope, S2S token, user-admin invariants
 
 1. **Task ID:** TASK-003
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Every protected action is authorized server-side by a central
    permission check enforcing the three-role scope (admin=all, manager=team,
    sales=owned/assigned); service-to-service calls require a signed token; the
@@ -171,7 +171,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-004 — audit-history: append-only record history + admin operation log + outbox sink
 
 1. **Task ID:** TASK-004
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** A trusted internal contract appends record-local history events
    and admin operation-log events to an append-only, tamper-evident store; history
    is queryable by record permission and operation logs by Administrator only.
@@ -220,7 +220,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-005 — gateway-bff: routing, correlation propagation, safe error normalization
 
 1. **Task ID:** TASK-005
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** A single external API edge that authenticates request context,
    routes commands/queries to owning services, propagates correlation IDs, and
    normalizes safe error responses — without owning data or deciding business state.
@@ -257,7 +257,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-006 — frontend: app shell, auth flow, Sign In + Work Overview screens
 
 1. **Task ID:** TASK-006
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** The React+TS app shell with role-aware navigation, a working sign-in
    screen, and a Work Overview landing that talks only to gateway-bff.
 4. **Business capability:** CAP-001 Identity and role access (primary ACC-001).
@@ -296,7 +296,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-007 — lead-service: create/edit/assign/transfer with required fields and owner rules
 
 1. **Task ID:** TASK-007
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Create, view, edit, search/filter, and assign/transfer leads with
    required fields persisted; Unassigned leads supported; owner required before
    Pending Qualification; owner-change history preserved.
@@ -344,7 +344,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-008 — lead-service: qualification (Valid/Invalid/restore) + conversion with history
 
 1. **Task ID:** TASK-008
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Qualify a Pending lead Valid or Invalid (with reason), restore an
    Invalid lead (admin/manager only), and convert a Valid lead to an opportunity while
    preserving original lead history and preventing re-conversion.
@@ -383,7 +383,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-009 — frontend: Lead List + Lead Detail & Qualification screens
 
 1. **Task ID:** TASK-009
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** UI to create/list/search leads and run qualification/conversion,
    reflecting Unassigned/denied/invalid-reason/converted states.
 4. **Business capability:** CAP-002 Lead intake and qualification (primary ACC-003).
@@ -418,7 +418,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-010 — account-service: company/customer CRUD with required fields, no hard delete
 
 1. **Task ID:** TASK-010
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Create/view/edit/search/filter ToB companies/customers with required
    fields persisted; no hard delete; unauthorized access denied.
 4. **Business capability:** CAP-003 Account and contact management (primary ACC-005).
@@ -453,7 +453,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-011 — account-service: multiple contacts under a company with required link
 
 1. **Task ID:** TASK-011
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Create/link multiple contacts under a company/customer, each
    requiring a related company and at least one contact method or role note.
 4. **Business capability:** CAP-003 Account and contact management (primary ACC-006).
@@ -486,7 +486,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-012 — frontend: Customer/Contact List + Detail screens
 
 1. **Task ID:** TASK-012
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** UI to manage companies and their contacts, with related opportunities/
    contracts/payments/history sections.
 4. **Business capability:** CAP-003 Account and contact management (primary ACC-005).
@@ -514,7 +514,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-013 — opportunity-service: create/edit with Pipeline Stage (no Status field)
 
 1. **Task ID:** TASK-013
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Create/view/edit/search/filter opportunities with required links/
    fields and a Pipeline Stage (the sole lifecycle dimension; no Status field); no hard
    delete; owner/role visibility enforced.
@@ -554,7 +554,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-014 — opportunity-service: pipeline stage transitions with history
 
 1. **Task ID:** TASK-014
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Move an opportunity through allowed forward stage transitions,
    rejecting forbidden transitions and rollbacks without mutation, emitting a history
    event per change.
@@ -588,7 +588,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-015 — opportunity-service: close Won (contract Signed) / Lost (reason), terminal lock
 
 1. **Task ID:** TASK-015
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Close an opportunity Won only when its related contract is Signed
    (verified with commercial-service), or Lost with a recorded reason; Won/Lost are
    terminal and non-reopenable; closure preserves related history; post-close notes/
@@ -633,7 +633,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-016 — frontend: Opportunity Detail (stage stepper, close Won/Lost)
 
 1. **Task ID:** TASK-016
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Opportunity UI with a stage stepper, blocked-transition alerts, and
    Won/Lost closure confirmations reflecting the Signed-contract and lost-reason rules.
 4. **Business capability:** CAP-004 Opportunity pipeline (primary ACC-008).
@@ -664,7 +664,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-017 — commercial-service: quote lifecycle, exactly one quote per opportunity
 
 1. **Task ID:** TASK-017
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Create/send/accept/reject/expire a quote with required fields; enforce
    exactly one quote per opportunity; an expired quote cannot link to a new contract.
 4. **Business capability:** CAP-005 Commercial execution (primary ACC-009).
@@ -704,7 +704,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-018 — commercial-service: contract create from Accepted quote (note, expected signed date, amount-diff reason)
 
 1. **Task ID:** TASK-018
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Create a Pending Signature contract from an Accepted, non-Expired quote
    with a required note and expected signed date; record an amount-difference reason when
    contract amount differs from the quote.
@@ -744,7 +744,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-019 — commercial-service: contract lifecycle (sign/activate/complete/terminate) with date guards
 
 1. **Task ID:** TASK-019
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Transition a contract Pending Signature → Signed → Active → Completed,
    or Terminate (pre/post signature), requiring a signed/effective date for signed states;
    contract Signed is the event that enables Opportunity Won.
@@ -782,7 +782,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-020 — commercial-service: payment plans + actual payments, status, overpayment block (post-sale)
 
 1. **Task ID:** TASK-020
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Create payment plans and record actual payments updating Unpaid/
    Partially Paid/Paid; reject zero/negative and contract-level overpayment; single
    currency; payment tracking is post-sale and does NOT gate Won.
@@ -824,7 +824,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-021 — frontend: Quote Detail screen
 
 1. **Task ID:** TASK-021
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Quote UI with status/amount/validity, accept/reject actions, expired
    warning, and contract-link indicator; reflects exactly-one-quote rule.
 4. **Business capability:** CAP-005 Commercial execution (primary ACC-009).
@@ -851,7 +851,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-022 — frontend: Contract Detail screen
 
 1. **Task ID:** TASK-022
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Contract UI with status/dates/note/amount-diff reason, status actions,
    and pending-signature reminder warning.
 4. **Business capability:** CAP-005 Commercial execution (primary ACC-010).
@@ -879,7 +879,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-023 — frontend: Payment Detail screen
 
 1. **Task ID:** TASK-023
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Payment UI for plan + actual payment with remaining amount, overdue
    signal, and zero/negative/overpayment validation; payment shown as post-sale tracking.
 4. **Business capability:** CAP-005 Commercial execution (primary ACC-011).
@@ -907,7 +907,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-024 — work-service: activities, notes, tasks against related records
 
 1. **Task ID:** TASK-024
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Create activities, notes, and tasks linked to any CRM record with
    required fields; manage task status (Open/Completed/Cancelled/Overdue); completed/
    cancelled tasks are not active reminders.
@@ -952,7 +952,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-025 — frontend: Activities/Notes/Tasks UI (embedded in record detail + standalone list)
 
 1. **Task ID:** TASK-025
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** UI to add/view activities, notes, and tasks within a record's detail and
    as a standalone task list with status actions.
 4. **Business capability:** CAP-006 Work activity and reminders (primary ACC-012).
@@ -979,7 +979,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-026 — Reminders: on-read due/overdue evaluation + Reminder Center
 
 1. **Task ID:** TASK-026
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** An in-app reminder query computes due/overdue tasks, pending-signature
    contracts past expected signed date, and due/overdue payments on-read against a supplied
    business date, hiding inactive and unauthorized items; the Reminder Center renders them.
@@ -1022,7 +1022,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-027 — frontend: Record-local history timeline (in record detail)
 
 1. **Task ID:** TASK-027
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Show the permitted record-local history timeline inside each record's
    detail, with safe before/after values per role and classification.
 4. **Business capability:** CAP-008 Collaboration history and operation audit (primary ACC-014).
@@ -1052,7 +1052,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-028 — audit-history + frontend: Admin global operation-log query
 
 1. **Task ID:** TASK-028
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Administrator-only global operation-log query covering required event
    classes, with a UI table; non-admins denied; logs not editable.
 4. **Business capability:** CAP-008 Collaboration history and operation audit (primary ACC-022).
@@ -1086,7 +1086,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-029 — frontend: Admin User/Role Management screen
 
 1. **Task ID:** TASK-029
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Admin UI to create users, change roles/status with confirmation, and show
    the last-Administrator-blocked state — backed by backend governance.
 4. **Business capability:** CAP-001 Identity and role access (primary ACC-002; also ACC-001/022).
@@ -1117,7 +1117,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-030 — gateway-bff + frontend: core list/detail/search/basic filter across all P0 entities
 
 1. **Task ID:** TASK-030
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Role-scoped list, detail, search, and basic filter across all P0 entities
    with empty-state, invalid-filter feedback, and permission hiding.
 4. **Business capability:** CAP-007 Core CRM navigation and record retrieval (primary ACC-015).
@@ -1153,7 +1153,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-031 — Duplicate warning on lead/company/contact create/edit
 
 1. **Task ID:** TASK-031
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Raise a non-blocking duplicate warning on normalized company name /
    contact phone-email / lead company-contact match; allow proceed-after-warning to create a
    new record only; no merge/overwrite; reveal no unauthorized matched-record detail.
@@ -1192,7 +1192,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-032 — Archive lifecycle with active-obligation blocking (record-owning services + UI)
 
 1. **Task ID:** TASK-032
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Archive eligible records (admin/manager only) when no unresolved active
    downstream obligations exist; archived records leave active views/reminders/default
    reports but remain retrievable via explicit archived filter; no hard delete.

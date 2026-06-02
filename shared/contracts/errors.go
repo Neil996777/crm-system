@@ -1,0 +1,28 @@
+package contracts
+
+const (
+	ErrorUnauthenticated        = "UNAUTHENTICATED"
+	ErrorSessionExpired         = "SESSION_EXPIRED"
+	ErrorSessionRevoked         = "SESSION_REVOKED"
+	ErrorUserDisabled           = "USER_DISABLED"
+	ErrorAuthzVersionStale      = "AUTHZ_VERSION_STALE"
+	ErrorPermissionDenied       = "PERMISSION_DENIED"
+	ErrorScopeDenied            = "SCOPE_DENIED"
+	ErrorAdminOnly              = "ADMIN_ONLY"
+	ErrorRequiredFieldMissing   = "REQUIRED_FIELD_MISSING"
+	ErrorInvalidDate            = "INVALID_DATE"
+	ErrorInvalidAmount          = "INVALID_AMOUNT"
+	ErrorInvalidTransition      = "INVALID_TRANSITION"
+	ErrorOverpaymentBlocked     = "OVERPAYMENT_BLOCKED"
+	ErrorEarlyWonBlocked        = "EARLY_WON_BLOCKED"
+	ErrorArchiveBlocked         = "ARCHIVE_BLOCKED_ACTIVE_OBLIGATION"
+	ErrorTerminalRecordReadOnly = "TERMINAL_RECORD_READ_ONLY"
+	ErrorLostReasonRequired     = "LOST_REASON_REQUIRED"
+	ErrorVersionConflict        = "VERSION_CONFLICT"
+	ErrorDuplicateWarning       = "DUPLICATE_WARNING"
+	ErrorServiceUnavailable     = "SERVICE_UNAVAILABLE"
+	ErrorDependencyTimeout      = "DEPENDENCY_TIMEOUT"
+	ErrorServiceAuthFailed      = "SERVICE_AUTH_FAILED"
+	ErrorImportPartialFailure   = "IMPORT_PARTIAL_FAILURE"
+	ErrorExportFailed           = "EXPORT_FAILED"
+)

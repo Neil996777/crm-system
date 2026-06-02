@@ -1,0 +1,2 @@
+DROP SCHEMA IF EXISTS account CASCADE;
+DROP ROLE IF EXISTS crm_account_user;
