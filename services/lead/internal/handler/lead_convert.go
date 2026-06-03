@@ -73,22 +73,32 @@ func (h *LeadHandler) convertLead(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The conversion input is invalid.")
 		return
 	}
-	converted, err = h.repo.Convert(r.Context(), current.ID, current.Version, converted)
+	err = h.inTransaction(r.Context(), func(txLeads *repo.LeadRepo, _ *repo.DuplicateRepo, txOutbox *event.Outbox) error {
+		var err error
+		converted, err = txLeads.Convert(r.Context(), current.ID, current.Version, converted)
+		if err != nil {
+			return err
+		}
+		return appendLeadOutbox(r.Context(), txOutbox, event.LeadConverted, converted.ID, map[string]any{
+			"traceability":  "TASK-008 ACC-004 ACC-005 ACC-007 ACC-014 FLOW-002 PIM-SM-001 PIM-INV-003 CONTRACT-003 CONTRACT-004",
+			"actorId":       actor.ID,
+			"leadId":        converted.ID,
+			"accountId":     converted.ConvertedAccountID,
+			"opportunityId": converted.ConvertedOpportunityID,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
+		return
+	}
+	if errors.Is(err, errOutboxAppendFailed) {
+		writeOutboxFailure(w)
 		return
 	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The conversion input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.LeadConverted, converted.ID, map[string]any{
-		"traceability":  "TASK-008 ACC-004 ACC-005 ACC-007 ACC-014 FLOW-002 PIM-SM-001 PIM-INV-003 CONTRACT-003 CONTRACT-004",
-		"actorId":       actor.ID,
-		"leadId":        converted.ID,
-		"accountId":     converted.ConvertedAccountID,
-		"opportunityId": converted.ConvertedOpportunityID,
-	})
 	writeJSON(w, http.StatusOK, conversionDTO(converted))
 }
 

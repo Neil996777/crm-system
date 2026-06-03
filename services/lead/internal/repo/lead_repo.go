@@ -19,15 +19,26 @@ var (
 
 type LeadRepo struct {
 	db *sql.DB
+	q  sqlRunner
 }
 
 func NewLeadRepo(db *sql.DB) *LeadRepo {
-	return &LeadRepo{db: db}
+	return &LeadRepo{db: db, q: db}
+}
+
+func NewLeadRepoTx(tx *sql.Tx) *LeadRepo {
+	return &LeadRepo{q: tx}
+}
+
+type sqlRunner interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 func (r *LeadRepo) Create(ctx context.Context, lead domain.Lead) (domain.Lead, error) {
 	lead.ID = "lead_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO lead.leads (id, lead_name, company_name, email, phone, source, status, owner_id, need_summary, version)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1)
 		RETURNING updated_at
@@ -40,7 +51,7 @@ func (r *LeadRepo) Create(ctx context.Context, lead domain.Lead) (domain.Lead, e
 
 func (r *LeadRepo) Find(ctx context.Context, id string) (domain.Lead, error) {
 	var lead domain.Lead
-	err := scanLead(r.db.QueryRowContext(ctx, `
+	err := scanLead(r.q.QueryRowContext(ctx, `
 		SELECT id, lead_name, company_name, email, phone, source, status, owner_id, need_summary,
 		       invalid_reason, converted_account_id, converted_opportunity_id, conversion_idempotency_key,
 		       archived_at, archived_by, archive_reason, version, updated_at
@@ -55,7 +66,7 @@ func (r *LeadRepo) Find(ctx context.Context, id string) (domain.Lead, error) {
 
 func (r *LeadRepo) List(ctx context.Context, actorID, actorRole, search string, includeArchived bool) ([]domain.Lead, error) {
 	search = strings.TrimSpace(search)
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, lead_name, company_name, email, phone, source, status, owner_id, need_summary,
 		       invalid_reason, converted_account_id, converted_opportunity_id, conversion_idempotency_key,
 		       archived_at, archived_by, archive_reason, version, updated_at
@@ -82,7 +93,7 @@ func (r *LeadRepo) List(ctx context.Context, actorID, actorRole, search string, 
 
 func (r *LeadRepo) Archive(ctx context.Context, id string, expectedVersion int, actorID, reason string) (domain.Lead, error) {
 	var lead domain.Lead
-	err := scanLead(r.db.QueryRowContext(ctx, `
+	err := scanLead(r.q.QueryRowContext(ctx, `
 		UPDATE lead.leads
 		SET archived_at = now(),
 		    archived_by = $2,
@@ -101,7 +112,7 @@ func (r *LeadRepo) Archive(ctx context.Context, id string, expectedVersion int, 
 }
 
 func (r *LeadRepo) UpdateQualification(ctx context.Context, id string, expectedVersion int, updated domain.Lead) (domain.Lead, error) {
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		UPDATE lead.leads
 		SET status = $2,
 		    invalid_reason = $3,
@@ -117,7 +128,7 @@ func (r *LeadRepo) UpdateQualification(ctx context.Context, id string, expectedV
 }
 
 func (r *LeadRepo) Convert(ctx context.Context, id string, expectedVersion int, updated domain.Lead) (domain.Lead, error) {
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		UPDATE lead.leads
 		SET status = $2,
 		    converted_account_id = $3,
@@ -146,7 +157,7 @@ func (r *LeadRepo) TransferOwner(ctx context.Context, id string, expectedVersion
 	updated.OwnerID = newOwnerID
 	updated.Status = domain.StatusPendingQualification
 	updated.Version = current.Version + 1
-	err = r.db.QueryRowContext(ctx, `
+	err = r.q.QueryRowContext(ctx, `
 		UPDATE lead.leads
 		SET owner_id = $2, status = $3, version = version + 1, updated_at = now()
 		WHERE id = $1 AND version = $4

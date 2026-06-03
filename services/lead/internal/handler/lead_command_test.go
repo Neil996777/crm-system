@@ -118,6 +118,41 @@ func TestLeadCreateAssignAndConcurrencyAcceptance(t *testing.T) {
 		}
 		requireErrorCode(t, conflict, "VERSION_CONFLICT")
 	})
+
+	t.Run("TEST-HISTORY-TX-001 outbox enqueue failure rolls back lead create", func(t *testing.T) {
+		if _, err := db.Exec(`
+			CREATE OR REPLACE FUNCTION lead.fail_outbox_insert() RETURNS trigger AS $$
+			BEGIN
+				RAISE EXCEPTION 'forced outbox failure';
+			END;
+			$$ LANGUAGE plpgsql;
+			CREATE TRIGGER fail_outbox_insert
+			BEFORE INSERT ON lead.outbox_events
+			FOR EACH ROW EXECUTE FUNCTION lead.fail_outbox_insert();
+		`); err != nil {
+			t.Fatalf("install failing outbox trigger: %v", err)
+		}
+		t.Cleanup(func() {
+			_, _ = db.Exec(`DROP TRIGGER IF EXISTS fail_outbox_insert ON lead.outbox_events; DROP FUNCTION IF EXISTS lead.fail_outbox_insert();`)
+		})
+		rec := postLeadJSON(app, "/leads", map[string]any{
+			"leadName":    "Rollback lead",
+			"companyName": "Rollback Co",
+			"source":      "Website",
+			"ownerId":     "sales-1",
+			"needSummary": "Must rollback with failed history event",
+		}, actorHeaders("sales-1", "Sales"))
+		if rec.Code < 400 {
+			t.Fatalf("expected outbox failure to fail request, got %d body=%s", rec.Code, rec.Body.String())
+		}
+		var count int
+		if err := db.QueryRow(`SELECT count(*) FROM lead.leads WHERE company_name = $1`, "Rollback Co").Scan(&count); err != nil {
+			t.Fatalf("count rolled back lead: %v", err)
+		}
+		if count != 0 {
+			t.Fatalf("expected rollback to leave no lead row, got %d", count)
+		}
+	})
 }
 
 func newLeadTestDB(t *testing.T) *sql.DB {

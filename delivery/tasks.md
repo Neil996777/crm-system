@@ -210,7 +210,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     `TEST-HISTORY-DISPATCH-RETRY-001`, `TEST-HISTORY-IDEMPOTENT-001`,
     `TEST-HISTORY-TX-001`; G12 second rework per-service dispatcher tests in
     account, commercial, and work covering successful audit-history delivery,
-    failed-delivery retry retention, and duplicate event UID idempotency. Type:
+    failed-delivery retry retention, and duplicate event UID idempotency; G12 third
+    rework lead transactional outbox rollback coverage (`TEST-HISTORY-TX-001`) proves
+    lead create rolls back when the local outbox append fails. Type:
     Integration.
 13. **Manual verification:** Append an event via S2S; query as record owner → visible;
     query as non-owner → denied; attempt to edit an event → unavailable.
@@ -223,7 +225,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     transaction coupling. G12 second rework fail-first evidence: work dispatcher test
     initially failed because `work.outbox_events` lacked `published_at`; after the
     migration fix, account/commercial/work dispatcher tests and full service test suites
-    passed.
+    passed. G12 third rework fail-first evidence: lead create rollback test initially
+    returned 201 because `_ = h.outbox.Append` discarded a forced outbox failure; after
+    transactional coupling it returned an error and left no lead row, and `go test ./...`
+    passed in services/lead.
 16. **No-downgrade items:** Real append-only persistence (no in-memory log); real
     hash chain; real record-permission gate on history query (ABUSE-013); actor identity
     is the authenticated principal, never a client-supplied field (ABUSE-019, AUTHZ-009).
@@ -340,7 +345,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     `TEST-OWNER-TRANSFER-001` (manager/admin assign allowed — PIM-SM-008, PM-014),
     `TEST-OWNER-TRANSFER-002` (manager/admin transfer allowed — PM-014),
     `TEST-OWNER-TRANSFER-003` (Sales assign/transfer denied; out-of-scope target rejected — PM-015, PIM-SM-008),
-    `TEST-AUTHZ-SCOPE-004` (Sales non-owned denied), `TEST-ABUSE-IDOR-001`. Type:
+    `TEST-AUTHZ-SCOPE-004` (Sales non-owned denied), `TEST-ABUSE-IDOR-001`;
+    G12 third rework `TEST-HISTORY-TX-001` proves lead create mutation rolls back if
+    its history/outbox insert fails. Type:
     Integration + E2E.
 13. **Manual verification:** Create a lead missing source → blocked; create Unassigned
     → allowed; Manager assigns owner → history shows owner change; Sales tries assign
@@ -381,7 +388,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     convert is idempotent by key.
 11. **Acceptance method:** ACC-004 — transition rules pass for allowed actors; forbidden
     transitions rejected without mutation; conversion preserves history.
-12. **Automated tests:** `TEST-LEAD-QUALIFY-001..007`, `TEST-ABUSE-BRBYPASS-001` (subset).
+12. **Automated tests:** `TEST-LEAD-QUALIFY-001..007`, `TEST-ABUSE-BRBYPASS-001` (subset);
+    G12 third rework regression in services/lead covers the same transactional outbox
+    helper used by qualification and conversion mutations.
     Type: Integration + E2E.
 13. **Manual verification:** Mark Valid → convert → opportunity created, lead history
     intact; mark Invalid then convert → rejected; restore as Sales → denied.
@@ -1190,7 +1199,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     warning; matched-record details safe.
 11. **Acceptance method:** ACC-019 — warning scenarios + proceed-after-warning + no-warning
     unique data.
-12. **Automated tests:** `TEST-DUPLICATE-WARN-001..006`, `TEST-ABUSE-DUPENUM-001`. Type:
+12. **Automated tests:** `TEST-DUPLICATE-WARN-001..006`, `TEST-ABUSE-DUPENUM-001`;
+    G12 third rework regression in services/lead covers the same transactional outbox
+    helper used by lead duplicate-warning token + event persistence. Type:
     Integration + E2E.
 13. **Manual verification:** Create a company; create another with same name differing case →
     warning; proceed → second record created, first untouched.

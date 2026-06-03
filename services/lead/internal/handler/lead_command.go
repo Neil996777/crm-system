@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -23,6 +25,7 @@ type Config struct {
 }
 
 type LeadHandler struct {
+	db         *sql.DB
 	repo       *repo.LeadRepo
 	duplicates *repo.DuplicateRepo
 	outbox     *event.Outbox
@@ -32,6 +35,7 @@ type LeadHandler struct {
 
 func NewLeadServer(db *sql.DB, config Config) http.Handler {
 	handler := &LeadHandler{
+		db:         db,
 		repo:       repo.NewLeadRepo(db),
 		duplicates: repo.NewDuplicateRepo(db),
 		outbox:     event.NewOutbox(db),
@@ -64,6 +68,31 @@ func NewLeadServer(db *sql.DB, config Config) http.Handler {
 	mux.HandleFunc("GET /leads", handler.listLeads)
 	mux.HandleFunc("GET /leads/{id}", handler.getLead)
 	return mux
+}
+
+var errOutboxAppendFailed = errors.New("outbox append failed")
+
+func (h *LeadHandler) inTransaction(ctx context.Context, fn func(*repo.LeadRepo, *repo.DuplicateRepo, *event.Outbox) error) error {
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := fn(repo.NewLeadRepoTx(tx), repo.NewDuplicateRepoTx(tx), event.NewOutboxTx(tx)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func appendLeadOutbox(ctx context.Context, outbox *event.Outbox, eventType, aggregateID string, payload map[string]any) error {
+	if err := outbox.Append(ctx, eventType, aggregateID, payload); err != nil {
+		return fmt.Errorf("%w: %v", errOutboxAppendFailed, err)
+	}
+	return nil
+}
+
+func writeOutboxFailure(w http.ResponseWriter) {
+	writeError(w, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "dependency", "The audit event could not be persisted.")
 }
 
 func (h *LeadHandler) createLead(w http.ResponseWriter, r *http.Request) {
@@ -99,26 +128,39 @@ func (h *LeadHandler) createLead(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The lead input is invalid.")
 		return
 	}
-	if request.ProceedWarningToken != "" {
-		candidate := domain.DuplicateCandidate{TargetType: "lead", CompanyName: lead.CompanyName, Email: lead.Email, Phone: lead.Phone}
-		signature, _ := domain.DuplicateSignature(candidate)
-		if err := h.duplicates.ConsumeToken(r.Context(), request.ProceedWarningToken, candidate.TargetType, actor.ID, signature); err != nil {
-			writeDuplicateTokenError(w, err)
-			return
+	var created domain.Lead
+	err = h.inTransaction(r.Context(), func(txLeads *repo.LeadRepo, txDuplicates *repo.DuplicateRepo, txOutbox *event.Outbox) error {
+		if request.ProceedWarningToken != "" {
+			candidate := domain.DuplicateCandidate{TargetType: "lead", CompanyName: lead.CompanyName, Email: lead.Email, Phone: lead.Phone}
+			signature, _ := domain.DuplicateSignature(candidate)
+			if err := txDuplicates.ConsumeToken(r.Context(), request.ProceedWarningToken, candidate.TargetType, actor.ID, signature); err != nil {
+				return err
+			}
 		}
+		created, err = txLeads.Create(r.Context(), lead)
+		if err != nil {
+			return err
+		}
+		return appendLeadOutbox(r.Context(), txOutbox, event.LeadCreated, created.ID, map[string]any{
+			"traceability": "TASK-007 ACC-003 PIM-BEH-004 CONTRACT-004",
+			"actorId":      actor.ID,
+			"leadId":       created.ID,
+			"ownerId":      created.OwnerID,
+			"status":       created.Status,
+		})
+	})
+	if errors.Is(err, repo.ErrDuplicateTokenInvalid) || errors.Is(err, repo.ErrDuplicateTokenUsed) {
+		writeDuplicateTokenError(w, err)
+		return
 	}
-	created, err := h.repo.Create(r.Context(), lead)
+	if errors.Is(err, errOutboxAppendFailed) {
+		writeOutboxFailure(w)
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The lead input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.LeadCreated, created.ID, map[string]any{
-		"traceability": "TASK-007 ACC-003 PIM-BEH-004 CONTRACT-004",
-		"actorId":      actor.ID,
-		"leadId":       created.ID,
-		"ownerId":      created.OwnerID,
-		"status":       created.Status,
-	})
 	writeJSON(w, http.StatusCreated, leadDTO(created))
 }
 
@@ -137,7 +179,22 @@ func (h *LeadHandler) transferOwner(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The owner transfer input is invalid.")
 		return
 	}
-	before, updated, err := h.repo.TransferOwner(r.Context(), r.PathValue("id"), request.ExpectedVersion, request.NewOwnerID)
+	var before domain.Lead
+	var updated domain.Lead
+	err := h.inTransaction(r.Context(), func(txLeads *repo.LeadRepo, _ *repo.DuplicateRepo, txOutbox *event.Outbox) error {
+		var err error
+		before, updated, err = txLeads.TransferOwner(r.Context(), r.PathValue("id"), request.ExpectedVersion, request.NewOwnerID)
+		if err != nil {
+			return err
+		}
+		return appendLeadOutbox(r.Context(), txOutbox, event.LeadOwnerChanged, updated.ID, map[string]any{
+			"traceability": "TASK-007 ACC-003 ACC-014 PIM-BEH-005 CONTRACT-004 EVT-OWNER-CHANGED",
+			"actorId":      actor.ID,
+			"oldOwnerId":   before.OwnerID,
+			"newOwnerId":   updated.OwnerID,
+			"reason":       request.Reason,
+		})
+	})
 	if errors.Is(err, repo.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
 		return
@@ -146,17 +203,14 @@ func (h *LeadHandler) transferOwner(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
+	if errors.Is(err, errOutboxAppendFailed) {
+		writeOutboxFailure(w)
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The owner transfer input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.LeadOwnerChanged, updated.ID, map[string]any{
-		"traceability": "TASK-007 ACC-003 ACC-014 PIM-BEH-005 CONTRACT-004 EVT-OWNER-CHANGED",
-		"actorId":      actor.ID,
-		"oldOwnerId":   before.OwnerID,
-		"newOwnerId":   updated.OwnerID,
-		"reason":       request.Reason,
-	})
 	writeJSON(w, http.StatusOK, leadDTO(updated))
 }
 
@@ -195,21 +249,32 @@ func (h *LeadHandler) archiveLead(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
-	archived, err := h.repo.Archive(r.Context(), lead.ID, request.ExpectedVersion, actor.ID, request.Reason)
+	var archived domain.Lead
+	err = h.inTransaction(r.Context(), func(txLeads *repo.LeadRepo, _ *repo.DuplicateRepo, txOutbox *event.Outbox) error {
+		var err error
+		archived, err = txLeads.Archive(r.Context(), lead.ID, request.ExpectedVersion, actor.ID, request.Reason)
+		if err != nil {
+			return err
+		}
+		return appendLeadOutbox(r.Context(), txOutbox, event.LeadArchived, archived.ID, map[string]any{
+			"traceability": "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-SM-010 PIM-BEH-024 PSM-002 FLOW-010 TEST-ARCHIVE",
+			"actorId":      actor.ID,
+			"leadId":       archived.ID,
+			"reason":       request.Reason,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
+		return
+	}
+	if errors.Is(err, errOutboxAppendFailed) {
+		writeOutboxFailure(w)
 		return
 	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.LeadArchived, archived.ID, map[string]any{
-		"traceability": "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-SM-010 PIM-BEH-024 PSM-002 FLOW-010 TEST-ARCHIVE",
-		"actorId":      actor.ID,
-		"leadId":       archived.ID,
-		"reason":       request.Reason,
-	})
 	writeJSON(w, http.StatusOK, leadDTO(archived))
 }
 

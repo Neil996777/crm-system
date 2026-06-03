@@ -34,19 +34,31 @@ func (h *LeadHandler) duplicateCheck(w http.ResponseWriter, r *http.Request) {
 		Email:       request.Candidate.Email,
 		Phone:       request.Candidate.Phone,
 	}
-	result, err := h.duplicates.Check(r.Context(), actor.ID, actor.Role, candidate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The duplicate check input is invalid.")
-		return
-	}
-	if result.Result == "PossibleDuplicate" {
-		_ = h.outbox.Append(r.Context(), event.DuplicateWarningRaised, result.WarningToken, map[string]any{
+	var result domain.DuplicateCheckResult
+	err := h.inTransaction(r.Context(), func(_ *repo.LeadRepo, txDuplicates *repo.DuplicateRepo, txOutbox *event.Outbox) error {
+		var err error
+		result, err = txDuplicates.Check(r.Context(), actor.ID, actor.Role, candidate)
+		if err != nil {
+			return err
+		}
+		if result.Result != "PossibleDuplicate" {
+			return nil
+		}
+		return appendLeadOutbox(r.Context(), txOutbox, event.DuplicateWarningRaised, result.WarningToken, map[string]any{
 			"traceability":     "TASK-031 ACC-019 CIM-040 CIM-PROC-005 PIM-021 PIM-BEH-025 PSM-002 CONTRACT-003 FLOW-012 TEST-DUPLICATE-WARN",
 			"actorId":          actor.ID,
 			"targetType":       request.TargetType,
 			"normalizedFields": result.NormalizedFields,
 			"rules":            result.Rules,
 		})
+	})
+	if errors.Is(err, errOutboxAppendFailed) {
+		writeOutboxFailure(w)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The duplicate check input is invalid.")
+		return
 	}
 	writeJSON(w, http.StatusOK, duplicateDTO(result))
 }

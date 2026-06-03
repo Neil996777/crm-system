@@ -27,7 +27,12 @@ const (
 )
 
 type Outbox struct {
-	db *sql.DB
+	q sqlExecer
+}
+
+type sqlExecer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
 
 type DispatchConfig struct {
@@ -46,7 +51,11 @@ type outboxEvent struct {
 }
 
 func NewOutbox(db *sql.DB) *Outbox {
-	return &Outbox{db: db}
+	return &Outbox{q: db}
+}
+
+func NewOutboxTx(tx *sql.Tx) *Outbox {
+	return &Outbox{q: tx}
 }
 
 func (o *Outbox) Append(ctx context.Context, eventType, aggregateID string, payload map[string]any) error {
@@ -54,7 +63,7 @@ func (o *Outbox) Append(ctx context.Context, eventType, aggregateID string, payl
 	if err != nil {
 		return err
 	}
-	_, err = o.db.ExecContext(ctx, `
+	_, err = o.q.ExecContext(ctx, `
 		INSERT INTO lead.outbox_events (id, event_type, aggregate_id, payload, occurred_at)
 		VALUES ($1, $2, $3, $4, $5)
 	`, "evt_"+randomHex(16), eventType, aggregateID, payloadBytes, time.Now().UTC())
@@ -73,7 +82,7 @@ func (o *Outbox) DispatchOnce(ctx context.Context, config DispatchConfig) error 
 	if batchSize <= 0 {
 		batchSize = 50
 	}
-	rows, err := o.db.QueryContext(ctx, `
+	rows, err := o.q.QueryContext(ctx, `
 		SELECT id, event_type, aggregate_id, payload
 		FROM lead.outbox_events
 		WHERE published_at IS NULL
@@ -107,7 +116,7 @@ func (o *Outbox) DispatchOnce(ctx context.Context, config DispatchConfig) error 
 			}
 			continue
 		}
-		if _, err := o.db.ExecContext(ctx, `UPDATE lead.outbox_events SET published_at = now() WHERE id = $1 AND published_at IS NULL`, item.ID); err != nil && firstErr == nil {
+		if _, err := o.q.ExecContext(ctx, `UPDATE lead.outbox_events SET published_at = now() WHERE id = $1 AND published_at IS NULL`, item.ID); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}

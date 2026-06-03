@@ -66,22 +66,32 @@ func (h *LeadHandler) updateQualification(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The qualification input is invalid.")
 		return
 	}
-	updated, err = h.repo.UpdateQualification(r.Context(), current.ID, request.ExpectedVersion, updated)
+	err = h.inTransaction(r.Context(), func(txLeads *repo.LeadRepo, _ *repo.DuplicateRepo, txOutbox *event.Outbox) error {
+		var err error
+		updated, err = txLeads.UpdateQualification(r.Context(), current.ID, request.ExpectedVersion, updated)
+		if err != nil {
+			return err
+		}
+		return appendLeadOutbox(r.Context(), txOutbox, event.LeadQualified, updated.ID, map[string]any{
+			"traceability":  "TASK-008 ACC-004 PIM-SM-001 PIM-BEH-006 CONTRACT-004",
+			"actorId":       actor.ID,
+			"leadId":        updated.ID,
+			"status":        updated.Status,
+			"invalidReason": updated.InvalidReason,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
+		return
+	}
+	if errors.Is(err, errOutboxAppendFailed) {
+		writeOutboxFailure(w)
 		return
 	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The qualification input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.LeadQualified, updated.ID, map[string]any{
-		"traceability":  "TASK-008 ACC-004 PIM-SM-001 PIM-BEH-006 CONTRACT-004",
-		"actorId":       actor.ID,
-		"leadId":        updated.ID,
-		"status":        updated.Status,
-		"invalidReason": updated.InvalidReason,
-	})
 	// TASK-027 / ACC-014 / PSM-009 / CONTRACT-013: the record-local timeline reads
 	// this safe, persisted history event through audit-history.
 	if err := h.audit.AppendRecordHistory(r.Context(), client.Actor{ID: actor.ID, Role: actor.Role, DisplayName: actor.DisplayName}, client.AuditEventInput{
