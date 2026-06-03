@@ -1383,7 +1383,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-037 — Persistence verification across refresh / re-login / restart
 
 1. **Task ID:** TASK-037
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Prove all core CRM data persists across browser refresh, logout/login, and
    service restart; failed saves are surfaced and never appear as successful persistent changes.
 4. **Business capability:** CAP-011 Persistence and production operation (primary ACC-016).
