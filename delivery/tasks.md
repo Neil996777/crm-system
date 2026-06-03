@@ -1263,11 +1263,16 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     authorization applied before aggregation; archived excluded by default.
 11. **Acceptance method:** ACC-018 — team overview from persisted authorized team records;
     Sales denied.
-12. **Automated tests:** `TEST-TEAM-OVERVIEW-001..004`. Type: E2E + Integration.
+12. **Automated tests:** `TEST-TEAM-OVERVIEW-001..004`; G12 rework
+    `TEST-REPORTING-S2S-001..005` for internal projection ingest authentication
+    and no-mutation denial. Type: E2E + Integration.
 13. **Manual verification:** As manager, open overview; as Sales → denied.
 14. **Traceability:** CIM-043/CIM-PROC-015 → PIM-024/PIM-BEH-031 → PSM-010 → CONTRACT-015/016 →
     ACC-018 → TEST-TEAM-OVERVIEW-001..004.
 15. **TDD:** Write manager-allow + Sales-deny + empty-state tests first (fail).
+    G12 rework fail-first evidence: `TestProjectionIngestRequiresS2SToken`
+    initially failed because `Config.ServiceID` / `ServiceTokenSecret` and S2S
+    verification were absent, then passed after signed-token middleware.
 16. **No-downgrade items:** Read model from events/contracts, NOT source DB (ARCH-ACC-006);
     real authz-before-aggregate; no static numbers.
 17. **Blocker:** None.

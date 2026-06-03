@@ -3,7 +3,10 @@ package handler
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -70,6 +73,44 @@ func TestManagerTeamOverviewAcceptance(t *testing.T) {
 			t.Fatalf("expected empty-state metrics, got %s", rec.Body.String())
 		}
 	})
+}
+
+func TestProjectionIngestRequiresS2SToken(t *testing.T) {
+	db := newReportingTestDB(t)
+	app := NewReportingServer(db, Config{ServiceID: "reporting", ServiceTokenSecret: []byte("reporting-secret")})
+	body := map[string]any{
+		"sourceService": "opportunity",
+		"recordType":    "opportunity",
+		"recordId":      "opp_s2s",
+		"ownerId":       "sales-1",
+		"teamId":        "single-team",
+		"stage":         "Quote",
+		"amount":        "1000.00",
+	}
+
+	for name, token := range map[string]string{
+		"TEST-REPORTING-S2S-001 missing token":   "",
+		"TEST-REPORTING-S2S-002 expired token":   signReportingTestToken(t, "opportunity", "reporting", "reporting.projection_ingest", []byte("reporting-secret"), time.Now().Add(-time.Minute)),
+		"TEST-REPORTING-S2S-003 wrong audience":  signReportingTestToken(t, "opportunity", "account", "reporting.projection_ingest", []byte("reporting-secret"), time.Now().Add(2*time.Minute)),
+		"TEST-REPORTING-S2S-004 wrong intent":    signReportingTestToken(t, "opportunity", "reporting", "audit.append", []byte("reporting-secret"), time.Now().Add(2*time.Minute)),
+		"TEST-REPORTING-S2S-005 wrong signature": signReportingTestToken(t, "opportunity", "reporting", "reporting.projection_ingest", []byte("wrong-secret"), time.Now().Add(2*time.Minute)),
+	} {
+		t.Run(name, func(t *testing.T) {
+			rec := postProjectionJSON(app, body, token, "opportunity", "reporting.projection_ingest")
+			if rec.Code != http.StatusUnauthorized {
+				t.Fatalf("expected 401, got %d body=%s", rec.Code, rec.Body.String())
+			}
+			requireErrorCode(t, rec, "SERVICE_AUTH_FAILED")
+			requireProjectionCount(t, db, "opp_s2s", 0)
+		})
+	}
+
+	valid := signReportingTestToken(t, "opportunity", "reporting", "reporting.projection_ingest", []byte("reporting-secret"), time.Now().Add(2*time.Minute))
+	rec := postProjectionJSON(app, body, valid, "opportunity", "reporting.projection_ingest")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected valid S2S projection ingest 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	requireProjectionCount(t, db, "opp_s2s", 1)
 }
 
 func newReportingTestDB(t *testing.T) *sql.DB {
@@ -160,6 +201,14 @@ func getReportingJSON(handler http.Handler, path string, headers map[string]stri
 	return requestReportingJSON(handler, http.MethodGet, path, nil, headers)
 }
 
+func postProjectionJSON(handler http.Handler, body any, token, serviceID, intent string) *httptest.ResponseRecorder {
+	headers := map[string]string{"X-Service-Id": serviceID, "X-Intent": intent}
+	if token != "" {
+		headers["Authorization"] = "Bearer " + token
+	}
+	return requestReportingJSON(handler, http.MethodPost, "/internal/projections", body, headers)
+}
+
 func requestReportingJSON(handler http.Handler, method, path string, body any, headers map[string]string) *httptest.ResponseRecorder {
 	var requestBody bytes.Buffer
 	if body != nil {
@@ -208,4 +257,32 @@ func requireErrorCode(t *testing.T, rec *httptest.ResponseRecorder, expected str
 
 func contains(haystack, needle string) bool {
 	return bytes.Contains([]byte(haystack), []byte(needle))
+}
+
+func requireProjectionCount(t *testing.T, db *sql.DB, recordID string, expected int) {
+	t.Helper()
+	var count int
+	if err := db.QueryRow(`SELECT count(*) FROM reporting.record_projections WHERE record_id = $1`, recordID).Scan(&count); err != nil {
+		t.Fatalf("count projection: %v", err)
+	}
+	if count != expected {
+		t.Fatalf("expected projection count %d for %s, got %d", expected, recordID, count)
+	}
+}
+
+func signReportingTestToken(t *testing.T, issuer, audience, intent string, secret []byte, expires time.Time) string {
+	t.Helper()
+	payload, err := json.Marshal(map[string]any{
+		"iss":    issuer,
+		"aud":    audience,
+		"intent": intent,
+		"exp":    expires.UTC(),
+	})
+	if err != nil {
+		t.Fatalf("marshal token: %v", err)
+	}
+	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
+	mac := hmac.New(sha256.New, secret)
+	mac.Write([]byte(encodedPayload))
+	return encodedPayload + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }

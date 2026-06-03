@@ -46,7 +46,10 @@ func main() {
 	defer db.Close()
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthHandler(true))
-	mux.Handle("/", handler.NewReportingServer(db, handler.Config{}))
+	mux.Handle("/", handler.NewReportingServer(db, handler.Config{
+		ServiceID:          envOrDefault("SERVICE_ID", "reporting"),
+		ServiceTokenSecret: []byte(os.Getenv("SERVICE_TOKEN_SECRET")),
+	}))
 	addr := ":" + envOrDefault("PORT", "8080")
 	log.Printf("%s listening on %s", defaultServiceName, addr)
 	log.Fatal(http.ListenAndServe(addr, mux))

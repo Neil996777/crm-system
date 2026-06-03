@@ -5,22 +5,35 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
+	"crm-system/services/reporting/internal/authz"
 	"crm-system/services/reporting/internal/projection"
 	"crm-system/services/reporting/internal/repo"
 )
 
-type Config struct{}
+const intentProjectionIngest = "reporting.projection_ingest"
+
+type Config struct {
+	ServiceID          string
+	ServiceTokenSecret []byte
+}
 
 type ReportingHandler struct {
 	repo     *repo.ProjectionRepo
 	consumer *projection.Consumer
+	config   Config
 }
 
-func NewReportingServer(db *sql.DB, _ Config) http.Handler {
+func NewReportingServer(db *sql.DB, config Config) http.Handler {
+	if config.ServiceID == "" {
+		config.ServiceID = "reporting"
+	}
 	handler := &ReportingHandler{
 		repo:     repo.NewProjectionRepo(db),
 		consumer: projection.NewConsumer(db),
+		config:   config,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /reports/team-overview", handler.teamOverview)
@@ -59,6 +72,10 @@ func (h *ReportingHandler) teamOverview(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ReportingHandler) upsertProjection(w http.ResponseWriter, r *http.Request) {
+	if !h.verifyServiceToken(r, intentProjectionIngest) {
+		writeError(w, http.StatusUnauthorized, "SERVICE_AUTH_FAILED", "authentication", "Service authentication failed.")
+		return
+	}
 	var input projection.RecordProjection
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The projection input is invalid.")
@@ -69,6 +86,23 @@ func (h *ReportingHandler) upsertProjection(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"status": "updated"})
+}
+
+func (h *ReportingHandler) verifyServiceToken(r *http.Request, intent string) bool {
+	authHeader := r.Header.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return false
+	}
+	claims, err := authz.VerifyServiceToken(strings.TrimPrefix(authHeader, "Bearer "), authz.VerifyOptions{
+		Secret:   h.config.ServiceTokenSecret,
+		Audience: h.config.ServiceID,
+		Intent:   intent,
+		Now:      time.Now().UTC(),
+	})
+	if err != nil {
+		return false
+	}
+	return r.Header.Get("X-Service-Id") == claims.Issuer && r.Header.Get("X-Intent") == intent
 }
 
 type actorContext struct {
