@@ -7,7 +7,7 @@ command=ls -l backup checksum passphrase
 --- command=openssl decrypt gzip integrity test
 decrypt_gzip_test=OK
 --- command=restore-result.json
-{"runId":"20260603T104837Z","backup":"crm-postgres-20260603T104620Z.sql.gz.enc","restoreDatabase":"crm_system","checksum":"passed","roles":10,"databaseExists":1,"schemas":9,"identityUsersTable":1,"auditHistoryTables":1,"servicePermissionRoles":9,"result":"passed"}
+{"runId":"20260603T104837Z","backup":"crm-postgres-20260603T104620Z.sql.gz.enc","restoreDatabase":"crm_system","checksum":"passed","roles":10,"databaseExists":1,"schemas":10,"identityUsersTable":1,"auditHistoryTables":1,"servicePermissionRoles":10,"result":"passed"}
 --- command=psql \du
                                     List of roles
         Role name        |                         Attributes                         

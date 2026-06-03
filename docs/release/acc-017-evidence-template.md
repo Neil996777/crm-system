@@ -155,5 +155,7 @@ that raw evidence.
 
 G12 release-evidence transcript rework captured `curl -I -v` HTTPS and redirect
 output, `openssl s_client`, `certbot certificates`, `certbot renew --dry-run`,
-external `nc` negative probes for `8080`/`5432`, and operator-access hardening
-evidence. `TEST-RELEASE-EVIDENCE-001` passed against those transcript files.
+external-edge `nc` negative probes for `8080`/`5432` from `srv-aliyun-bj-01`,
+operator-access hardening evidence with `sshd -T` effective values, and distinct
+SSH key fingerprints for `crm-deploy` and `crm-ops`. `TEST-RELEASE-EVIDENCE-001`
+passed against those transcript files.

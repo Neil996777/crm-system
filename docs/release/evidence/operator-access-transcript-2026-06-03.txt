@@ -1,32 +1,52 @@
 command=getent passwd crm-deploy crm-ops
 crm-deploy:x:1000:1000::/home/crm-deploy:/bin/bash
 crm-ops:x:1001:1001::/home/crm-ops:/bin/bash
---- command=sshd_config effective values
+--- command=sshd -T effective values
 permitrootlogin without-password
 pubkeyauthentication yes
-passwordauthentication yes
+passwordauthentication no
 kbdinteractiveauthentication no
---- command=sshd hardening drop-in
--rw-r--r-- 1 root root 117 Jun  3 20:49 /etc/ssh/sshd_config.d/99-crm-hardening.conf
-PasswordAuthentication no
-KbdInteractiveAuthentication no
-PermitRootLogin prohibit-password
-PubkeyAuthentication yes
+--- command=sshd hardening source
+/etc/ssh/sshd_config:33:PermitRootLogin prohibit-password
+/etc/ssh/sshd_config:57:PasswordAuthentication no
+/etc/ssh/sshd_config:62:KbdInteractiveAuthentication no
+/etc/ssh/sshd_config.d/50-cloud-init.conf:1:PasswordAuthentication no
+/etc/ssh/sshd_config.d/99-crm-hardening.conf:1:PubkeyAuthentication yes
+/etc/ssh/sshd_config.d/99-crm-hardening.conf:2:PasswordAuthentication no
+/etc/ssh/sshd_config.d/99-crm-hardening.conf:3:KbdInteractiveAuthentication no
+/etc/ssh/sshd_config.d/99-crm-hardening.conf:4:PermitRootLogin prohibit-password
+/etc/ssh/sshd_config.d/99-crm-hardening.conf:5:PubkeyAuthentication yes
 --- command=sudoers crm boundary
-/etc/sudoers.d/crm-system:crm-deploy ALL=(root) NOPASSWD: CRM_DEPLOY
-/etc/sudoers.d/crm-system:crm-ops ALL=(root) NOPASSWD: CRM_OPS_READ
+1:Cmnd_Alias CRM_DEPLOY = /usr/bin/docker compose --env-file /opt/crm-system/current/.env -f /opt/crm-system/current/docker-compose.prod.yml *, /usr/sbin/nginx -t, /usr/bin/systemctl reload nginx, /usr/bin/systemctl status nginx *, /usr/local/bin/certbot renew *, /usr/bin/systemctl status crm-certbot-renew.timer *
+2:Cmnd_Alias CRM_OPS_READ = /usr/bin/docker compose --env-file /opt/crm-system/current/.env -f /opt/crm-system/current/docker-compose.prod.yml ps, /usr/bin/docker compose --env-file /opt/crm-system/current/.env -f /opt/crm-system/current/docker-compose.prod.yml logs *, /usr/bin/systemctl status nginx *, /usr/bin/systemctl status crm-certbot-renew.timer *, /usr/bin/journalctl *, /usr/bin/tail *, /usr/bin/less *, /usr/bin/df *, /usr/bin/free *, /usr/bin/ss *
+3:crm-deploy ALL=(root) NOPASSWD: CRM_DEPLOY
+4:crm-ops ALL=(root) NOPASSWD: CRM_OPS_READ
 --- command=key fingerprints and ownership
--rw------- 1 crm-deploy crm-deploy 381 Jun  3 15:25 /home/crm-deploy/.ssh/authorized_keys
-2048 SHA256:fr4eZ5j+5ZOAIYhqAV9P/3rK70qscRakbnyBSjiF6rc no comment (RSA)
--rw------- 1 crm-ops crm-ops 381 Jun  3 15:25 /home/crm-ops/.ssh/authorized_keys
-2048 SHA256:fr4eZ5j+5ZOAIYhqAV9P/3rK70qscRakbnyBSjiF6rc no comment (RSA)
+-rw------- 1 crm-deploy crm-deploy 122 Jun  3 22:31 /home/crm-deploy/.ssh/authorized_keys
+-rw------- 1 crm-ops    crm-ops    119 Jun  3 22:31 /home/crm-ops/.ssh/authorized_keys
+256 SHA256:ZGLqXBHGgqy29ZUMFysRjaw579Z3yx1980pIFWBb/b4 crm-deploy@srv-volcengine-sh-01-20260603 (ED25519)
+256 SHA256:PHl9ZXjKKPzI5oiWrll9Jj60X04+5S7/TMpV1q3AYQA crm-ops@srv-volcengine-sh-01-20260603 (ED25519)
 --- command=secrets backup permissions
 drwxr-xr-x 8 root root 4096 Jun  3 18:47 /opt/crm-system
 drwxr-xr-x 3 root root 4096 Jun  3 18:44 /opt/crm-system/backups
 drwx------ 2 root root 4096 Jun  3 18:46 /opt/crm-system/backups/postgres
 drwx------ 2 root root 4096 Jun  3 18:46 /opt/crm-system/secrets
--rw------- 1 root root 65 Jun  3 18:44 /opt/crm-system/secrets/backup.passphrase
--rw------- 1 root root 1700 May 29 16:49 /opt/crm-system/secrets/aliyun-bj-ecs-root.pem
+-rw-r--r-- 1 root root    0 Jun  3 18:46 /opt/crm-system/backups/postgres/.backup.lock
 -rw------- 1 root root 9680 Jun  3 18:46 /opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc
--rw------- 1 root root 140 Jun  3 18:46 /opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc.sha256
--rw-r--r-- 1 root root 0 Jun  3 18:46 /opt/crm-system/backups/postgres/.backup.lock
+-rw------- 1 root root  140 Jun  3 18:46 /opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc.sha256
+-rw------- 1 root root 1700 May 29 16:49 /opt/crm-system/secrets/aliyun-bj-ecs-root.pem
+-rw------- 1 root root   65 Jun  3 18:44 /opt/crm-system/secrets/backup.passphrase
+--- command=crm-deploy ssh login
+uid=1000(crm-deploy) gid=1000(crm-deploy) groups=1000(crm-deploy)
+Matching Defaults entries for crm-deploy on iv-yemoz0an7kk36d2c9bp6:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin, use_pty
+
+User crm-deploy may run the following commands on iv-yemoz0an7kk36d2c9bp6:
+    (root) NOPASSWD: /usr/bin/docker compose --env-file /opt/crm-system/current/.env -f /opt/crm-system/current/docker-compose.prod.yml *, /usr/sbin/nginx -t, /usr/bin/systemctl reload nginx, /usr/bin/systemctl status nginx *, /usr/local/bin/certbot renew *, /usr/bin/systemctl status crm-certbot-renew.timer *
+--- command=crm-ops ssh login
+uid=1001(crm-ops) gid=1001(crm-ops) groups=1001(crm-ops)
+Matching Defaults entries for crm-ops on iv-yemoz0an7kk36d2c9bp6:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin, use_pty
+
+User crm-ops may run the following commands on iv-yemoz0an7kk36d2c9bp6:
+    (root) NOPASSWD: /usr/bin/docker compose --env-file /opt/crm-system/current/.env -f /opt/crm-system/current/docker-compose.prod.yml ps, /usr/bin/docker compose --env-file /opt/crm-system/current/.env -f /opt/crm-system/current/docker-compose.prod.yml logs *, /usr/bin/systemctl status nginx *, /usr/bin/systemctl status crm-certbot-renew.timer *, /usr/bin/journalctl *, /usr/bin/tail *, /usr/bin/less *, /usr/bin/df *, /usr/bin/free *, /usr/bin/ss *

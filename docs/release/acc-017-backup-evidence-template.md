@@ -38,8 +38,8 @@ The restore rehearsal must verify:
 - Source backup: off-server encrypted copy from `srv-aliyun-bj-01`.
 - Restore database: `crm_system`.
 - Checksum: passed before decryption.
-- Roles: `10`; service permission roles: `9`.
-- Service schemas: `9`.
+- Roles: `10`; service permission roles: `10`.
+- Service schemas: `10`.
 - Identity users table: present.
 - Audit-history tables: present.
 - Decrypted SQL retention: removed after the controlled restore; the rehearsal

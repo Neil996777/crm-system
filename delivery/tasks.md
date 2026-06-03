@@ -1536,8 +1536,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     `docs/release/evidence/volcengine-security-group-dedicated-raw-2026-06-03.json`;
     `docs/release/evidence/volcengine-security-group-rework-transcript-2026-06-03.txt`.
     BLK-G12-006 is also resolved: captured HTTPS/redirect/openssl/certbot,
-    external negative-probe, restore, and operator-access transcripts under
-    `docs/release/evidence/`; `scripts/test_release_evidence_transcripts.sh`
+    external-edge negative probes from `srv-aliyun-bj-01`, restore catalog counts,
+    `sshd -T` effective hardening, and distinct `crm-deploy`/`crm-ops` SSH key
+    fingerprints under `docs/release/evidence/`; `scripts/test_release_evidence_transcripts.sh`
     passed. TASK-039 is complete again, pending independent G12 re-audit.
     Previous G11 text retained for historical context: Resolved on 2026-06-03. The HTTPS endpoint blocker was resolved
     with approved endpoint `https://118.196.44.193` and a Let's Encrypt IP certificate.
@@ -1603,7 +1604,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     Restore rehearsal run `20260603T104837Z` restored the off-server encrypted backup
     into a controlled PostgreSQL target and passed verification for roles, `crm_system`,
     service schemas, `identity_authz.users`, audit-history tables, and service permission
-    roles. `crm-backup.timer` is enabled and active with next run
+    roles. G12 second rework reconciled the restore catalog evidence to the captured
+    transcript counts: roles `10`, schemas `10`, and service permission roles `10`.
+    `crm-backup.timer` is enabled and active with next run
     `2026-06-04 02:00:00 CST`. Evidence:
     `docs/release/acc-017-backup-evidence-template.md` and
     `docs/release/evidence/backup-restore-rehearsal-2026-06-03.json`.

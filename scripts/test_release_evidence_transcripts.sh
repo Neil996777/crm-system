@@ -22,6 +22,17 @@ require_text() {
   fi
 }
 
+require_distinct_operator_fingerprints() {
+  local path="$1"
+  require_file "${path}"
+  local unique_count
+  unique_count="$(grep -E 'SHA256:[A-Za-z0-9+/=]+' "${path}" | awk '{print $2}' | sort -u | wc -l | tr -d ' ')"
+  if [[ "${unique_count}" -lt 2 ]]; then
+    echo "TEST-RELEASE-EVIDENCE-001 failed: ${path#${ROOT_DIR}/} must show distinct crm-deploy and crm-ops SSH key fingerprints" >&2
+    exit 1
+  fi
+}
+
 TLS_CURL="${EVIDENCE_DIR}/tls-curl-https-2026-06-03.txt"
 TLS_OPENSSL="${EVIDENCE_DIR}/tls-openssl-2026-06-03.txt"
 TLS_REDIRECT="${EVIDENCE_DIR}/tls-curl-redirect-2026-06-03.txt"
@@ -39,11 +50,17 @@ require_text "${CERTBOT_RENEW}" 'Congratulations, all simulated renewals succeed
 require_text "${NEGATIVE_PROBES}" '118\.196\.44\.193.*8080'
 require_text "${NEGATIVE_PROBES}" '118\.196\.44\.193.*5432'
 require_text "${NEGATIVE_PROBES}" 'refused|timed out|succeeded: no|failed'
+require_text "${NEGATIVE_PROBES}" 'source=srv-aliyun-bj-01|external edge'
 require_text "${RESTORE_TRANSCRIPT}" 'sha256sum -c|OK'
 require_text "${RESTORE_TRANSCRIPT}" 'psql|\\du|schema|audit'
+require_text "${RESTORE_TRANSCRIPT}" '"roles":10'
+require_text "${RESTORE_TRANSCRIPT}" '"schemas":10'
+require_text "${RESTORE_TRANSCRIPT}" '"servicePermissionRoles":10'
 require_text "${OPERATOR_ACCESS}" 'getent passwd crm-deploy crm-ops'
+require_text "${OPERATOR_ACCESS}" 'command=sshd -T effective values'
 require_text "${OPERATOR_ACCESS}" 'passwordauthentication no'
 require_text "${OPERATOR_ACCESS}" 'permitrootlogin prohibit-password|PermitRootLogin prohibit-password'
 require_text "${OPERATOR_ACCESS}" 'drwx------|-rw-------'
+require_distinct_operator_fingerprints "${OPERATOR_ACCESS}"
 
 echo "TEST-RELEASE-EVIDENCE-001 passed"

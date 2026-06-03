@@ -27,10 +27,10 @@
     "checksum": "passed",
     "roles": 10,
     "databaseExists": 1,
-    "schemas": 9,
+    "schemas": 10,
     "identityUsersTable": 1,
     "auditHistoryTables": 1,
-    "servicePermissionRoles": 9,
+    "servicePermissionRoles": 10,
     "decryptedSqlRetained": false,
     "result": "passed"
   },

@@ -23,3 +23,12 @@ SSH requirements:
 - Keep operator keys out of the repository.
 - Record key fingerprints in the infrastructure SSH access register.
 - Replace current root-only access with named operators before production closure.
+
+G12 second rework operator key evidence (2026-06-03):
+
+| Account | Local private key path | Public key fingerprint |
+|---|---|---|
+| `crm-deploy` | `/Users/neil/practice/software/.secrets/ssh-keys/crm-deploy-volcengine-sh-20260603` | `SHA256:ZGLqXBHGgqy29ZUMFysRjaw579Z3yx1980pIFWBb/b4` |
+| `crm-ops` | `/Users/neil/practice/software/.secrets/ssh-keys/crm-ops-volcengine-sh-20260603` | `SHA256:PHl9ZXjKKPzI5oiWrll9Jj60X04+5S7/TMpV1q3AYQA` |
+
+Evidence: `docs/release/evidence/operator-access-transcript-2026-06-03.txt`.

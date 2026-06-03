@@ -1,2 +1,9 @@
-nc: connectx to 118.196.44.193 port 8080 (tcp) failed: Operation timed out
-nc: connectx to 118.196.44.193 port 5432 (tcp) failed: Operation timed out
+source=srv-aliyun-bj-01
+source_public_ip=47.95.119.211
+target=118.196.44.193
+--- command=nc -zvw5 118.196.44.193 8080
+exit_status=124
+result=timed out expected_closed
+--- command=nc -zvw5 118.196.44.193 5432
+exit_status=124
+result=timed out expected_closed
