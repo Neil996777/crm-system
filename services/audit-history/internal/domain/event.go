@@ -27,6 +27,8 @@ type Event struct {
 	BeforeSummary      map[string]any
 	AfterSummary       map[string]any
 	DiffClassification string
+	RetentionPolicy    string
+	RetainUntil        time.Time
 	ScopeSummary       string
 	SafeSummary        string
 	CorrelationID      string
@@ -64,6 +66,8 @@ func (e Event) ComputeHash() (string, error) {
 		"beforeSummary":      e.BeforeSummary,
 		"afterSummary":       e.AfterSummary,
 		"diffClassification": e.DiffClassification,
+		"retentionPolicy":    e.RetentionPolicy,
+		"retainUntil":        e.RetainUntil.Format(time.RFC3339),
 		"scopeSummary":       e.ScopeSummary,
 		"safeSummary":        e.SafeSummary,
 		"correlationId":      e.CorrelationID,

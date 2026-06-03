@@ -19,6 +19,7 @@ func NewEventRepo(db *sql.DB) *EventRepo {
 }
 
 func (r *EventRepo) Append(ctx context.Context, event domain.Event) (domain.Event, error) {
+	event = domain.ApplyClassificationAndRetention(event)
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Event{}, err
@@ -56,7 +57,7 @@ func (r *EventRepo) Append(ctx context.Context, event domain.Event) (domain.Even
 			actor_user_id, actor_role, actor_display, action,
 			resource_type, resource_id, parent_resource_type, parent_resource_id,
 			result, reason_code, before_summary, after_summary, diff_classification,
-			scope_summary, safe_summary, correlation_id, causation_id, acceptance_ids,
+			retention_policy, retain_until, scope_summary, safe_summary, correlation_id, causation_id, acceptance_ids,
 			occurred_at, prev_hash, event_hash
 		)
 		VALUES (
@@ -65,13 +66,13 @@ func (r *EventRepo) Append(ctx context.Context, event domain.Event) (domain.Even
 			$10, $11, $12, $13,
 			$14, $15, $16, $17, $18,
 			$19, $20, $21, $22, $23,
-			$24, $25, $26
+			$24, $25, $26, $27, $28
 		)
 	`, event.EventUID, event.EventID, event.EventVersion, event.ProducerService, event.Surfaces,
 		event.ActorUserID, event.ActorRole, event.ActorDisplay, event.Action,
 		event.ResourceType, event.ResourceID, event.ParentResourceType, event.ParentResourceID,
 		event.Result, event.ReasonCode, beforeBytes, afterBytes, event.DiffClassification,
-		event.ScopeSummary, event.SafeSummary, event.CorrelationID, event.CausationID, event.AcceptanceIDs,
+		event.RetentionPolicy, event.RetainUntil, event.ScopeSummary, event.SafeSummary, event.CorrelationID, event.CausationID, event.AcceptanceIDs,
 		event.OccurredAt, event.PrevHash, event.EventHash)
 	if err != nil {
 		return domain.Event{}, err
@@ -83,7 +84,8 @@ func (r *EventRepo) ByRecord(ctx context.Context, resourceType, resourceID strin
 	return r.query(ctx, `
 		SELECT event_uid, event_id, event_version, producer_service,
 			actor_user_id, actor_role, actor_display, action, resource_type, resource_id,
-			result, before_summary, after_summary, safe_summary, occurred_at, prev_hash, event_hash
+			result, before_summary, after_summary, diff_classification, retention_policy, retain_until,
+			safe_summary, occurred_at, prev_hash, event_hash
 		FROM audit_history.events
 		WHERE resource_type = $1 AND resource_id = $2 AND 'record_history' = ANY(surfaces)
 		ORDER BY occurred_at ASC, sequence_id ASC
@@ -94,7 +96,8 @@ func (r *EventRepo) OperationLog(ctx context.Context) ([]domain.Event, error) {
 	return r.query(ctx, `
 		SELECT event_uid, event_id, event_version, producer_service,
 			actor_user_id, actor_role, actor_display, action, resource_type, resource_id,
-			result, before_summary, after_summary, safe_summary, occurred_at, prev_hash, event_hash
+			result, before_summary, after_summary, diff_classification, retention_policy, retain_until,
+			safe_summary, occurred_at, prev_hash, event_hash
 		FROM audit_history.events
 		WHERE 'operation_log' = ANY(surfaces)
 		ORDER BY occurred_at ASC, sequence_id ASC
@@ -126,6 +129,9 @@ func (r *EventRepo) query(ctx context.Context, query string, args ...any) ([]dom
 			&event.Result,
 			&beforeBytes,
 			&afterBytes,
+			&event.DiffClassification,
+			&event.RetentionPolicy,
+			&event.RetainUntil,
 			&event.SafeSummary,
 			&event.OccurredAt,
 			&event.PrevHash,

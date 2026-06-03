@@ -29,6 +29,7 @@ services:
       - ./services/work/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/014_work.sql:ro
       - ./services/audit-history/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/015_audit_history.sql:ro
       - ./services/audit-history/migrations/0002_history_oplog.up.sql:/docker-entrypoint-initdb.d/016_audit_history_events.sql:ro
+      - ./services/audit-history/migrations/0003_retention_metadata.up.sql:/docker-entrypoint-initdb.d/016b_audit_history_retention.sql:ro
       - ./services/reporting/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/017_reporting.sql:ro
       - ./services/import-export/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/018_import_export.sql:ro
       - ./services/lead/migrations/0002_leads.up.sql:/docker-entrypoint-initdb.d/019_lead_leads.sql:ro

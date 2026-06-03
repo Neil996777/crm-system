@@ -1417,7 +1417,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-038 — Data classification & retention enforcement (cross-cutting)
 
 1. **Task ID:** TASK-038
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Carry the committed data classification on records/logs and enforce minimum
    retention anchored to lifecycle events (never shortened, never hard-deleted); mask sensitive
    before/after values per classification in denied/error/log states.

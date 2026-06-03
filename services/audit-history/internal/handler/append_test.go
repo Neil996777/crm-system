@@ -131,7 +131,7 @@ func newAuditTestDB(t *testing.T) (*sql.DB, *sql.DB) {
 	}
 	adminDSN := fmt.Sprintf("postgres://crm_admin:crm_admin_dev_password@%s:%s/crm_system?sslmode=disable", host, port.Port())
 	adminDB := openAuditDB(t, adminDSN)
-	for _, migration := range []string{"0001_init_schema.up.sql", "0002_history_oplog.up.sql"} {
+	for _, migration := range []string{"0001_init_schema.up.sql", "0002_history_oplog.up.sql", "0003_retention_metadata.up.sql"} {
 		sqlBytes, err := os.ReadFile(filepath.Join("..", "..", "migrations", migration))
 		if err != nil {
 			t.Fatalf("read migration %s: %v", migration, err)
