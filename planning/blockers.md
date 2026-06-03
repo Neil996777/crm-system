@@ -42,6 +42,16 @@ the PSM artifact and G7 test design; they are not pre-G8 PM/BA decisions.
 |---|---|---|---|---|
 | BLK-A01 | Overdue-evaluation trigger (on-read vs scheduled) — needed for deterministic overdue test design; modeled at PIM as a Business-Date guard, mechanism deferred. | Architecture (in PSM) | PSM / G7 | PIM-OPEN-002, CIM-034, BR-021 |
 
+## Open G11 Release Evidence Blockers
+
+These are active execution blockers surfaced during Codex G9-G11 execution. Per the
+no-invention discipline, Codex may not invent production endpoint, TLS, security-group,
+monitoring, or runtime evidence.
+
+| ID | Blocker | Owner | Blocks | Touches | Status | Opened |
+|---|---|---|---|---|---|---|
+| BLK-G11-001 | TASK-039 cannot be completed because production release requires a valid HTTPS endpoint with TLS certificate, but the deployment source says the domain is "Not specified yet" and absence of a valid HTTPS endpoint blocks production release. G11 also requires real runtime evidence on `srv-volcengine-sh-01` for endpoint, TLS status, security-group inbound rules, opened ports, health URL, deployment timestamp, operator, and smoke result. | Infrastructure Ops + Integration Owner | G11 handoff to G12; TASK-039 | ACC-017 (P0), ARCH-ACC-008/013/014/015, TEST-DEPLOY-SMOKE-001/002 | Open | 2026-06-03 |
+
 ## Carried-forward Release Blockers (not gate blockers)
 
 Recorded in `planning/gate-status.md` G12 row; repeated here for visibility. These are

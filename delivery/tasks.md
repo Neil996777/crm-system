@@ -1460,7 +1460,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-039 — Deploy on runtime host: Docker Compose, reverse proxy, HTTPS/TLS, security group, health/monitoring
 
 1. **Task ID:** TASK-039
-2. **Status:** Not Started
+2. **Status:** Blocked
 3. **Objective:** Deploy the full stack on the committed runtime host via Docker Compose behind
    the existing reverse proxy with HTTPS/TLS, restricted network exposure, and health/monitoring
    evidence; CRM reachable and connected to persistent services.

@@ -25,7 +25,7 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
 | G8 | Task Planning -> Implementation **[HANDOFF: Claude -> Codex]** | Task Planner | Claude -> Codex | Gate Passed | Task Planner, Infrastructure Ops, Security Compliance, Audit (signed off 2026-06-01) | 2026-06-01 | Self-contained execution handoff package on disk (`delivery/G8-handoff.md` + delivery plan). Pre-G8 operator-access Security review done (approved w/ conditions). HANDED OFF to Codex for G9–G11; Claude resumes at G12. Decision: `archive/reviews/g8-handoff/g8-gate-decision-2026-06-01.md`. |
 | G9 | Implementation -> QA | Frontend / Backend Engineer | Codex | Gate Draft | | | |
 | G10 | QA -> Integration | QA Execution | Codex | Gate Draft | | | |
-| G11 | Integration -> Audit **[RETURN: Codex -> Claude]** | Integration Owner | Codex -> Claude | Gate Draft | | | |
+| G11 | Integration -> Audit **[RETURN: Codex -> Claude]** | Integration Owner | Codex -> Claude | Gate Blocked | | 2026-06-03 | BLK-G11-001: TASK-039 cannot close without a valid production HTTPS endpoint / TLS certificate (and domain or otherwise approved endpoint) and G11 release evidence on `srv-volcengine-sh-01`. |
 | G12 | Audit -> Release/Rework | Audit | Claude | Gate Draft | | | release blockers carried: off-server backup+restore, HTTPS/TLS, security-group, monitoring evidence |
 
 ## Handoff Log
