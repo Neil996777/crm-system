@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-06-03T16:54:00+08:00",
+  "runtimeHost": "srv-volcengine-sh-01",
+  "publicIp": "118.196.44.193",
+  "actions": [
+    {
+      "target": "hermes container",
+      "previousState": "running container hermes, image hermes-agent, host network, restart unless-stopped, host listener 0.0.0.0:8642",
+      "action": "docker update --restart=no hermes; docker stop hermes; docker rm hermes",
+      "result": "completed"
+    }
+  ],
+  "postReleaseHostListeners": [
+    {
+      "address": "0.0.0.0",
+      "port": 80,
+      "process": "nginx",
+      "purpose": "CRM HTTP redirect to HTTPS"
+    },
+    {
+      "address": "0.0.0.0",
+      "port": 443,
+      "process": "nginx",
+      "purpose": "CRM HTTPS ingress"
+    },
+    {
+      "address": "*",
+      "port": 22,
+      "process": "sshd",
+      "purpose": "SSH administration"
+    },
+    {
+      "address": "127.0.0.1",
+      "port": 8080,
+      "process": "docker-proxy",
+      "purpose": "CRM gateway for local Nginx reverse proxy only"
+    }
+  ],
+  "releasedHostExposure": [
+    {
+      "port": 8642,
+      "previousProcess": "hermes",
+      "status": "no longer listening after container removal"
+    }
+  ],
+  "crmVerification": {
+    "dockerComposeContainers": "11 CRM containers running and healthy after old deployment release",
+    "deploySmoke": "scripts/test_deploy_smoke.sh passed for https://118.196.44.193"
+  },
+  "remainingCloudSecurityGroupCleanup": {
+    "securityGroupId": "sg-1pm4k7f37z8xs643rg0fvk85e",
+    "attemptedAction": "vpc:RevokeSecurityGroupIngress for TCP 8088, 8443, 3389 from 0.0.0.0/0",
+    "result": "AccessDenied",
+    "missingPermission": "vpc:RevokeSecurityGroupIngress",
+    "rulesStillPresent": [
+      {
+        "port": 8088,
+        "cidrIp": "0.0.0.0/0",
+        "description": "fixlink-hermes"
+      },
+      {
+        "port": 8443,
+        "cidrIp": "0.0.0.0/0",
+        "description": "hermes-dashboard"
+      },
+      {
+        "port": 3389,
+        "cidrIp": "0.0.0.0/0",
+        "description": "Windows remote login rule unused by this Linux host"
+      }
+    ]
+  }
+}

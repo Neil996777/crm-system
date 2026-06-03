@@ -12,7 +12,7 @@
 | Deployment path | `/opt/crm-system/current` |
 | PostgreSQL data path | `/opt/crm-system/volumes/postgres` |
 | Log path | `/opt/crm-system/logs` |
-| Open public ports | Host-level observed ports: `22` SSH, `80/443` Nginx CRM ingress, pre-existing non-CRM `8642` Hermes. Volcengine security group also allows public TCP `8088`, `8443`, and `3389`; these are non-CRM exposure findings requiring owner/security review. |
+| Open public ports | Host-level observed ports after old deployment release: `22` SSH and `80/443` Nginx CRM ingress. Volcengine security group still allows public TCP `8088`, `8443`, and `3389`; these old/non-CRM rules require removal or owner/security disposition. |
 | Restricted ports | Host-level Docker/iptables evidence shows CRM gateway bound to `127.0.0.1:8080`; PostgreSQL has no host port mapping and is exposed only inside Compose. Volcengine API evidence confirms CRM `8080` and PostgreSQL `5432` are not allowed from `0.0.0.0/0`. |
 | Health URL | `https://118.196.44.193/health` |
 | Deployment timestamp | 2026-06-03 15:20 CST |
@@ -39,9 +39,9 @@ and operator identity.
 This evidence is not sufficient to mark TASK-039 Done until non-CRM public
 exposure on the same production candidate host has owner and Security Compliance
 disposition. The Volcengine provider security-group record is now exported and
-confirms CRM `8080` and PostgreSQL `5432` are not publicly allowed, but public
-non-CRM rules remain for `8088`, `8443`, and `3389`, and host-level Hermes
-`8642` remains owner/security-review pending.
+confirms CRM `8080` and PostgreSQL `5432` are not publicly allowed. Host-level
+Hermes `8642` has been released, but public non-CRM security-group rules remain
+for `8088`, `8443`, and `3389`.
 
 ## Infrastructure Ops Read-Only Check
 
@@ -100,7 +100,8 @@ group:
 - Network interface: `eni-13e8tbocd8f0g79iu5jer8idt`
 - Security group: `sg-1pm4k7f37z8xs643rg0fvk85e` (`Default`)
 - Evidence files:
-  - `docs/release/evidence/volcengine-ecs-describe-instance-2026-06-03.json`
+- `docs/release/evidence/old-deployment-release-2026-06-03.json`
+- `docs/release/evidence/volcengine-ecs-describe-instance-2026-06-03.json`
   - `docs/release/evidence/volcengine-security-group-summary-2026-06-03.json`
   - `docs/release/evidence/volcengine-security-group-raw-2026-06-03.json`
 
@@ -121,3 +122,22 @@ ECS read returned `403`. After `ECSReadOnlyAccess` was added,
 `ecs:DescribeInstances` returned HTTP `200` for `i-yemoz0an7kk36d2c9bp6` and
 confirmed the same ENI and security group already identified through VPC API
 evidence. `vpc:DescribeSecurityGroupAttributes` returned the inbound rules.
+
+## Old Deployment Release
+
+The user approved releasing previous deployments after the project transfer.
+Codex released host-level Hermes exposure on 2026-06-03:
+
+- Container `hermes` (`hermes-agent`, host network, restart `unless-stopped`) had
+  been listening on `0.0.0.0:8642`.
+- Codex set the container restart policy to `no`, stopped it, and removed the
+  container.
+- Post-release host listeners no longer include `8642`.
+- CRM remained healthy, with all 11 CRM containers running and server-side
+  `scripts/test_deploy_smoke.sh` passing.
+
+Cloud security-group cleanup was attempted for public TCP `8088`, `8443`, and
+`3389`, but the current IAM user lacks `vpc:RevokeSecurityGroupIngress`; each
+delete returned `AccessDenied`. These three security-group rules remain pending
+until the IAM user receives that permission or they are removed in the Volcengine
+console.

@@ -1510,10 +1510,12 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     Volcengine security-group API evidence was exported for security group
     `sg-1pm4k7f37z8xs643rg0fvk85e` bound to instance `i-yemoz0an7kk36d2c9bp6` via ENI
     `eni-13e8tbocd8f0g79iu5jer8idt`; it confirms CRM gateway `8080` and PostgreSQL
-    `5432` are not publicly allowed from `0.0.0.0/0`. TASK-039 remains blocked by
-    unresolved non-CRM public exposure owner/Security Compliance disposition for host-level
-    Hermes `8642` and security-group TCP `8088`, TCP `8443`, and TCP `3389`
-    (BLK-G11-002). **Pre-G8
+    `5432` are not publicly allowed from `0.0.0.0/0`. The user approved releasing
+    previous deployments; Codex stopped and removed the host-network Hermes container, so
+    host-level `8642` no longer listens and CRM smoke still passes. TASK-039 remains
+    blocked by old/non-CRM Volcengine security-group rules publicly allowing TCP `8088`,
+    TCP `8443`, and TCP `3389`; API deletion was attempted but failed with `AccessDenied`
+    because the IAM user lacks `vpc:RevokeSecurityGroupIngress` (BLK-G11-002). **Pre-G8
     condition:** Security Compliance must review the operator-access design (SSH access, key
     ownership, sudo boundary) before G8 implementation tasks are approved (deployment-notes
     "Operator Access").
