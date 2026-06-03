@@ -1,0 +1,10 @@
+generatedAt=2026-06-03T20:29:54+08:00
+evidence=docs/release/evidence/volcengine-security-group-dedicated-raw-2026-06-03.json
+command=python3 scripts/volcengine_security_group_rework.py --apply
+operations:
+- dedicated security group: sg-366ptx1bxp9ts1e710babmc8y
+- ensured public tcp/22 on sg-366ptx1bxp9ts1e710babmc8y
+- ensured public tcp/80 on sg-366ptx1bxp9ts1e710babmc8y
+- ensured public tcp/443 on sg-366ptx1bxp9ts1e710babmc8y
+- removed old public tcp/8088, tcp/8443, tcp/3389 rules from sg-1pm4k7f37z8xs643rg0fvk85e when present
+- bound eni-13e8tbocd8f0g79iu5jer8idt to only sg-366ptx1bxp9ts1e710babmc8y

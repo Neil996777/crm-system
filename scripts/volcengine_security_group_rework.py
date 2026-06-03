@@ -20,7 +20,7 @@ INSTANCE_ID = "i-yemoz0an7kk36d2c9bp6"
 ENI_ID = "eni-13e8tbocd8f0g79iu5jer8idt"
 DEFAULT_SG_ID = "sg-1pm4k7f37z8xs643rg0fvk85e"
 DEDICATED_SG_NAME = "crm-system-prod-public"
-DEDICATED_SG_DESCRIPTION = "CRM production public edge only: 22,80,443"
+DEDICATED_SG_DESCRIPTION = "CRM production public edge only 22 80 443"
 VERSION = "2020-04-01"
 
 
@@ -59,7 +59,7 @@ class VolcengineClient:
             quote_via=urllib.parse.quote,
             safe="-_.~",
         )
-        request_date = dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        request_date = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
         short_date = request_date[:8]
         payload_hash = hashlib.sha256(b"").hexdigest()
         signed_headers = "host;x-date"
@@ -189,7 +189,7 @@ def get_security_group_attrs(client: VolcengineClient, calls: dict, security_gro
 
 
 def has_rule(attrs: dict, port: int) -> bool:
-    for rule in attrs.get("Result", {}).get("Permissions", []):
+    for rule in attrs.get("Result", {}).get("Permissions") or []:
         if (
             rule.get("Direction") == "ingress"
             and rule.get("Policy") == "accept"
@@ -205,7 +205,7 @@ def has_rule(attrs: dict, port: int) -> bool:
 def public_old_rules(attrs: dict) -> list[dict]:
     old_ports = {8088, 8443, 3389}
     rules = []
-    for rule in attrs.get("Result", {}).get("Permissions", []):
+    for rule in attrs.get("Result", {}).get("Permissions") or []:
         try:
             start = int(rule.get("PortStart", -1))
             end = int(rule.get("PortEnd", -1))
@@ -315,7 +315,7 @@ def bind_eni_to_group(client: VolcengineClient, calls: dict, security_group_id: 
     time.sleep(5)
 
 
-def write_outputs(calls: dict, operations: list[str], region: str) -> None:
+def write_outputs(calls: dict, operations: list[str], region: str, mode: str) -> None:
     generated_at = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).isoformat(timespec="seconds")
     evidence = {
         "generatedAt": generated_at,
@@ -329,7 +329,7 @@ def write_outputs(calls: dict, operations: list[str], region: str) -> None:
     transcript_lines = [
         f"generatedAt={generated_at}",
         f"evidence={EVIDENCE_FILE.relative_to(ROOT)}",
-        "command=python3 scripts/volcengine_security_group_rework.py --apply",
+        f"command=python3 scripts/volcengine_security_group_rework.py {mode}",
         "operations:",
         *[f"- {operation}" for operation in operations],
     ]
@@ -371,7 +371,8 @@ def main() -> None:
     get_security_groups(client, calls, vpc_id)
     get_security_group_attrs(client, calls, dedicated_sg_id, "dedicated-final")
     get_security_group_attrs(client, calls, DEFAULT_SG_ID, "default-final")
-    write_outputs(calls, operations, region)
+    mode = "--apply" if args.apply else "--export-only"
+    write_outputs(calls, operations, region, mode)
     print(f"Wrote raw Volcengine evidence to {EVIDENCE_FILE.relative_to(ROOT)}")
     print(f"Wrote command transcript to {TRANSCRIPT_FILE.relative_to(ROOT)}")
     print(f"Final ENI security groups: {final_eni.get('SecurityGroupIds')}")

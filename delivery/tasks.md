@@ -1476,7 +1476,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-039 — Deploy on runtime host: Docker Compose, reverse proxy, HTTPS/TLS, security group, health/monitoring
 
 1. **Task ID:** TASK-039
-2. **Status:** Blocked (G12 rework — BLK-G12-003/007 pending Volcengine VPC IAM permission)
+2. **Status:** Blocked (G12 rework — BLK-G12-006 release evidence pending)
 3. **Objective:** Deploy the full stack on the committed runtime host via Docker Compose behind
    the existing reverse proxy with HTTPS/TLS, restricted network exposure, and health/monitoring
    evidence; CRM reachable and connected to persistent services.
@@ -1521,7 +1521,16 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 16. **No-downgrade items:** Real HTTPS/TLS (no self-signed-only for production); real restricted
     exposure; real health/monitoring — not a screenshot of a local run. ARCH-ACC-008/013/014/015
     are `Release-evidence pending` and proven at G11, audited at G12.
-17. **Blocker:** Reopened by G12 on 2026-06-03 for BLK-G12-003/007. HTTPS endpoint evidence remains available, but security-group closure is not releasable until a raw post-remediation Volcengine API export proves CRM is bound to a dedicated non-Default security group with public TCP ingress limited to `22`, `80`, and `443`, and no public `8080`, `5432`, `8088`, `8443`, or `3389`. Codex added fail-first `TEST-DEPLOY-SG-001` and attempted OpenAPI remediation on 2026-06-03, but the current operator account lacks `vpc:CreateSecurityGroup`; evidence: `docs/release/evidence/volcengine-security-group-rework-blocked-2026-06-03.md`. Previous G11 text retained for historical context: Resolved on 2026-06-03. The HTTPS endpoint blocker was resolved
+17. **Blocker:** Reopened by G12 on 2026-06-03. BLK-G12-003/007 are resolved:
+    Codex added fail-first `TEST-DEPLOY-SG-001`, created dedicated security group
+    `sg-366ptx1bxp9ts1e710babmc8y`, moved CRM ENI `eni-13e8tbocd8f0g79iu5jer8idt`
+    to that group only, exported raw Volcengine API evidence, and verified public
+    TCP ingress is limited to `22`, `80`, and `443` with no public `8080`, `5432`,
+    `8088`, `8443`, or `3389`. Evidence:
+    `docs/release/evidence/volcengine-security-group-dedicated-raw-2026-06-03.json`;
+    `docs/release/evidence/volcengine-security-group-rework-transcript-2026-06-03.txt`.
+    TASK-039 remains blocked by BLK-G12-006 release-evidence transcript gaps.
+    Previous G11 text retained for historical context: Resolved on 2026-06-03. The HTTPS endpoint blocker was resolved
     with approved endpoint `https://118.196.44.193` and a Let's Encrypt IP certificate.
     Volcengine security-group API evidence was exported for security group
     `sg-1pm4k7f37z8xs643rg0fvk85e` bound to instance `i-yemoz0an7kk36d2c9bp6` via ENI

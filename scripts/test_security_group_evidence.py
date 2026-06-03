@@ -93,16 +93,39 @@ group_types = {group.get("Type") for group in groups if "Type" in group}
 if "Default" in group_names or "default" in group_types:
     fail(f"CRM must not remain on the shared Default security group: {security_group_id}")
 
+final_attrs = [
+    call.get("Result", {})
+    for name, call in data["calls"].items()
+    if name.startswith("DescribeSecurityGroupAttributes:")
+    and name.endswith(":ingress")
+    and (":dedicated-final:" in name or ":default-final:" in name)
+]
+if len(final_attrs) < 2:
+    fail("missing dedicated-final/default-final raw security-group permission exports")
+
+dedicated_attrs = [
+    attrs
+    for attrs in final_attrs
+    if attrs.get("SecurityGroupId") == security_group_id
+]
+if len(dedicated_attrs) != 1:
+    fail(f"missing final permission export for dedicated security group {security_group_id}")
+
 permissions = [
     permission
-    for node in walk(data)
-    for permission in (node.get("Permissions") or [])
+    for attrs in final_attrs
+    for permission in (attrs.get("Permissions") or [])
     if isinstance(permission, dict)
 ]
-if not permissions:
-    fail("missing raw security-group permission export")
+dedicated_permissions = [
+    permission
+    for permission in (dedicated_attrs[0].get("Permissions") or [])
+    if isinstance(permission, dict)
+]
+if not dedicated_permissions:
+    fail("missing final dedicated security-group permission export")
 
-public_rules = [permission for permission in permissions if public_rule(permission)]
+public_rules = [permission for permission in dedicated_permissions if public_rule(permission)]
 public_tcp_ports = set()
 unexpected_public = []
 for rule in public_rules:
@@ -122,7 +145,12 @@ if unexpected_public:
     fail(f"unexpected public ingress rules remain: {unexpected_public}")
 
 for port in FORBIDDEN_PUBLIC_PORTS:
-    if any(public_rule(rule) and port_range_covers(rule, port) for rule in permissions):
+    if any(
+        public_rule(rule)
+        and str(rule.get("Protocol", "")).lower() in {"tcp", "all"}
+        and port_range_covers(rule, port)
+        for rule in permissions
+    ):
         fail(f"port {port} is still publicly allowed")
 
 self_references = [

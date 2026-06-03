@@ -99,17 +99,22 @@ group:
   - `docs/release/evidence/volcengine-security-group-post-cleanup-2026-06-03.json`
   - `docs/release/evidence/volcengine-security-group-summary-2026-06-03.json`
   - `docs/release/evidence/volcengine-security-group-raw-2026-06-03.json`
+  - `docs/release/evidence/volcengine-security-group-dedicated-raw-2026-06-03.json`
+  - `docs/release/evidence/volcengine-security-group-rework-transcript-2026-06-03.txt`
 
 Inbound security-group evidence:
 
 - Publicly allowed for CRM ingress: TCP `80`, TCP `443`.
 - Publicly allowed for administration: TCP `22`.
-- Post-cleanup public TCP rules: `22`, `80`, and `443`.
-- ICMP is publicly allowed.
-- A self-referential source-group rule allows all protocols only from members of
-  the same security group; it is not public `8080`/`5432` exposure.
+- Post-G12 rework CRM dedicated security group:
+  `sg-366ptx1bxp9ts1e710babmc8y` (`crm-system-prod-public`).
+- CRM ENI `eni-13e8tbocd8f0g79iu5jer8idt` is bound only to
+  `sg-366ptx1bxp9ts1e710babmc8y`, not the shared `Default` group.
+- Dedicated security-group public TCP rules: `22`, `80`, and `443`.
 - CRM gateway TCP `8080` is not allowed from `0.0.0.0/0`.
 - PostgreSQL TCP `5432` is not allowed from `0.0.0.0/0`.
+- Old/non-CRM public TCP `8088`, `8443`, and `3389` are absent from the
+  final raw security-group export.
 
 API note: the initial IAM policy lacked `ecs:DescribeInstances`, so the first
 ECS read returned `403`. After `ECSReadOnlyAccess` was added,
@@ -134,3 +139,10 @@ Cloud security-group cleanup was completed after the user removed public TCP
 `8088`, `8443`, and `3389` in Volcengine. API post-cleanup verification confirms
 these old/non-CRM rules are gone and only public TCP `22`, `80`, and `443`
 remain.
+
+G12 rework supersedes the earlier hand-authored post-cleanup summary. Codex used
+the Volcengine OpenAPI to create dedicated security group
+`sg-366ptx1bxp9ts1e710babmc8y`, bind the CRM primary ENI only to that group, and
+export the raw final `DescribeNetworkInterfaces`, `DescribeSecurityGroups`, and
+`DescribeSecurityGroupAttributes` responses. `TEST-DEPLOY-SG-001` passed against
+that raw evidence.
