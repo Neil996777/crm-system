@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-06-03T16:49:00+08:00",
+  "region": "cn-shanghai",
+  "api": "ecs:DescribeInstances",
+  "httpStatus": 200,
+  "instanceCount": 1,
+  "instance": {
+    "instanceId": "i-yemoz0an7kk36d2c9bp6",
+    "instanceName": "AI-OpenClaw-xUh3-000",
+    "status": "RUNNING",
+    "zoneId": "cn-shanghai-a",
+    "vpcId": "vpc-1pm4k7964n30g643rfzajxhor",
+    "networkInterfaces": [
+      {
+        "networkInterfaceId": "eni-13e8tbocd8f0g79iu5jer8idt",
+        "primaryIpAddress": "172.31.8.67",
+        "securityGroupIds": [
+          "sg-1pm4k7f37z8xs643rg0fvk85e"
+        ]
+      }
+    ]
+  },
+  "notes": [
+    "ECS read-only permission was added after the initial 403 AccessDenied result.",
+    "The API response confirms the instance, primary ENI, private IP, VPC, and bound security group already identified through VPC API evidence."
+  ]
+}

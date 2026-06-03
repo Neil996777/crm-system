@@ -100,6 +100,7 @@ group:
 - Network interface: `eni-13e8tbocd8f0g79iu5jer8idt`
 - Security group: `sg-1pm4k7f37z8xs643rg0fvk85e` (`Default`)
 - Evidence files:
+  - `docs/release/evidence/volcengine-ecs-describe-instance-2026-06-03.json`
   - `docs/release/evidence/volcengine-security-group-summary-2026-06-03.json`
   - `docs/release/evidence/volcengine-security-group-raw-2026-06-03.json`
 
@@ -115,7 +116,8 @@ Inbound security-group evidence:
 - CRM gateway TCP `8080` is not allowed from `0.0.0.0/0`.
 - PostgreSQL TCP `5432` is not allowed from `0.0.0.0/0`.
 
-API note: the IAM user lacked `ecs:DescribeInstances`, but
-`vpc:DescribeNetworkInterfaces` returned the primary ENI for
-`i-yemoz0an7kk36d2c9bp6` and its bound security group, and
-`vpc:DescribeSecurityGroupAttributes` returned the inbound rules.
+API note: the initial IAM policy lacked `ecs:DescribeInstances`, so the first
+ECS read returned `403`. After `ECSReadOnlyAccess` was added,
+`ecs:DescribeInstances` returned HTTP `200` for `i-yemoz0an7kk36d2c9bp6` and
+confirmed the same ENI and security group already identified through VPC API
+evidence. `vpc:DescribeSecurityGroupAttributes` returned the inbound rules.

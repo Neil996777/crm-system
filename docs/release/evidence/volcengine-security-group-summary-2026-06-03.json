@@ -130,7 +130,8 @@
     "Non-CRM public TCP rule 3389-3389 from 0.0.0.0/0: 允许远程登录Windows云服务器"
   ],
   "apiNotes": [
-    "ecs:DescribeInstances returned AccessDenied because the IAM user lacks ECS read-only permission; VPC DescribeNetworkInterfaces identified the bound instance ENI and security group.",
+    "Initial ecs:DescribeInstances returned AccessDenied before ECS read-only permission was added; VPC DescribeNetworkInterfaces identified the bound instance ENI and security group.",
+    "After ECS read-only permission was added, ecs:DescribeInstances returned HTTP 200 for instance i-yemoz0an7kk36d2c9bp6 and confirmed ENI eni-13e8tbocd8f0g79iu5jer8idt with security group sg-1pm4k7f37z8xs643rg0fvk85e.",
     "SourceGroupId-only self-referential all-protocol rule allows traffic only from members of the same security group and is not treated as public 8080/5432 exposure.",
     "Cloud security group evidence proves CRM 8080 and PostgreSQL 5432 are not allowed from 0.0.0.0/0."
   ],
