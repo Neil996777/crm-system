@@ -1234,7 +1234,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-033 — reporting-service + frontend: Manager Team Overview
 
 1. **Task ID:** TASK-033
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** A Sales Manager team overview aggregating team leads/opportunities/quotes/
    contracts/payments/tasks and pipeline status from read models; Sales denied; empty state.
 4. **Business capability:** CAP-009 Team overview and reports (primary ACC-018).

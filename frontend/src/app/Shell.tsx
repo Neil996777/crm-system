@@ -11,6 +11,7 @@ import { ContractList } from '../pages/contracts/ContractList';
 import { PaymentList } from '../pages/payments/PaymentList';
 import { TaskList } from '../components/TaskList';
 import { ReminderCenter } from '../pages/reminders/ReminderCenter';
+import { ManagerOverview } from '../pages/reports/ManagerOverview';
 import { OperationLogs } from '../pages/admin/OperationLogs';
 import { UserManagement } from '../pages/admin/UserManagement';
 import { AppView, Nav } from './Nav';
@@ -43,7 +44,7 @@ export function Shell() {
             Sign out
           </button>
         </header>
-        {view === 'leads' ? <LeadList /> : view === 'accounts' ? <AccountList /> : view === 'contacts' ? <ContactList /> : view === 'opportunities' ? <OpportunityList /> : view === 'quotes' ? <QuoteList /> : view === 'contracts' ? <ContractList /> : view === 'payments' ? <PaymentList /> : view === 'tasks' ? <TaskList /> : view === 'reminders' ? <ReminderCenter /> : view === 'userManagement' ? <UserManagement /> : view === 'operationLogs' ? <OperationLogs /> : <WorkOverview user={user} />}
+        {view === 'leads' ? <LeadList /> : view === 'accounts' ? <AccountList /> : view === 'contacts' ? <ContactList /> : view === 'opportunities' ? <OpportunityList /> : view === 'quotes' ? <QuoteList /> : view === 'contracts' ? <ContractList /> : view === 'payments' ? <PaymentList /> : view === 'tasks' ? <TaskList /> : view === 'reminders' ? <ReminderCenter /> : view === 'managerOverview' ? <ManagerOverview /> : view === 'userManagement' ? <UserManagement /> : view === 'operationLogs' ? <OperationLogs /> : <WorkOverview user={user} />}
       </div>
     </div>
   );

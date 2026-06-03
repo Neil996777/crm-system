@@ -37,6 +37,10 @@ services:
       - ./services/account/migrations/0005_archive.up.sql:/docker-entrypoint-initdb.d/022_account_archive.sql:ro
       - ./services/lead/migrations/0004_duplicate_warnings.up.sql:/docker-entrypoint-initdb.d/023_lead_duplicate_warnings.sql:ro
       - ./services/work/migrations/0002_work.up.sql:/docker-entrypoint-initdb.d/024_work_items.sql:ro
+      - ./services/lead/migrations/0005_archive.up.sql:/docker-entrypoint-initdb.d/025_lead_archive.sql:ro
+      - ./services/opportunity/migrations/0003_archive.up.sql:/docker-entrypoint-initdb.d/026_opportunity_archive.sql:ro
+      - ./services/commercial/migrations/0005_archive.up.sql:/docker-entrypoint-initdb.d/027_commercial_archive.sql:ro
+      - ./services/reporting/migrations/0002_reporting_projections.up.sql:/docker-entrypoint-initdb.d/028_reporting_projections.sql:ro
     expose:
       - "5432"
     healthcheck:

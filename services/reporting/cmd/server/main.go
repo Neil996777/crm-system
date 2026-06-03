@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"crm-system/services/reporting/internal/handler"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -37,19 +39,21 @@ func healthHandler(requiresDatabase bool) http.Handler {
 }
 
 func main() {
+	db, err := openDatabase()
+	if err != nil {
+		log.Fatalf("open reporting database: %v", err)
+	}
+	defer db.Close()
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthHandler(true))
+	mux.Handle("/", handler.NewReportingServer(db, handler.Config{}))
 	addr := ":" + envOrDefault("PORT", "8080")
 	log.Printf("%s listening on %s", defaultServiceName, addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
 func pingDatabase() error {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		return sql.ErrConnDone
-	}
-	db, err := sql.Open("pgx", dsn)
+	db, err := openDatabase()
 	if err != nil {
 		return err
 	}
@@ -57,6 +61,18 @@ func pingDatabase() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	return db.PingContext(ctx)
+}
+
+func openDatabase() (*sql.DB, error) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		return nil, sql.ErrConnDone
+	}
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
