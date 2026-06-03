@@ -12,8 +12,8 @@
 | Deployment path | `/opt/crm-system/current` |
 | PostgreSQL data path | `/opt/crm-system/volumes/postgres` |
 | Log path | `/opt/crm-system/logs` |
-| Open public ports | Host-level observed ports: `22` SSH, `80/443` Nginx CRM ingress, pre-existing non-CRM `8642` Hermes. Cloud security-group export is still pending. |
-| Restricted ports | Host-level Docker/iptables evidence shows CRM gateway bound to `127.0.0.1:8080`; PostgreSQL has no host port mapping and is exposed only inside Compose. Cloud security-group evidence is still pending. |
+| Open public ports | Host-level observed ports: `22` SSH, `80/443` Nginx CRM ingress, pre-existing non-CRM `8642` Hermes. Volcengine security group also allows public TCP `8088`, `8443`, and `3389`; these are non-CRM exposure findings requiring owner/security review. |
+| Restricted ports | Host-level Docker/iptables evidence shows CRM gateway bound to `127.0.0.1:8080`; PostgreSQL has no host port mapping and is exposed only inside Compose. Volcengine API evidence confirms CRM `8080` and PostgreSQL `5432` are not allowed from `0.0.0.0/0`. |
 | Health URL | `https://118.196.44.193/health` |
 | Deployment timestamp | 2026-06-03 15:20 CST |
 | Operator | Initial deployment by root; named `crm-deploy` and `crm-ops` accounts created with SSH keys and sudo boundaries on 2026-06-03 |
@@ -36,10 +36,12 @@ and operator identity.
 
 ## Remaining G11 Blocker
 
-This evidence is not sufficient to mark TASK-039 Done until the Volcengine cloud
-security-group inbound rules are exported or otherwise recorded. The host-level
-state is consistent with restricted CRM exposure, but the provider security-group
-record is still required for ACC-017 closure.
+This evidence is not sufficient to mark TASK-039 Done until non-CRM public
+exposure on the same production candidate host has owner and Security Compliance
+disposition. The Volcengine provider security-group record is now exported and
+confirms CRM `8080` and PostgreSQL `5432` are not publicly allowed, but public
+non-CRM rules remain for `8088`, `8443`, and `3389`, and host-level Hermes
+`8642` remains owner/security-review pending.
 
 ## Infrastructure Ops Read-Only Check
 
@@ -84,10 +86,36 @@ Closeout verification on 2026-06-03 16:07-16:08 CST confirmed:
   and require Security Compliance review.
 
 TASK-039 cannot be marked Done from this closeout attempt. Required closure
-evidence remains:
+evidence remains owner and Security Compliance disposition for public non-CRM
+exposure on the same production candidate host.
 
-- Volcengine console/API export for the inbound security-group rules bound to
-  instance `i-yemoz0an7kk36d2c9bp6`, proving CRM `8080` and PostgreSQL `5432`
-  are not publicly allowed.
-- Owner and Security Compliance disposition for the pre-existing public Hermes
-  `8642` exposure on the same production candidate host.
+## Volcengine Security Group API Export
+
+Volcengine API export on 2026-06-03 identified the bound primary ENI and security
+group:
+
+- Instance: `i-yemoz0an7kk36d2c9bp6`
+- Public IP: `118.196.44.193`
+- Private IP: `172.31.8.67`
+- Network interface: `eni-13e8tbocd8f0g79iu5jer8idt`
+- Security group: `sg-1pm4k7f37z8xs643rg0fvk85e` (`Default`)
+- Evidence files:
+  - `docs/release/evidence/volcengine-security-group-summary-2026-06-03.json`
+  - `docs/release/evidence/volcengine-security-group-raw-2026-06-03.json`
+
+Inbound security-group evidence:
+
+- Publicly allowed for CRM ingress: TCP `80`, TCP `443`.
+- Publicly allowed for administration: TCP `22`.
+- Publicly allowed non-CRM rules requiring owner/security review: TCP `8088`
+  (`fixlink-hermes`), TCP `8443` (`hermes-dashboard`), TCP `3389`.
+- ICMP is publicly allowed.
+- A self-referential source-group rule allows all protocols only from members of
+  the same security group; it is not public `8080`/`5432` exposure.
+- CRM gateway TCP `8080` is not allowed from `0.0.0.0/0`.
+- PostgreSQL TCP `5432` is not allowed from `0.0.0.0/0`.
+
+API note: the IAM user lacked `ecs:DescribeInstances`, but
+`vpc:DescribeNetworkInterfaces` returned the primary ENI for
+`i-yemoz0an7kk36d2c9bp6` and its bound security group, and
+`vpc:DescribeSecurityGroupAttributes` returned the inbound rules.

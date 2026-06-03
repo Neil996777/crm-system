@@ -1,0 +1,301 @@
+{
+  "generatedAt": "2026-06-03T16:39:04.569300+08:00",
+  "region": "cn-shanghai",
+  "instanceId": "i-yemoz0an7kk36d2c9bp6",
+  "privateIp": "172.31.8.67",
+  "calls": {
+    "DescribeInstances": {
+      "ResponseMetadata": {
+        "RequestId": "20260603163905DA7ABB8A255998FC0954",
+        "Action": "DescribeInstances",
+        "Version": "2020-04-01",
+        "Service": "ecs",
+        "Region": "cn-shanghai",
+        "Error": {
+          "CodeN": 100013,
+          "Code": "AccessDenied",
+          "Message": "User is not authorized to perform: ecs:DescribeInstances on resource: trn:ecs:cn-shanghai:2114460511:instance/i-yemoz0an7kk36d2c9bp6"
+        }
+      },
+      "_http_status": 403
+    },
+    "DescribeNetworkInterfaces": {
+      "ResponseMetadata": {
+        "RequestId": "20260603163905C6B72E5A9BF0052B933A",
+        "Action": "DescribeNetworkInterfaces",
+        "Version": "2020-04-01",
+        "Service": "vpc",
+        "Region": "cn-shanghai"
+      },
+      "Result": {
+        "RequestId": "20260603163905C6B72E5A9BF0052B933A",
+        "PageNumber": 1,
+        "PageSize": 20,
+        "TotalCount": 1,
+        "NetworkInterfaceSets": [
+          {
+            "CreatedAt": "2026-05-21T21:07:58+08:00",
+            "UpdatedAt": "2026-05-21T21:08:02+08:00",
+            "AccountId": "2114460511",
+            "ProjectName": "default",
+            "Status": "InUse",
+            "Description": "",
+            "NetworkInterfaceId": "eni-13e8tbocd8f0g79iu5jer8idt",
+            "NetworkInterfaceName": "AI-OpenClaw-xUh3--eni-1",
+            "VpcId": "vpc-1pm4k7964n30g643rfzajxhor",
+            "VpcName": "Default",
+            "SubnetId": "subnet-13e8ozd47zxfk79iu5jfsnpn9",
+            "MacAddress": "00:16:3e:2e:f4:14",
+            "DeviceId": "i-yemoz0an7kk36d2c9bp6",
+            "ServiceManaged": false,
+            "Type": "primary",
+            "PrimaryIpAddress": "172.31.8.67",
+            "PortSecurityEnabled": false,
+            "SecurityGroupIds": [
+              "sg-1pm4k7f37z8xs643rg0fvk85e"
+            ],
+            "AssociatedElasticIp": {
+              "EipAddress": "118.196.44.193",
+              "AllocationId": "eip-peeqnj0d1e6816q6vkia8gdp",
+              "ReleaseWithInstance": false
+            },
+            "PrivateIpAddresses": null,
+            "IPv6Sets": null,
+            "IsIpv6Only": false,
+            "ZoneId": "cn-shanghai-a",
+            "PrivateIpSets": {
+              "PrivateIpSet": [
+                {
+                  "PrivateIpAddress": "172.31.8.67",
+                  "Primary": true,
+                  "AssociatedElasticIp": {
+                    "EipAddress": "118.196.44.193",
+                    "AllocationId": "eip-peeqnj0d1e6816q6vkia8gdp",
+                    "ReleaseWithInstance": false
+                  }
+                }
+              ]
+            },
+            "Tags": [
+              {
+                "Key": "volc:ecs:linkedresource",
+                "Value": "trn:ecs:cn-shanghai:2114460511:instance/i-yemoz0an7kk36d2c9bp6"
+              }
+            ],
+            "Attachment": {
+              "InstanceId": "i-yemoz0an7kk36d2c9bp6",
+              "DeleteOnTermination": true
+            },
+            "Ipv4PrefixSets": null,
+            "Ipv6PrefixSets": null,
+            "TcpEstablishedTimeout": 910,
+            "TcpClosedAndTimeWaitTimeout": 3,
+            "UdpTimeout": 32,
+            "RdmaTimeout": 300
+          }
+        ]
+      }
+    },
+    "DescribeSecurityGroups": {
+      "ResponseMetadata": {
+        "RequestId": "202606031639057C94DC25593FBA040523",
+        "Action": "DescribeSecurityGroups",
+        "Version": "2020-04-01",
+        "Service": "vpc",
+        "Region": "cn-shanghai"
+      },
+      "Result": {
+        "RequestId": "202606031639057C94DC25593FBA040523",
+        "NextToken": "",
+        "SecurityGroups": [
+          {
+            "AccountId": "2114460511",
+            "VpcId": "vpc-1pm4k7964n30g643rfzajxhor",
+            "CreationTime": "2026-05-21T21:07:13+08:00",
+            "Description": "默认安全组",
+            "SecurityGroupName": "Default",
+            "SecurityGroupId": "sg-1pm4k7f37z8xs643rg0fvk85e",
+            "Status": "Available",
+            "ProjectName": "default",
+            "Type": "default",
+            "Tags": [],
+            "ServiceManaged": false,
+            "Invisible": false
+          }
+        ]
+      }
+    },
+    "DescribeSecurityGroupAttributes:sg-1pm4k7f37z8xs643rg0fvk85e:ingress": {
+      "ResponseMetadata": {
+        "RequestId": "20260603164204FBDD6017F067E81C9D33",
+        "Action": "DescribeSecurityGroupAttributes",
+        "Version": "2020-04-01",
+        "Service": "vpc",
+        "Region": "cn-shanghai"
+      },
+      "Result": {
+        "RequestId": "20260603164204FBDD6017F067E81C9D33",
+        "AccountId": "2114460511",
+        "SecurityGroupId": "sg-1pm4k7f37z8xs643rg0fvk85e",
+        "SecurityGroupName": "Default",
+        "Description": "默认安全组",
+        "VpcId": "vpc-1pm4k7964n30g643rfzajxhor",
+        "Permissions": [
+          {
+            "Description": "fixlink-hermes",
+            "CreationTime": "2026-05-26T20:02:09+08:00",
+            "UpdateTime": "2026-05-26T20:02:09+08:00",
+            "Priority": 100,
+            "Direction": "ingress",
+            "Protocol": "tcp",
+            "Policy": "accept",
+            "CidrIp": "0.0.0.0/0",
+            "LocalCidrIp": null,
+            "SourceGroupId": "",
+            "PortStart": 8088,
+            "PortEnd": 8088,
+            "SourcePortStart": null,
+            "SourcePortEnd": null,
+            "PrefixListId": "",
+            "PrefixListCidrs": null
+          },
+          {
+            "Description": "hermes-dashboard",
+            "CreationTime": "2026-05-22T22:58:26+08:00",
+            "UpdateTime": "2026-05-22T22:58:26+08:00",
+            "Priority": 100,
+            "Direction": "ingress",
+            "Protocol": "tcp",
+            "Policy": "accept",
+            "CidrIp": "0.0.0.0/0",
+            "LocalCidrIp": null,
+            "SourceGroupId": "",
+            "PortStart": 8443,
+            "PortEnd": 8443,
+            "SourcePortStart": null,
+            "SourcePortEnd": null,
+            "PrefixListId": "",
+            "PrefixListCidrs": null
+          },
+          {
+            "Description": "允许安全组内的云服务器彼此通信",
+            "CreationTime": "2026-05-21T21:07:13+08:00",
+            "UpdateTime": "2026-05-21T21:07:13+08:00",
+            "Priority": 100,
+            "Direction": "ingress",
+            "Protocol": "all",
+            "Policy": "accept",
+            "CidrIp": "",
+            "LocalCidrIp": null,
+            "SourceGroupId": "sg-1pm4k7f37z8xs643rg0fvk85e",
+            "PortStart": -1,
+            "PortEnd": -1,
+            "SourcePortStart": null,
+            "SourcePortEnd": null,
+            "PrefixListId": "",
+            "PrefixListCidrs": null
+          },
+          {
+            "Description": "允许ping程序测试云服务器连通性",
+            "CreationTime": "2026-05-21T21:07:13+08:00",
+            "UpdateTime": "2026-05-21T21:07:13+08:00",
+            "Priority": 100,
+            "Direction": "ingress",
+            "Protocol": "icmp",
+            "Policy": "accept",
+            "CidrIp": "0.0.0.0/0",
+            "LocalCidrIp": null,
+            "SourceGroupId": "",
+            "PortStart": -1,
+            "PortEnd": -1,
+            "SourcePortStart": null,
+            "SourcePortEnd": null,
+            "PrefixListId": "",
+            "PrefixListCidrs": null
+          },
+          {
+            "Description": "允许SSH远程连接Linux云服务器",
+            "CreationTime": "2026-05-21T21:07:13+08:00",
+            "UpdateTime": "2026-05-21T21:07:13+08:00",
+            "Priority": 100,
+            "Direction": "ingress",
+            "Protocol": "tcp",
+            "Policy": "accept",
+            "CidrIp": "0.0.0.0/0",
+            "LocalCidrIp": null,
+            "SourceGroupId": "",
+            "PortStart": 22,
+            "PortEnd": 22,
+            "SourcePortStart": null,
+            "SourcePortEnd": null,
+            "PrefixListId": "",
+            "PrefixListCidrs": null
+          },
+          {
+            "Description": "允许使用HTTP协议访问网站",
+            "CreationTime": "2026-05-21T21:07:13+08:00",
+            "UpdateTime": "2026-05-21T21:07:13+08:00",
+            "Priority": 100,
+            "Direction": "ingress",
+            "Protocol": "tcp",
+            "Policy": "accept",
+            "CidrIp": "0.0.0.0/0",
+            "LocalCidrIp": null,
+            "SourceGroupId": "",
+            "PortStart": 80,
+            "PortEnd": 80,
+            "SourcePortStart": null,
+            "SourcePortEnd": null,
+            "PrefixListId": "",
+            "PrefixListCidrs": null
+          },
+          {
+            "Description": "允许使用HTTPS协议访问网站",
+            "CreationTime": "2026-05-21T21:07:13+08:00",
+            "UpdateTime": "2026-05-21T21:07:13+08:00",
+            "Priority": 100,
+            "Direction": "ingress",
+            "Protocol": "tcp",
+            "Policy": "accept",
+            "CidrIp": "0.0.0.0/0",
+            "LocalCidrIp": null,
+            "SourceGroupId": "",
+            "PortStart": 443,
+            "PortEnd": 443,
+            "SourcePortStart": null,
+            "SourcePortEnd": null,
+            "PrefixListId": "",
+            "PrefixListCidrs": null
+          },
+          {
+            "Description": "允许远程登录Windows云服务器",
+            "CreationTime": "2026-05-21T21:07:13+08:00",
+            "UpdateTime": "2026-05-21T21:07:13+08:00",
+            "Priority": 100,
+            "Direction": "ingress",
+            "Protocol": "tcp",
+            "Policy": "accept",
+            "CidrIp": "0.0.0.0/0",
+            "LocalCidrIp": null,
+            "SourceGroupId": "",
+            "PortStart": 3389,
+            "PortEnd": 3389,
+            "SourcePortStart": null,
+            "SourcePortEnd": null,
+            "PrefixListId": "",
+            "PrefixListCidrs": null
+          }
+        ],
+        "CreationTime": "2026-05-21T21:07:13+08:00",
+        "UpdateTime": "2026-05-21T21:07:13+08:00",
+        "ProjectName": "default",
+        "Type": "default",
+        "Tags": [],
+        "ServiceManaged": false,
+        "Invisible": false,
+        "Status": "Available"
+      }
+    }
+  },
+  "generatedAtCloseout2": "2026-06-03T16:42:04.047302+08:00"
+}
