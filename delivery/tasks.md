@@ -1476,7 +1476,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-039 — Deploy on runtime host: Docker Compose, reverse proxy, HTTPS/TLS, security group, health/monitoring
 
 1. **Task ID:** TASK-039
-2. **Status:** Blocked (G12 rework — BLK-G12-006 release evidence pending)
+2. **Status:** Done
 3. **Objective:** Deploy the full stack on the committed runtime host via Docker Compose behind
    the existing reverse proxy with HTTPS/TLS, restricted network exposure, and health/monitoring
    evidence; CRM reachable and connected to persistent services.
@@ -1529,7 +1529,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     `8088`, `8443`, or `3389`. Evidence:
     `docs/release/evidence/volcengine-security-group-dedicated-raw-2026-06-03.json`;
     `docs/release/evidence/volcengine-security-group-rework-transcript-2026-06-03.txt`.
-    TASK-039 remains blocked by BLK-G12-006 release-evidence transcript gaps.
+    BLK-G12-006 is also resolved: captured HTTPS/redirect/openssl/certbot,
+    external negative-probe, restore, and operator-access transcripts under
+    `docs/release/evidence/`; `scripts/test_release_evidence_transcripts.sh`
+    passed. TASK-039 is complete again, pending independent G12 re-audit.
     Previous G11 text retained for historical context: Resolved on 2026-06-03. The HTTPS endpoint blocker was resolved
     with approved endpoint `https://118.196.44.193` and a Let's Encrypt IP certificate.
     Volcengine security-group API evidence was exported for security group

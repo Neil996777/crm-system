@@ -1,0 +1,75 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 118.196.44.193:443...
+* Name '192.168.0.107' family 2 resolved to '192.168.0.107' family 2
+* Local port: 0
+* Connected to 118.196.44.193 (118.196.44.193) port 443
+* ALPN: curl offers h2,http/1.1
+* (304) (OUT), TLS handshake, Client hello (1):
+} [296 bytes data]
+*  CAfile: /etc/ssl/cert.pem
+*  CApath: none
+* (304) (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* (304) (IN), TLS handshake, Unknown (8):
+{ [15 bytes data]
+* (304) (IN), TLS handshake, Certificate (11):
+{ [3351 bytes data]
+* (304) (IN), TLS handshake, CERT verify (15):
+{ [78 bytes data]
+* (304) (IN), TLS handshake, Finished (20):
+{ [36 bytes data]
+* (304) (OUT), TLS handshake, Finished (20):
+} [36 bytes data]
+* SSL connection using TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256 / [blank] / UNDEF
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: [NONE]
+*  start date: Jun  3 05:46:05 2026 GMT
+*  expire date: Jun  9 21:46:04 2026 GMT
+*  subjectAltName: host "118.196.44.193" matched cert's IP address!
+*  issuer: C=US; O=Let's Encrypt; CN=YE1
+*  SSL certificate verify ok.
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://118.196.44.193/
+* [HTTP/2] [1] [:method: HEAD]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: 118.196.44.193]
+* [HTTP/2] [1] [:path: /]
+* [HTTP/2] [1] [user-agent: curl/8.7.1]
+* [HTTP/2] [1] [accept: */*]
+> HEAD / HTTP/2
+> Host: 118.196.44.193
+> User-Agent: curl/8.7.1
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/2 200 
+< server: nginx/1.24.0 (Ubuntu)
+< date: Wed, 03 Jun 2026 12:34:15 GMT
+< content-type: text/html
+< content-length: 395
+< last-modified: Wed, 03 Jun 2026 06:45:01 GMT
+< etag: "6a1fcd6d-18b"
+< strict-transport-security: max-age=31536000; includeSubDomains
+< x-content-type-options: nosniff
+< referrer-policy: strict-origin-when-cross-origin
+< content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< accept-ranges: bytes
+< 
+{ [0 bytes data]
+  0   395    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+* Connection #0 to host 118.196.44.193 left intact
+HTTP/2 200 
+server: nginx/1.24.0 (Ubuntu)
+date: Wed, 03 Jun 2026 12:34:15 GMT
+content-type: text/html
+content-length: 395
+last-modified: Wed, 03 Jun 2026 06:45:01 GMT
+etag: "6a1fcd6d-18b"
+strict-transport-security: max-age=31536000; includeSubDomains
+x-content-type-options: nosniff
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+accept-ranges: bytes
+

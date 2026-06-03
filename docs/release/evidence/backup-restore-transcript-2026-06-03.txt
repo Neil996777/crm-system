@@ -1,0 +1,48 @@
+command=ls -l backup checksum passphrase
+-rw------- 1 root root 9680 Jun  3 18:46 /opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc
+-rw------- 1 root root  140 Jun  3 18:46 /opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc.sha256
+-rw------- 1 root root   65 Jun  3 18:44 /opt/crm-system/secrets/backup.passphrase
+--- command=sha256sum -c /opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc.sha256
+/opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc: OK
+--- command=openssl decrypt gzip integrity test
+decrypt_gzip_test=OK
+--- command=restore-result.json
+{"runId":"20260603T104837Z","backup":"crm-postgres-20260603T104620Z.sql.gz.enc","restoreDatabase":"crm_system","checksum":"passed","roles":10,"databaseExists":1,"schemas":9,"identityUsersTable":1,"auditHistoryTables":1,"servicePermissionRoles":9,"result":"passed"}
+--- command=psql \du
+                                    List of roles
+        Role name        |                         Attributes                         
+-------------------------+------------------------------------------------------------
+ crm_account_user        | 
+ crm_admin               | Superuser, Create role, Create DB, Replication, Bypass RLS
+ crm_audit_history_user  | 
+ crm_commercial_user     | 
+ crm_identity_authz_user | 
+ crm_import_export_user  | 
+ crm_lead_user           | 
+ crm_opportunity_user    | 
+ crm_reporting_user      | 
+ crm_work_user           | 
+
+--- command=psql \dn schema list
+          List of schemas
+      Name      |       Owner       
+----------------+-------------------
+ account        | crm_admin
+ audit_history  | crm_admin
+ commercial     | crm_admin
+ identity_authz | crm_admin
+ import_export  | crm_admin
+ lead           | crm_admin
+ opportunity    | crm_admin
+ public         | pg_database_owner
+ reporting      | crm_admin
+ work           | crm_admin
+(10 rows)
+
+--- command=psql \dt audit_history.*
+             List of relations
+    Schema     |  Name  | Type  |   Owner   
+---------------+--------+-------+-----------
+ audit_history | events | table | crm_admin
+(1 row)
+

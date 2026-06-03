@@ -17,7 +17,10 @@
 | Operator | Codex acting as `infrastructure-ops` |
 | Result | Passed for TASK-040 / ACC-017 backup and restore release evidence |
 
-Evidence file: `docs/release/evidence/backup-restore-rehearsal-2026-06-03.json`.
+Evidence files:
+
+- `docs/release/evidence/backup-restore-rehearsal-2026-06-03.json`
+- `docs/release/evidence/backup-restore-transcript-2026-06-03.txt`
 
 ## Restore rehearsal
 
@@ -41,3 +44,8 @@ The restore rehearsal must verify:
 - Audit-history tables: present.
 - Decrypted SQL retention: removed after the controlled restore; the rehearsal
   directory retains only the encrypted backup, checksum, and `restore-result.json`.
+
+G12 rework captured the real `sha256sum -c` output, OpenSSL decrypt + `gzip -t`
+integrity check, restore-result file, `psql \du`, schema list, and
+`audit_history` table listing in
+`docs/release/evidence/backup-restore-transcript-2026-06-03.txt`.

@@ -1,0 +1,32 @@
+command=getent passwd crm-deploy crm-ops
+crm-deploy:x:1000:1000::/home/crm-deploy:/bin/bash
+crm-ops:x:1001:1001::/home/crm-ops:/bin/bash
+--- command=sshd_config effective values
+permitrootlogin without-password
+pubkeyauthentication yes
+passwordauthentication yes
+kbdinteractiveauthentication no
+--- command=sshd hardening drop-in
+-rw-r--r-- 1 root root 117 Jun  3 20:49 /etc/ssh/sshd_config.d/99-crm-hardening.conf
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+--- command=sudoers crm boundary
+/etc/sudoers.d/crm-system:crm-deploy ALL=(root) NOPASSWD: CRM_DEPLOY
+/etc/sudoers.d/crm-system:crm-ops ALL=(root) NOPASSWD: CRM_OPS_READ
+--- command=key fingerprints and ownership
+-rw------- 1 crm-deploy crm-deploy 381 Jun  3 15:25 /home/crm-deploy/.ssh/authorized_keys
+2048 SHA256:fr4eZ5j+5ZOAIYhqAV9P/3rK70qscRakbnyBSjiF6rc no comment (RSA)
+-rw------- 1 crm-ops crm-ops 381 Jun  3 15:25 /home/crm-ops/.ssh/authorized_keys
+2048 SHA256:fr4eZ5j+5ZOAIYhqAV9P/3rK70qscRakbnyBSjiF6rc no comment (RSA)
+--- command=secrets backup permissions
+drwxr-xr-x 8 root root 4096 Jun  3 18:47 /opt/crm-system
+drwxr-xr-x 3 root root 4096 Jun  3 18:44 /opt/crm-system/backups
+drwx------ 2 root root 4096 Jun  3 18:46 /opt/crm-system/backups/postgres
+drwx------ 2 root root 4096 Jun  3 18:46 /opt/crm-system/secrets
+-rw------- 1 root root 65 Jun  3 18:44 /opt/crm-system/secrets/backup.passphrase
+-rw------- 1 root root 1700 May 29 16:49 /opt/crm-system/secrets/aliyun-bj-ecs-root.pem
+-rw------- 1 root root 9680 Jun  3 18:46 /opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc
+-rw------- 1 root root 140 Jun  3 18:46 /opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc.sha256
+-rw-r--r-- 1 root root 0 Jun  3 18:46 /opt/crm-system/backups/postgres/.backup.lock

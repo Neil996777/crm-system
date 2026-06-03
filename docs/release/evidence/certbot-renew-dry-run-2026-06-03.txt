@@ -1,0 +1,26 @@
+command=certbot certificates
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Found the following certs:
+  Certificate Name: 118.196.44.193
+    Serial Number: 5188a5ce29b19e4e37916e6294c78794ab9
+    Key Type: ECDSA
+    Identifiers: 118.196.44.193
+    Expiry Date: 2026-06-09 21:46:04+00:00 (VALID: 6 days)
+    Certificate Path: /etc/letsencrypt/live/118.196.44.193/fullchain.pem
+    Private Key Path: /etc/letsencrypt/live/118.196.44.193/privkey.pem
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+---
+command=certbot renew --dry-run
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Processing /etc/letsencrypt/renewal/118.196.44.193.conf
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+Simulating renewal of an existing certificate for 118.196.44.193
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Congratulations, all simulated renewals succeeded: 
+  /etc/letsencrypt/live/118.196.44.193/fullchain.pem (success)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

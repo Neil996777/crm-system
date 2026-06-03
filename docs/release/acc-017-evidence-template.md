@@ -101,6 +101,12 @@ group:
   - `docs/release/evidence/volcengine-security-group-raw-2026-06-03.json`
   - `docs/release/evidence/volcengine-security-group-dedicated-raw-2026-06-03.json`
   - `docs/release/evidence/volcengine-security-group-rework-transcript-2026-06-03.txt`
+  - `docs/release/evidence/tls-curl-https-2026-06-03.txt`
+  - `docs/release/evidence/tls-openssl-2026-06-03.txt`
+  - `docs/release/evidence/tls-curl-redirect-2026-06-03.txt`
+  - `docs/release/evidence/certbot-renew-dry-run-2026-06-03.txt`
+  - `docs/release/evidence/external-negative-probes-2026-06-03.txt`
+  - `docs/release/evidence/operator-access-transcript-2026-06-03.txt`
 
 Inbound security-group evidence:
 
@@ -146,3 +152,8 @@ the Volcengine OpenAPI to create dedicated security group
 export the raw final `DescribeNetworkInterfaces`, `DescribeSecurityGroups`, and
 `DescribeSecurityGroupAttributes` responses. `TEST-DEPLOY-SG-001` passed against
 that raw evidence.
+
+G12 release-evidence transcript rework captured `curl -I -v` HTTPS and redirect
+output, `openssl s_client`, `certbot certificates`, `certbot renew --dry-run`,
+external `nc` negative probes for `8080`/`5432`, and operator-access hardening
+evidence. `TEST-RELEASE-EVIDENCE-001` passed against those transcript files.
