@@ -1269,7 +1269,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-034 — reporting-service + frontend: Basic sales reports
 
 1. **Task ID:** TASK-034
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Basic reports with counts/sums for leads by status, opportunities by stage,
    quotes/contracts/payments by status/amount over persisted authorized records; empty/zero
    state; Sales denied; archived excluded by default.

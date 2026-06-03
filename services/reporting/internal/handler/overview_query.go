@@ -24,6 +24,7 @@ func NewReportingServer(db *sql.DB, _ Config) http.Handler {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /reports/team-overview", handler.teamOverview)
+	mux.HandleFunc("GET /reports/sales-overview", handler.salesOverview)
 	mux.HandleFunc("POST /internal/projections", handler.upsertProjection)
 	return mux
 }

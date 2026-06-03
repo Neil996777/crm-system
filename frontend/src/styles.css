@@ -508,6 +508,34 @@ select {
   gap: 12px;
 }
 
+.reportSection {
+  display: grid;
+  gap: 16px;
+  padding-top: 12px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sectionHeader h2,
+.sectionHeader p {
+  margin: 0;
+}
+
+.sectionHeader p {
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.reportTables {
+  display: grid;
+  gap: 12px;
+}
+
 .metricTile {
   min-height: 88px;
   display: grid;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getManagerOverview, ManagerOverview as ManagerOverviewData } from '../../api/reports';
+import { BasicReports } from './BasicReports';
 
 export function ManagerOverview() {
   const [overview, setOverview] = useState<ManagerOverviewData | null>(null);
@@ -71,6 +72,7 @@ export function ManagerOverview() {
           </section>
         </>
       ) : null}
+      <BasicReports />
     </main>
   );
 }
