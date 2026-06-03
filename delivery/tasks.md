@@ -1460,7 +1460,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-039 — Deploy on runtime host: Docker Compose, reverse proxy, HTTPS/TLS, security group, health/monitoring
 
 1. **Task ID:** TASK-039
-2. **Status:** Blocked
+2. **Status:** Done
 3. **Objective:** Deploy the full stack on the committed runtime host via Docker Compose behind
    the existing reverse proxy with HTTPS/TLS, restricted network exposure, and health/monitoring
    evidence; CRM reachable and connected to persistent services.
@@ -1505,17 +1505,17 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 16. **No-downgrade items:** Real HTTPS/TLS (no self-signed-only for production); real restricted
     exposure; real health/monitoring — not a screenshot of a local run. ARCH-ACC-008/013/014/015
     are `Release-evidence pending` and proven at G11, audited at G12.
-17. **Blocker:** G11 execution update 2026-06-03: the HTTPS endpoint blocker was resolved
+17. **Blocker:** Resolved on 2026-06-03. The HTTPS endpoint blocker was resolved
     with approved endpoint `https://118.196.44.193` and a Let's Encrypt IP certificate.
     Volcengine security-group API evidence was exported for security group
     `sg-1pm4k7f37z8xs643rg0fvk85e` bound to instance `i-yemoz0an7kk36d2c9bp6` via ENI
     `eni-13e8tbocd8f0g79iu5jer8idt`; it confirms CRM gateway `8080` and PostgreSQL
     `5432` are not publicly allowed from `0.0.0.0/0`. The user approved releasing
     previous deployments; Codex stopped and removed the host-network Hermes container, so
-    host-level `8642` no longer listens and CRM smoke still passes. TASK-039 remains
-    blocked by old/non-CRM Volcengine security-group rules publicly allowing TCP `8088`,
-    TCP `8443`, and TCP `3389`; API deletion was attempted but failed with `AccessDenied`
-    because the IAM user lacks `vpc:RevokeSecurityGroupIngress` (BLK-G11-002). **Pre-G8
+    host-level `8642` no longer listens and CRM smoke still passes. The user removed
+    old/non-CRM Volcengine security-group rules for TCP `8088`, TCP `8443`, and TCP
+    `3389`; API post-cleanup verification confirms only public TCP `22`, `80`, and
+    `443` remain. **Pre-G8
     condition:** Security Compliance must review the operator-access design (SSH access, key
     ownership, sudo boundary) before G8 implementation tasks are approved (deployment-notes
     "Operator Access").

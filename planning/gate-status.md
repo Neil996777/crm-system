@@ -25,7 +25,7 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
 | G8 | Task Planning -> Implementation **[HANDOFF: Claude -> Codex]** | Task Planner | Claude -> Codex | Gate Passed | Task Planner, Infrastructure Ops, Security Compliance, Audit (signed off 2026-06-01) | 2026-06-01 | Self-contained execution handoff package on disk (`delivery/G8-handoff.md` + delivery plan). Pre-G8 operator-access Security review done (approved w/ conditions). HANDED OFF to Codex for G9–G11; Claude resumes at G12. Decision: `archive/reviews/g8-handoff/g8-gate-decision-2026-06-01.md`. |
 | G9 | Implementation -> QA | Frontend / Backend Engineer | Codex | Gate Draft | | | |
 | G10 | QA -> Integration | QA Execution | Codex | Gate Draft | | | |
-| G11 | Integration -> Audit **[RETURN: Codex -> Claude]** | Integration Owner | Codex -> Claude | Gate Blocked | | 2026-06-03 | BLK-G11-002: TASK-039 has deployed HTTPS/IP-certificate evidence and Volcengine security-group API evidence for `srv-volcengine-sh-01`; CRM `8080` and PostgreSQL `5432` are not publicly allowed, and host-level Hermes `8642` was released. Still blocked by old/non-CRM Volcengine security-group rules publicly allowing TCP `8088`, TCP `8443`, and TCP `3389`; API deletion requires `vpc:RevokeSecurityGroupIngress` or console removal. |
+| G11 | Integration -> Audit **[RETURN: Codex -> Claude]** | Integration Owner | Codex -> Claude | Gate Draft | | 2026-06-03 | TASK-039 deployment/security-group blocker resolved; TASK-040 encrypted off-server backup + restore rehearsal pending. |
 | G12 | Audit -> Release/Rework | Audit | Claude | Gate Draft | | | release blockers carried: off-server backup+restore, HTTPS/TLS, security-group, monitoring evidence |
 
 ## Handoff Log

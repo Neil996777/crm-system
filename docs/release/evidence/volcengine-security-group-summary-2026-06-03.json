@@ -124,34 +124,19 @@
       ]
     }
   ],
-  "riskFlags": [
-    "Non-CRM public TCP rule 8088-8088 from 0.0.0.0/0: fixlink-hermes",
-    "Non-CRM public TCP rule 8443-8443 from 0.0.0.0/0: hermes-dashboard",
-    "Non-CRM public TCP rule 3389-3389 from 0.0.0.0/0: 允许远程登录Windows云服务器"
-  ],
+  "riskFlags": [],
   "apiNotes": [
     "Initial ecs:DescribeInstances returned AccessDenied before ECS read-only permission was added; VPC DescribeNetworkInterfaces identified the bound instance ENI and security group.",
     "After ECS read-only permission was added, ecs:DescribeInstances returned HTTP 200 for instance i-yemoz0an7kk36d2c9bp6 and confirmed ENI eni-13e8tbocd8f0g79iu5jer8idt with security group sg-1pm4k7f37z8xs643rg0fvk85e.",
     "SourceGroupId-only self-referential all-protocol rule allows traffic only from members of the same security group and is not treated as public 8080/5432 exposure.",
-    "Cloud security group evidence proves CRM 8080 and PostgreSQL 5432 are not allowed from 0.0.0.0/0."
+    "Cloud security group evidence proves CRM 8080 and PostgreSQL 5432 are not allowed from 0.0.0.0/0.",
+    "Post-cleanup verification on 2026-06-03 confirmed old/non-CRM public TCP 8088, 8443, and 3389 rules are gone; only public TCP 22, 80, and 443 remain."
   ],
   "publicExposureFindings": {
     "crmGateway8080PubliclyAllowed": false,
     "postgres5432PubliclyAllowed": false,
-    "hermes8642PubliclyAllowedBySecurityGroup": false,
+    "oldNonCrmRulesStillPresent": false,
     "publicTcpRules": [
-      {
-        "portStart": 8088,
-        "portEnd": 8088,
-        "cidrIp": "0.0.0.0/0",
-        "description": "fixlink-hermes"
-      },
-      {
-        "portStart": 8443,
-        "portEnd": 8443,
-        "cidrIp": "0.0.0.0/0",
-        "description": "hermes-dashboard"
-      },
       {
         "portStart": 22,
         "portEnd": 22,
@@ -169,13 +154,8 @@
         "portEnd": 443,
         "cidrIp": "0.0.0.0/0",
         "description": "允许使用HTTPS协议访问网站"
-      },
-      {
-        "portStart": 3389,
-        "portEnd": 3389,
-        "cidrIp": "0.0.0.0/0",
-        "description": "允许远程登录Windows云服务器"
       }
     ]
-  }
+  },
+  "generatedAtPostCleanup": "2026-06-03T18:38:42+08:00"
 }

@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-06-03T18:38:42+08:00",
+  "securityGroupId": "sg-1pm4k7f37z8xs643rg0fvk85e",
+  "httpStatus": 200,
+  "publicTcpRules": [
+    {
+      "portStart": 22,
+      "portEnd": 22,
+      "cidrIp": "0.0.0.0/0",
+      "description": "允许SSH远程连接Linux云服务器",
+      "policy": "accept"
+    },
+    {
+      "portStart": 80,
+      "portEnd": 80,
+      "cidrIp": "0.0.0.0/0",
+      "description": "允许使用HTTP协议访问网站",
+      "policy": "accept"
+    },
+    {
+      "portStart": 443,
+      "portEnd": 443,
+      "cidrIp": "0.0.0.0/0",
+      "description": "允许使用HTTPS协议访问网站",
+      "policy": "accept"
+    }
+  ],
+  "crmGateway8080PubliclyAllowed": false,
+  "postgres5432PubliclyAllowed": false,
+  "oldRulesStillPresent": [],
+  "conclusion": "Volcengine security group cleanup is complete for old/non-CRM public TCP rules 8088, 8443, and 3389. CRM gateway 8080 and PostgreSQL 5432 are not publicly allowed."
+}
