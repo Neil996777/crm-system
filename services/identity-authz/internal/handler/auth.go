@@ -164,9 +164,12 @@ func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) currentUser(w http.ResponseWriter, r *http.Request) {
-	user, sessionID, ok := h.authenticate(r.Context(), r)
+	user, sessionID, errorCode, ok := h.authenticate(r.Context(), r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, safeAuthMessage)
+		if errorCode == "" {
+			errorCode = "AUTHENTICATION_FAILED"
+		}
+		writeErrorCode(w, http.StatusUnauthorized, errorCode, "authentication", safeAuthMessage)
 		return
 	}
 	now := time.Now().UTC()
@@ -176,25 +179,31 @@ func (h *AuthHandler) currentUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"user": userDTO(user)})
 }
 
-func (h *AuthHandler) authenticate(ctx context.Context, r *http.Request) (domain.User, string, bool) {
+func (h *AuthHandler) authenticate(ctx context.Context, r *http.Request) (domain.User, string, string, bool) {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil || cookie.Value == "" {
 		h.appendAccessDenied(ctx, "", "unauthenticated")
-		return domain.User{}, "", false
+		return domain.User{}, "", "AUTHENTICATION_FAILED", false
 	}
 	session, err := h.sessions.FindByID(ctx, cookie.Value)
 	if err != nil || !session.Active(time.Now().UTC()) {
 		h.appendAccessDenied(ctx, "", "invalid_session")
-		return domain.User{}, "", false
+		return domain.User{}, "", "AUTHENTICATION_FAILED", false
 	}
 	user, err := h.users.FindByID(ctx, session.UserID)
 	if err != nil || !user.Active() {
 		now := time.Now().UTC()
 		_, _ = h.sessions.Revoke(ctx, session.ID, now)
 		h.appendAccessDenied(ctx, session.UserID, "inactive_user")
-		return domain.User{}, "", false
+		return domain.User{}, "", "AUTHENTICATION_FAILED", false
 	}
-	return user, session.ID, true
+	if user.AuthzVersion != session.AuthzVersionAtIssue {
+		now := time.Now().UTC()
+		_, _ = h.sessions.Revoke(ctx, session.ID, now)
+		h.appendAccessDenied(ctx, session.UserID, "authz_version_stale")
+		return domain.User{}, "", "AUTHZ_VERSION_STALE", false
+	}
+	return user, session.ID, "", true
 }
 
 func (h *AuthHandler) appendAccessDenied(ctx context.Context, userID, reason string) {

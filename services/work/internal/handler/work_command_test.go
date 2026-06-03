@@ -105,7 +105,7 @@ func TestWorkAcceptance(t *testing.T) {
 		requireEvent(t, db, "TaskStatusChanged", taskID)
 	})
 
-	t.Run("TEST-ACTIVITY-NOTE-003 denies Sales creating work for another owner", func(t *testing.T) {
+	t.Run("TEST-ACTIVITY-NOTE-003 and TEST-ABUSE-MUTATE-001 denies Sales creating work for another owner", func(t *testing.T) {
 		rec := postWorkJSON(app, "/tasks", map[string]any{
 			"relatedType": "Lead",
 			"relatedId":   "lead_work_denied",
@@ -121,6 +121,7 @@ func TestWorkAcceptance(t *testing.T) {
 }
 
 func TestOwnerTransferOpenWorkCascade(t *testing.T) {
+	t.Log("TEST-OWNER-TRANSFER-004 open-work cascade transfers active tasks to the new owner")
 	db := newWorkTestDB(t)
 	app := NewWorkServer(db, Config{ServiceID: "work", ServiceTokenSecret: []byte("work-test-secret")})
 

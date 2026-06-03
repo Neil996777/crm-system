@@ -50,5 +50,8 @@ func VerifyServiceToken(token, audience, intent string, secret []byte, now time.
 	if claims.Audience != audience || claims.Intent != intent || !claims.Expires.After(now) {
 		return ServiceClaims{}, errors.New("invalid claims")
 	}
+	if claims.Expires.After(now.Add(5*time.Minute + time.Second)) {
+		return ServiceClaims{}, errors.New("invalid claims")
+	}
 	return claims, nil
 }

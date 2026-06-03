@@ -126,7 +126,7 @@ func TestAuthSessionAcceptance(t *testing.T) {
 		requireEvent(t, db, "UserSignedOut", userID)
 	})
 
-	t.Run("TEST-AUTH-LOGIN-006 stale session re-evaluates role and disabled status", func(t *testing.T) {
+	t.Run("TEST-AUTH-LOGIN-006 stale session re-evaluates role and disabled status with AUTHZ_VERSION_STALE", func(t *testing.T) {
 		email := "stale-" + randomSuffix(t) + "@example.com"
 		userID := insertUser(t, db, email, "correct-password", "Sales", "Active")
 		login := postJSON(app, "/auth/sign-in", map[string]string{
@@ -139,10 +139,10 @@ func TestAuthSessionAcceptance(t *testing.T) {
 			t.Fatalf("change role: %v", err)
 		}
 		current := get(app, "/auth/current", cookie)
-		if current.Code != http.StatusOK {
-			t.Fatalf("expected current session to re-evaluate role, got %d body=%s", current.Code, current.Body.String())
+		if current.Code != http.StatusUnauthorized {
+			t.Fatalf("expected stale authz version to be denied, got %d body=%s", current.Code, current.Body.String())
 		}
-		requireJSONValue(t, decodeJSON(t, current), "user.role", "Sales Manager")
+		requireErrorCode(t, current, "AUTHZ_VERSION_STALE")
 
 		if _, err := db.Exec(`UPDATE identity_authz.users SET status = 'Disabled', authz_version = authz_version + 1 WHERE id = $1`, userID); err != nil {
 			t.Fatalf("disable user: %v", err)

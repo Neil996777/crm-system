@@ -140,9 +140,12 @@ func (h *AuthHandler) changeUserStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) requireAdministrator(w http.ResponseWriter, r *http.Request) (domain.User, string, bool) {
-	actor, sessionID, ok := h.authenticate(r.Context(), r)
+	actor, sessionID, errorCode, ok := h.authenticate(r.Context(), r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, safeAuthMessage)
+		if errorCode == "" {
+			errorCode = "AUTHENTICATION_FAILED"
+		}
+		writeErrorCode(w, http.StatusUnauthorized, errorCode, "authentication", safeAuthMessage)
 		return domain.User{}, "", false
 	}
 	if actor.Role != domain.RoleAdministrator {

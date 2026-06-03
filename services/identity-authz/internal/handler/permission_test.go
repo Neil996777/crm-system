@@ -25,7 +25,7 @@ func TestPermissionScopeAndS2SAcceptance(t *testing.T) {
 
 	token := signTestServiceToken(t, secret, "lead", "identity-authz", "permission.check")
 
-	t.Run("TEST-AUTHZ-SCOPE-001 admin governs all", func(t *testing.T) {
+	t.Run("TEST-AUTHZ-SCOPE-001 and TEST-PERM-CRUD-ADMIN-001 admin governs all", func(t *testing.T) {
 		rec := permissionCheck(app, token, map[string]any{
 			"actorId": adminID,
 			"action":  "lead.update",
@@ -41,7 +41,7 @@ func TestPermissionScopeAndS2SAcceptance(t *testing.T) {
 		requirePermission(t, rec, true, "all", nil)
 	})
 
-	t.Run("TEST-AUTHZ-SCOPE-002 manager team scope", func(t *testing.T) {
+	t.Run("TEST-AUTHZ-SCOPE-002 and TEST-PERM-CRUD-MGR-001 manager team scope", func(t *testing.T) {
 		rec := permissionCheck(app, token, map[string]any{
 			"actorId": managerID,
 			"action":  "opportunity.update",
@@ -57,7 +57,7 @@ func TestPermissionScopeAndS2SAcceptance(t *testing.T) {
 		requirePermission(t, rec, true, "team", nil)
 	})
 
-	t.Run("TEST-AUTHZ-SCOPE-003 and 004 sales owned allowed and cross-owner denied without leakage", func(t *testing.T) {
+	t.Run("TEST-AUTHZ-SCOPE-003/004/005 and TEST-PERM-CRUD-SALES-001 sales owned allowed and cross-owner denied without leakage or mutation", func(t *testing.T) {
 		owned := permissionCheck(app, token, map[string]any{
 			"actorId": salesID,
 			"action":  "lead.update",

@@ -62,7 +62,7 @@ func TestLeadCreateAssignAndConcurrencyAcceptance(t *testing.T) {
 		requireJSONValue(t, body, "ownerId", "")
 	})
 
-	t.Run("TEST-LEAD-ASSIGN-001 and TEST-OWNER-TRANSFER-001 manager assigns owner and records history event", func(t *testing.T) {
+	t.Run("TEST-LEAD-ASSIGN-001 TEST-OWNER-TRANSFER-001 and TEST-OWNER-TRANSFER-002 manager assigns or transfers owner and records history event", func(t *testing.T) {
 		create := postLeadJSON(app, "/leads", map[string]any{
 			"companyName": "Assign Co",
 			"source":      "Trade Show",
@@ -83,7 +83,7 @@ func TestLeadCreateAssignAndConcurrencyAcceptance(t *testing.T) {
 		requireEvent(t, db, "LeadOwnerChanged", leadID)
 	})
 
-	t.Run("TEST-LEAD-ASSIGN-002 and TEST-OWNER-TRANSFER-003 Sales cannot assign or transfer", func(t *testing.T) {
+	t.Run("TEST-LEAD-ASSIGN-002 TEST-OWNER-TRANSFER-003 and TEST-ABUSE-MUTATE-001 Sales cannot assign or transfer", func(t *testing.T) {
 		create := postLeadJSON(app, "/leads", map[string]any{
 			"leadName": "Sales owned",
 			"source":   "Website",

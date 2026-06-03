@@ -82,7 +82,7 @@ func TestOpportunityCreateAcceptance(t *testing.T) {
 		requireNoStatusColumn(t, db)
 	})
 
-	t.Run("TEST-OPP-CREATE-004 non-owned edit denied and hard delete unavailable", func(t *testing.T) {
+	t.Run("TEST-OPP-CREATE-004 TEST-AUTHZ-SCOPE-005 and TEST-ABUSE-MUTATE-001 non-owned edit denied with no mutation and hard delete unavailable", func(t *testing.T) {
 		create := postOpportunityJSON(app, "/opportunities", map[string]any{
 			"customerId":        "acct_restricted",
 			"ownerId":           "sales-2",
