@@ -1,0 +1,7 @@
+[Unit]
+Description=Renew CRM IP TLS certificate
+Documentation=https://letsencrypt.org/docs/
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/certbot renew --deploy-hook "systemctl reload nginx"

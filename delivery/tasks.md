@@ -1505,11 +1505,13 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 16. **No-downgrade items:** Real HTTPS/TLS (no self-signed-only for production); real restricted
     exposure; real health/monitoring — not a screenshot of a local run. ARCH-ACC-008/013/014/015
     are `Release-evidence pending` and proven at G11, audited at G12.
-17. **Blocker:** A valid HTTPS endpoint / TLS certificate (and domain, if used) must be available
-    for production release; absence blocks production closure per deployment-notes.md (record here
-    if unavailable at G11 — do not guess a domain). **Pre-G8 condition:** Security Compliance must
-    review the operator-access design (SSH access, key ownership, sudo boundary) before G8
-    implementation tasks are approved (deployment-notes "Operator Access").
+17. **Blocker:** G11 execution update 2026-06-03: the HTTPS endpoint blocker was resolved
+    with approved endpoint `https://118.196.44.193` and a Let's Encrypt IP certificate, but
+    TASK-039 remains blocked by missing Volcengine cloud security-group inbound-rule evidence
+    and review of the pre-existing public `8642` Hermes exposure (BLK-G11-002). **Pre-G8
+    condition:** Security Compliance must review the operator-access design (SSH access, key
+    ownership, sudo boundary) before G8 implementation tasks are approved (deployment-notes
+    "Operator Access").
 
 ### TASK-040 — Encrypted off-server backup + restore rehearsal (release evidence)
 

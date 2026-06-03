@@ -1,0 +1,10 @@
+[Unit]
+Description=Run CRM IP TLS certificate renewal twice daily
+
+[Timer]
+OnCalendar=*-*-* 03,15:17:00
+Persistent=true
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target
