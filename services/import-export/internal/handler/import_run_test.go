@@ -144,7 +144,7 @@ func newImportExportTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("container port: %v", err)
 	}
 	db := openImportExportDB(t, fmt.Sprintf("postgres://crm_admin:crm_admin_dev_password@%s:%s/crm_system?sslmode=disable", host, port.Port()))
-	for _, migration := range []string{"0001_init_schema.up.sql", "0002_import_export_runs.up.sql"} {
+	for _, migration := range []string{"0001_init_schema.up.sql", "0002_import_export_runs.up.sql", "0003_export_runs.up.sql"} {
 		sqlBytes, err := os.ReadFile(filepath.Join("..", "..", "migrations", migration))
 		if err != nil {
 			t.Fatalf("read migration %s: %v", migration, err)

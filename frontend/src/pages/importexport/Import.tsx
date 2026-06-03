@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ImportRun, startImport } from '../../api/importexport';
+import { ExportPanel } from './Export';
 
 export function ImportExportPage() {
   const [objectType, setObjectType] = useState('lead');
@@ -88,6 +89,7 @@ export function ImportExportPage() {
           )}
         </section>
       ) : null}
+      <ExportPanel />
     </main>
   );
 }

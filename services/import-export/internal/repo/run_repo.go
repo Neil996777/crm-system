@@ -33,6 +33,22 @@ type ImportRowResult struct {
 	TargetRecordID string
 }
 
+type ExportRun struct {
+	RunID              string
+	ObjectType         string
+	Filename           string
+	Status             string
+	ActorID            string
+	ActorRole          string
+	TeamID             string
+	IncludeArchived    bool
+	ExportedCount      int
+	OperationLogStatus string
+	CleanupStatus      string
+	RetainedUntil      time.Time
+	CompletedAt        *time.Time
+}
+
 type RunRepo struct {
 	db *sql.DB
 }
@@ -118,5 +134,32 @@ func (r *RunRepo) MarkExpiredRunsDeleted(ctx context.Context, now time.Time) (in
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected()
+	importCount, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	result, err = r.db.ExecContext(ctx, `
+		UPDATE import_export.export_runs
+		SET cleanup_status = 'deleted'
+		WHERE retained_until <= $1 AND cleanup_status <> 'deleted'
+	`, now)
+	if err != nil {
+		return 0, err
+	}
+	exportCount, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return importCount + exportCount, nil
+}
+
+func (r *RunRepo) SaveExportRun(ctx context.Context, run ExportRun) error {
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO import_export.export_runs
+			(run_id, object_type, filename, status, actor_id, actor_role, team_id, include_archived,
+			 exported_count, operation_log_status, cleanup_status, retained_until, completed_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, run.RunID, run.ObjectType, run.Filename, run.Status, run.ActorID, run.ActorRole, run.TeamID,
+		run.IncludeArchived, run.ExportedCount, run.OperationLogStatus, run.CleanupStatus, run.RetainedUntil, run.CompletedAt)
+	return err
 }

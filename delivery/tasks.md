@@ -1346,7 +1346,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-036 — import-export-service + frontend: CSV export (authorized records, archived excluded, confirm + log)
 
 1. **Task ID:** TASK-036
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Authorized CSV export including only authorized records, excluding archived
    by default, with explicit confirmation and audit log; Sales denied; export safely encodes
    dangerous cells.

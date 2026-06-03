@@ -548,6 +548,24 @@ select {
   font-weight: 700;
 }
 
+.exportResult {
+  display: grid;
+  gap: 8px;
+}
+
+.exportResult p {
+  margin: 0;
+}
+
+.exportResult textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 10px;
+  border: 1px solid #b8c4d1;
+  border-radius: 6px;
+  resize: vertical;
+}
+
 .metricTile {
   min-height: 88px;
   display: grid;

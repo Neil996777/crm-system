@@ -48,6 +48,7 @@ func NewImportExportServer(db *sql.DB, config Config) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /imports", handler.startImport)
 	mux.HandleFunc("GET /imports/{id}", handler.getImportRun)
+	mux.HandleFunc("POST /exports", handler.startExport)
 	return mux
 }
 
