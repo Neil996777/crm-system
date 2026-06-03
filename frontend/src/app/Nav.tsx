@@ -9,7 +9,7 @@ type NavItem = {
   view: AppView;
 };
 
-export type AppView = 'overview' | 'leads' | 'accounts' | 'contacts' | 'opportunities' | 'quotes' | 'contracts' | 'payments' | 'tasks' | 'reminders' | 'managerOverview' | 'userManagement' | 'operationLogs';
+export type AppView = 'overview' | 'leads' | 'accounts' | 'contacts' | 'opportunities' | 'quotes' | 'contracts' | 'payments' | 'tasks' | 'reminders' | 'managerOverview' | 'importExport' | 'userManagement' | 'operationLogs';
 
 const items: NavItem[] = [
   { label: 'Work Overview', roles: ['Administrator', 'Sales Manager', 'Sales'], icon: BriefcaseBusiness, view: 'overview' },
@@ -23,7 +23,7 @@ const items: NavItem[] = [
   { label: 'Tasks', roles: ['Administrator', 'Sales Manager', 'Sales'], icon: ListChecks, view: 'tasks' },
   { label: 'Reminder Center', roles: ['Administrator', 'Sales Manager', 'Sales'], icon: ListChecks, view: 'reminders' },
   { label: 'Reports', roles: ['Administrator', 'Sales Manager'], icon: BarChart3, view: 'managerOverview' },
-  { label: 'Import/Export', roles: ['Administrator', 'Sales Manager'], icon: FileText, view: 'overview' },
+  { label: 'Import/Export', roles: ['Administrator', 'Sales Manager'], icon: FileText, view: 'importExport' },
   { label: 'Admin: Users/Roles', roles: ['Administrator'], icon: LockKeyhole, view: 'userManagement' },
   { label: 'Operation Logs', roles: ['Administrator'], icon: ListChecks, view: 'operationLogs' }
 ];

@@ -536,6 +536,18 @@ select {
   gap: 12px;
 }
 
+.importForm {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(260px, 1fr) max-content;
+  align-items: end;
+  gap: 12px;
+}
+
+.resultSummary {
+  margin: 0;
+  font-weight: 700;
+}
+
 .metricTile {
   min-height: 88px;
   display: grid;
@@ -701,6 +713,7 @@ select {
     .timelineMeta,
     .actionBand,
     .inlineForm,
+    .importForm,
     .convertForm,
     .stageStepper {
     grid-template-columns: 1fr;

@@ -41,6 +41,7 @@ services:
       - ./services/opportunity/migrations/0003_archive.up.sql:/docker-entrypoint-initdb.d/026_opportunity_archive.sql:ro
       - ./services/commercial/migrations/0005_archive.up.sql:/docker-entrypoint-initdb.d/027_commercial_archive.sql:ro
       - ./services/reporting/migrations/0002_reporting_projections.up.sql:/docker-entrypoint-initdb.d/028_reporting_projections.sql:ro
+      - ./services/import-export/migrations/0002_import_export_runs.up.sql:/docker-entrypoint-initdb.d/029_import_export_runs.sql:ro
     expose:
       - "5432"
     healthcheck:
@@ -264,6 +265,10 @@ services:
       SERVICE_NAME: import-export
       PORT: "8080"
       DATABASE_URL: postgres://crm_import_export_user:crm_import_export_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=import_export
+      LEAD_SERVICE_URL: http://lead:8080
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+      SERVICE_ID: import-export
+      SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
     expose:
       - "8080"
     healthcheck: *go-healthcheck

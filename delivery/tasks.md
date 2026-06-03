@@ -1303,7 +1303,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-035 — import-export-service + frontend: CSV import with row-level errors
 
 1. **Task ID:** TASK-035
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Authorized CSV import that validates rows, imports valid rows via target
    domain Command APIs, reports row-level errors without corrupting existing records, and
    denies Sales; CSV formula-injection-safe.

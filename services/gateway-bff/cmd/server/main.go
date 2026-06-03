@@ -49,6 +49,7 @@ func main() {
 			"tasks":         envOrDefault("WORK_SERVICE_URL", "http://work:8080"),
 			"reminders":     envOrDefault("WORK_SERVICE_URL", "http://work:8080"),
 			"reports":       envOrDefault("REPORTING_SERVICE_URL", "http://reporting:8080"),
+			"imports":       envOrDefault("IMPORT_EXPORT_SERVICE_URL", "http://import-export:8080"),
 			"history":       envOrDefault("AUDIT_HISTORY_SERVICE_URL", "http://audit-history:8080"),
 		},
 	})
