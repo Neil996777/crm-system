@@ -187,6 +187,7 @@ func deliverReportingProjection(ctx context.Context, config DispatchConfig, serv
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("X-Service-Id", serviceID)
 	req.Header.Set("X-Intent", "reporting.projection_ingest")
+	req.Header.Set("X-Correlation-Id", payloadString(item.Payload, "correlationId", item.ID))
 	client := config.HTTPClient
 	if client == nil {
 		client = &http.Client{Timeout: 5 * time.Second}

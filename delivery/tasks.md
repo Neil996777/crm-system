@@ -1272,7 +1272,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 12. **Automated tests:** `TEST-TEAM-OVERVIEW-001..004`; G12 rework
     `TEST-REPORTING-S2S-001..005` for internal projection ingest authentication
     and no-mutation denial; `TEST-REPORTING-PROJECTION-INGEST-001/006` for
-    producer dispatcher projection delivery and manager aggregate query. Type: E2E + Integration.
+    producer dispatcher projection delivery and manager aggregate query; G12 second
+    rework `TEST-REPORTING-CORRELATION-001` for projection ingest correlation-id
+    propagation. Type: E2E + Integration.
 13. **Manual verification:** As manager, open overview; as Sales → denied.
 14. **Traceability:** CIM-043/CIM-PROC-015 → PIM-024/PIM-BEH-031 → PSM-010 → CONTRACT-015/016 →
     ACC-018 → TEST-TEAM-OVERVIEW-001..004.
@@ -1281,7 +1283,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     initially failed because `Config.ServiceID` / `ServiceTokenSecret` and S2S
     verification were absent, then passed after signed-token middleware. Projection
     dispatcher test initially failed on missing `ReportingServiceURL`, then passed
-    after producer outbox dispatchers called reporting ingest.
+    after producer outbox dispatchers called reporting ingest. G12 second rework
+    fail-first evidence: opportunity dispatcher test failed because reporting
+    projection delivery omitted `X-Correlation-Id`, then passed after all producer
+    reporting dispatchers set it.
 16. **No-downgrade items:** Read model from events/contracts, NOT source DB (ARCH-ACC-006);
     real authz-before-aggregate; no static numbers.
 17. **Blocker:** None.
@@ -1310,14 +1315,16 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     unauthorized records excluded; archived excluded by default.
 11. **Acceptance method:** ACC-023 — report numbers traceable to records and matching metric
     groupings; Sales denied.
-12. **Automated tests:** `TEST-BASIC-REPORT-001..005`; G12 rework
+12. **Automated tests:** `TEST-BASIC-REPORT-001..006`; G12 rework
     `TEST-REPORTING-PROJECTION-INGEST-006` covers real S2S-populated reporting
     read model used by report queries. Type: Integration + E2E.
 13. **Manual verification:** Create records, open reports, confirm counts/sums match; as Sales
     → denied.
 14. **Traceability:** CIM-044/CIM-PROC-019 → PIM-025/PIM-BEH-032 → PSM-010 → CONTRACT-015/016 →
-    ACC-023 → TEST-BASIC-REPORT-001..005.
+    ACC-023 → TEST-BASIC-REPORT-001..006.
 15. **TDD:** Write grouping-traceability + empty + Sales-deny + archived-excluded tests first (fail).
+    G12 second rework added `TEST-BASIC-REPORT-006` for Administrator all-scope
+    report query over active records across teams.
 16. **No-downgrade items:** Numbers derived from real persisted records via read model; no
     hardcoded metrics; archived excluded.
 17. **Blocker:** None.

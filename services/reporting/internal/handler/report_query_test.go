@@ -89,6 +89,18 @@ func TestBasicSalesReportAcceptance(t *testing.T) {
 			t.Fatalf("expected archived records excluded, got %#v body=%s", metrics, rec.Body.String())
 		}
 	})
+
+	t.Run("TEST-BASIC-REPORT-006 Administrator all-scope sees all active teams", func(t *testing.T) {
+		rec := getReportingJSON(app, "/reports/sales-overview", actorHeaders("admin-1", "Administrator", "single-team"))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected administrator all-scope report 200, got %d body=%s", rec.Code, rec.Body.String())
+		}
+		body := decodeJSON(t, rec)
+		metrics := body["metrics"].(map[string]any)
+		if body["scope"] != "all" || metrics["leadCount"].(float64) != 4 {
+			t.Fatalf("expected Administrator all-scope to include active records across teams, got %s", rec.Body.String())
+		}
+	})
 }
 
 func insertArchivedProjection(t *testing.T, db *sql.DB, values map[string]any) {

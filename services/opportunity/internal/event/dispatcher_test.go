@@ -84,6 +84,9 @@ func TestOutboxDispatcherDeliversAndRetriesAuditHistoryEvents(t *testing.T) {
 		if r.Header.Get("X-Service-Id") != "opportunity" || r.Header.Get("X-Intent") != "reporting.projection_ingest" {
 			t.Fatalf("missing reporting S2S headers: service=%q intent=%q", r.Header.Get("X-Service-Id"), r.Header.Get("X-Intent"))
 		}
+		if r.Header.Get("X-Correlation-Id") != "corr-dispatch-1" {
+			t.Fatalf("TEST-REPORTING-CORRELATION-001 expected reporting correlation id, got %q", r.Header.Get("X-Correlation-Id"))
+		}
 		if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
 			t.Fatalf("missing reporting bearer service token")
 		}
