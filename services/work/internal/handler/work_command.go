@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -27,6 +28,7 @@ type Config struct {
 }
 
 type WorkHandler struct {
+	db     *sql.DB
 	repo   *repo.WorkRepo
 	outbox *event.Outbox
 	config Config
@@ -41,7 +43,7 @@ func NewWorkServer(db *sql.DB, config Config) http.Handler {
 	if config.ServiceID == "" {
 		config.ServiceID = "work"
 	}
-	handler := &WorkHandler{repo: repo.NewWorkRepo(db), outbox: event.NewOutbox(db), config: config}
+	handler := &WorkHandler{db: db, repo: repo.NewWorkRepo(db), outbox: event.NewOutbox(db), config: config}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /activities", handler.createActivity)
 	mux.HandleFunc("GET /activities", handler.listActivities)
@@ -54,6 +56,22 @@ func NewWorkServer(db *sql.DB, config Config) http.Handler {
 	mux.HandleFunc("POST /internal/owner-transfer", handler.transferOwner)
 	mux.HandleFunc("GET /internal/active-obligations", handler.activeObligations)
 	return mux
+}
+
+func (h *WorkHandler) inTransaction(ctx context.Context, fn func(*repo.WorkRepo, *event.Outbox) error) error {
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := fn(repo.NewWorkRepoTx(tx), event.NewOutboxTx(tx)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func writeOutboxFailure(w http.ResponseWriter) {
+	writeError(w, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "dependency", "The audit event could not be persisted.")
 }
 
 func SignServiceToken(issuer, audience, intent string, secret []byte) string {
@@ -89,18 +107,26 @@ func (h *WorkHandler) createActivity(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The work item input is invalid.")
 		return
 	}
-	created, err := h.repo.CreateActivity(r.Context(), activity)
-	if err != nil {
+	var created domain.Activity
+	if err := h.inTransaction(r.Context(), func(txRepo *repo.WorkRepo, txOutbox *event.Outbox) error {
+		var err error
+		created, err = txRepo.CreateActivity(r.Context(), activity)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.WorkItemCreated, created.ID, map[string]any{
+			"traceability": "TASK-024 ACC-012 CIM-030 CIM-PROC-012 PIM-013 PIM-BEH-020 PSM-008 CONTRACT-011 CONTRACT-012",
+			"actorId":      actor.ID,
+			"actorRole":    actor.Role,
+			"actorDisplay": actor.ID,
+			"workItemId":   created.ID,
+			"relatedType":  created.RelatedType,
+			"relatedId":    created.RelatedID,
+		})
+	}); err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The work item input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.WorkItemCreated, created.ID, map[string]any{
-		"traceability": "TASK-024 ACC-012 CIM-030 CIM-PROC-012 PIM-013 PIM-BEH-020 PSM-008 CONTRACT-011 CONTRACT-012",
-		"actorId":      actor.ID,
-		"workItemId":   created.ID,
-		"relatedType":  created.RelatedType,
-		"relatedId":    created.RelatedID,
-	})
 	writeJSON(w, http.StatusCreated, activityDTO(created))
 }
 
@@ -131,18 +157,26 @@ func (h *WorkHandler) createNote(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The work item input is invalid.")
 		return
 	}
-	created, err := h.repo.CreateNote(r.Context(), note)
-	if err != nil {
+	var created domain.Note
+	if err := h.inTransaction(r.Context(), func(txRepo *repo.WorkRepo, txOutbox *event.Outbox) error {
+		var err error
+		created, err = txRepo.CreateNote(r.Context(), note)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.WorkItemCreated, created.ID, map[string]any{
+			"traceability": "TASK-024 ACC-012 CIM-031 CIM-PROC-012 PIM-014 PIM-BEH-020 PSM-008 CONTRACT-011 CONTRACT-012",
+			"actorId":      actor.ID,
+			"actorRole":    actor.Role,
+			"actorDisplay": actor.ID,
+			"workItemId":   created.ID,
+			"relatedType":  created.RelatedType,
+			"relatedId":    created.RelatedID,
+		})
+	}); err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The work item input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.WorkItemCreated, created.ID, map[string]any{
-		"traceability": "TASK-024 ACC-012 CIM-031 CIM-PROC-012 PIM-014 PIM-BEH-020 PSM-008 CONTRACT-011 CONTRACT-012",
-		"actorId":      actor.ID,
-		"workItemId":   created.ID,
-		"relatedType":  created.RelatedType,
-		"relatedId":    created.RelatedID,
-	})
 	writeJSON(w, http.StatusCreated, noteDTO(created))
 }
 
@@ -180,18 +214,26 @@ func (h *WorkHandler) createTask(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The task input is invalid.")
 		return
 	}
-	created, err := h.repo.CreateTask(r.Context(), task)
-	if err != nil {
+	var created domain.Task
+	if err := h.inTransaction(r.Context(), func(txRepo *repo.WorkRepo, txOutbox *event.Outbox) error {
+		var err error
+		created, err = txRepo.CreateTask(r.Context(), task)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.WorkItemCreated, created.ID, map[string]any{
+			"traceability": "TASK-024 ACC-012 ACC-021 CIM-032 CIM-PROC-012 PIM-015 PIM-SM-007 PIM-BEH-021 PSM-008 CONTRACT-011 CONTRACT-012",
+			"actorId":      actor.ID,
+			"actorRole":    actor.Role,
+			"actorDisplay": actor.ID,
+			"taskId":       created.ID,
+			"relatedType":  created.RelatedType,
+			"relatedId":    created.RelatedID,
+		})
+	}); err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The task input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.WorkItemCreated, created.ID, map[string]any{
-		"traceability": "TASK-024 ACC-012 ACC-021 CIM-032 CIM-PROC-012 PIM-015 PIM-SM-007 PIM-BEH-021 PSM-008 CONTRACT-011 CONTRACT-012",
-		"actorId":      actor.ID,
-		"taskId":       created.ID,
-		"relatedType":  created.RelatedType,
-		"relatedId":    created.RelatedID,
-	})
 	writeJSON(w, http.StatusCreated, taskDTO(created, time.Time{}))
 }
 
@@ -223,17 +265,25 @@ func (h *WorkHandler) changeTaskStatus(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "INVALID_TRANSITION", "business_rule", "The requested task status transition is not allowed.")
 		return
 	}
-	saved, err := h.repo.UpdateTaskStatus(r.Context(), updated)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+	var saved domain.Task
+	if err := h.inTransaction(r.Context(), func(txRepo *repo.WorkRepo, txOutbox *event.Outbox) error {
+		var err error
+		saved, err = txRepo.UpdateTaskStatus(r.Context(), updated)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.TaskStatusChanged, saved.ID, map[string]any{
+			"traceability": "TASK-024 ACC-012 ACC-014 ACC-021 CIM-032 PIM-SM-007 PIM-BEH-021 PSM-008 CONTRACT-011 CONTRACT-012",
+			"actorId":      actor.ID,
+			"actorRole":    actor.Role,
+			"actorDisplay": actor.ID,
+			"taskId":       saved.ID,
+			"toStatus":     saved.Status,
+		})
+	}); err != nil {
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.TaskStatusChanged, saved.ID, map[string]any{
-		"traceability": "TASK-024 ACC-012 ACC-014 ACC-021 CIM-032 PIM-SM-007 PIM-BEH-021 PSM-008 CONTRACT-011 CONTRACT-012",
-		"actorId":      actor.ID,
-		"taskId":       saved.ID,
-		"toStatus":     saved.Status,
-	})
 	writeJSON(w, http.StatusOK, taskDTO(saved, time.Time{}))
 }
 
@@ -252,19 +302,28 @@ func (h *WorkHandler) transferOwner(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The owner transfer input is invalid.")
 		return
 	}
-	count, err := h.repo.TransferOpenWork(r.Context(), request.RelatedType, request.RelatedID, request.FromOwnerID, request.ToOwnerID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+	var count int64
+	if err := h.inTransaction(r.Context(), func(txRepo *repo.WorkRepo, txOutbox *event.Outbox) error {
+		var err error
+		count, err = txRepo.TransferOpenWork(r.Context(), request.RelatedType, request.RelatedID, request.FromOwnerID, request.ToOwnerID)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.OpenWorkTransferred, request.RelatedID, map[string]any{
+			"traceability": "TASK-024 ACC-012 ACC-014 CIM-032 PIM-INV-030 PIM-INV-033 PSM-008 CONTRACT-011 CONTRACT-012 EDGE-024",
+			"actorId":      r.Header.Get("X-Actor-User-Id"),
+			"actorRole":    r.Header.Get("X-Actor-Role"),
+			"actorDisplay": r.Header.Get("X-Actor-User-Id"),
+			"relatedType":  request.RelatedType,
+			"relatedId":    request.RelatedID,
+			"fromOwnerId":  request.FromOwnerID,
+			"toOwnerId":    request.ToOwnerID,
+			"count":        count,
+		})
+	}); err != nil {
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.OpenWorkTransferred, request.RelatedID, map[string]any{
-		"traceability": "TASK-024 ACC-012 ACC-014 CIM-032 PIM-INV-030 PIM-INV-033 PSM-008 CONTRACT-011 CONTRACT-012 EDGE-024",
-		"relatedType":  request.RelatedType,
-		"relatedId":    request.RelatedID,
-		"fromOwnerId":  request.FromOwnerID,
-		"toOwnerId":    request.ToOwnerID,
-		"count":        count,
-	})
 	writeJSON(w, http.StatusOK, map[string]any{"transferred": count})
 }
 

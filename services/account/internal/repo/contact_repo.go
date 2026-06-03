@@ -10,16 +10,20 @@ import (
 )
 
 type ContactRepo struct {
-	db *sql.DB
+	q sqlRunner
 }
 
 func NewContactRepo(db *sql.DB) *ContactRepo {
-	return &ContactRepo{db: db}
+	return &ContactRepo{q: db}
+}
+
+func NewContactRepoTx(tx *sql.Tx) *ContactRepo {
+	return &ContactRepo{q: tx}
 }
 
 func (r *ContactRepo) Create(ctx context.Context, contact domain.Contact) (domain.Contact, error) {
 	contact.ID = "ctc_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO account.contacts (id, account_id, contact_name, email, phone, role_note, version)
 		VALUES ($1, $2, $3, $4, $5, $6, 1)
 		RETURNING updated_at
@@ -31,7 +35,7 @@ func (r *ContactRepo) Create(ctx context.Context, contact domain.Contact) (domai
 }
 
 func (r *ContactRepo) ListByAccount(ctx context.Context, accountID string) ([]domain.Contact, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, account_id, contact_name, email, phone, role_note, version, updated_at
 		FROM account.contacts
 		WHERE account_id = $1
@@ -54,7 +58,7 @@ func (r *ContactRepo) ListByAccount(ctx context.Context, accountID string) ([]do
 
 func (r *ContactRepo) List(ctx context.Context, actorID, actorRole, search string) ([]domain.Contact, error) {
 	search = strings.TrimSpace(search)
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT c.id, c.account_id, a.company_name, c.contact_name, c.email, c.phone, c.role_note, c.version, c.updated_at
 		FROM account.contacts c
 		JOIN account.accounts a ON a.id = c.account_id
@@ -79,7 +83,7 @@ func (r *ContactRepo) List(ctx context.Context, actorID, actorRole, search strin
 
 func (r *ContactRepo) FindAuthorized(ctx context.Context, id, actorID, actorRole string) (domain.Contact, error) {
 	var contact domain.Contact
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT c.id, c.account_id, a.company_name, c.contact_name, c.email, c.phone, c.role_note, c.version, c.updated_at
 		FROM account.contacts c
 		JOIN account.accounts a ON a.id = c.account_id

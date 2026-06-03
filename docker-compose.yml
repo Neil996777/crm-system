@@ -137,6 +137,7 @@ services:
       PORT: "8080"
       DATABASE_URL: postgres://crm_account_user:crm_account_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=account
       SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
       WORK_SERVICE_URL: http://work:8080
     expose:
       - "8080"
@@ -160,6 +161,7 @@ services:
       PORT: "8080"
       DATABASE_URL: postgres://crm_opportunity_user:crm_opportunity_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=opportunity
       SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
       COMMERCIAL_SERVICE_URL: http://commercial:8080
     expose:
       - "8080"
@@ -183,6 +185,7 @@ services:
       PORT: "8080"
       DATABASE_URL: postgres://crm_commercial_user:crm_commercial_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=commercial
       SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
     expose:
       - "8080"
     healthcheck: *go-healthcheck
@@ -205,6 +208,7 @@ services:
       PORT: "8080"
       DATABASE_URL: postgres://crm_work_user:crm_work_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=work
       SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
       COMMERCIAL_SERVICE_URL: http://commercial:8080
     expose:
       - "8080"

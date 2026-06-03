@@ -119,6 +119,42 @@ func TestOpportunityCreateAcceptance(t *testing.T) {
 			t.Fatalf("expected opportunity to persist after delete attempt, got %d body=%s", fetch.Code, fetch.Body.String())
 		}
 	})
+
+	t.Run("TEST-HISTORY-TX-001 outbox enqueue failure rolls back opportunity create", func(t *testing.T) {
+		if _, err := db.Exec(`
+			CREATE OR REPLACE FUNCTION opportunity.fail_outbox_insert() RETURNS trigger AS $$
+			BEGIN
+				RAISE EXCEPTION 'forced outbox failure';
+			END;
+			$$ LANGUAGE plpgsql;
+			CREATE TRIGGER fail_outbox_insert
+			BEFORE INSERT ON opportunity.outbox_events
+			FOR EACH ROW EXECUTE FUNCTION opportunity.fail_outbox_insert();
+		`); err != nil {
+			t.Fatalf("install failing outbox trigger: %v", err)
+		}
+		t.Cleanup(func() {
+			_, _ = db.Exec(`DROP TRIGGER IF EXISTS fail_outbox_insert ON opportunity.outbox_events; DROP FUNCTION IF EXISTS opportunity.fail_outbox_insert();`)
+		})
+		rec := postOpportunityJSON(app, "/opportunities", map[string]any{
+			"customerId":        "acct_tx_rollback",
+			"ownerId":           "sales-1",
+			"stage":             "New Opportunity",
+			"expectedAmount":    "12000.00",
+			"expectedCloseDate": "2026-10-01",
+			"title":             "Must rollback",
+		}, actorHeaders("sales-1", "Sales"))
+		if rec.Code < 400 {
+			t.Fatalf("expected outbox failure to fail request, got %d body=%s", rec.Code, rec.Body.String())
+		}
+		var count int
+		if err := db.QueryRow(`SELECT count(*) FROM opportunity.opportunities WHERE customer_id = $1`, "acct_tx_rollback").Scan(&count); err != nil {
+			t.Fatalf("count rolled back opportunity: %v", err)
+		}
+		if count != 0 {
+			t.Fatalf("expected rollback to leave no opportunity row, got %d", count)
+		}
+	})
 }
 
 func newOpportunityTestDB(t *testing.T) *sql.DB {

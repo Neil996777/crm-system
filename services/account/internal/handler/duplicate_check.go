@@ -40,13 +40,18 @@ func (h *AccountHandler) duplicateCheck(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if result.Result == "PossibleDuplicate" {
-		_ = h.outbox.Append(r.Context(), event.DuplicateWarningRaised, result.WarningToken, map[string]any{
+		if err := h.outbox.Append(r.Context(), event.DuplicateWarningRaised, result.WarningToken, map[string]any{
 			"traceability":     "TASK-031 ACC-019 CIM-040 CIM-PROC-005 PIM-021 PIM-BEH-025 PSM-003 CONTRACT-005 FLOW-012 TEST-DUPLICATE-WARN",
 			"actorId":          actor.ID,
+			"actorRole":        actor.Role,
+			"actorDisplay":     actor.ID,
 			"targetType":       request.TargetType,
 			"normalizedFields": result.NormalizedFields,
 			"rules":            result.Rules,
-		})
+		}); err != nil {
+			writeOutboxFailure(w)
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, duplicateDTO(result))
 }

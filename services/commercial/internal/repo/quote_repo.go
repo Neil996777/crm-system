@@ -18,21 +18,32 @@ var (
 
 type QuoteRepo struct {
 	db *sql.DB
+	q  sqlRunner
 }
 
 func NewQuoteRepo(db *sql.DB) *QuoteRepo {
-	return &QuoteRepo{db: db}
+	return &QuoteRepo{db: db, q: db}
+}
+
+func NewQuoteRepoTx(tx *sql.Tx) *QuoteRepo {
+	return &QuoteRepo{q: tx}
+}
+
+type sqlRunner interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 func (r *QuoteRepo) ExistsForOpportunity(ctx context.Context, opportunityID string) (bool, error) {
 	var exists bool
-	err := r.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM commercial.quotes WHERE opportunity_id = $1)`, opportunityID).Scan(&exists)
+	err := r.q.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM commercial.quotes WHERE opportunity_id = $1)`, opportunityID).Scan(&exists)
 	return exists, err
 }
 
 func (r *QuoteRepo) Create(ctx context.Context, quote domain.Quote) (domain.Quote, error) {
 	quote.ID = "quote_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO commercial.quotes
 			(id, opportunity_id, customer_id, amount, status, validity_end, owner_id, version)
 		VALUES ($1, $2, $3, $4::numeric, $5, $6, $7, 1)
@@ -49,7 +60,7 @@ func (r *QuoteRepo) Create(ctx context.Context, quote domain.Quote) (domain.Quot
 
 func (r *QuoteRepo) Find(ctx context.Context, id string) (domain.Quote, error) {
 	var quote domain.Quote
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT id, opportunity_id, customer_id, to_char(amount, 'FM999999999999990.00'), status, validity_end, owner_id, version, updated_at
 		FROM commercial.quotes
 		WHERE id = $1
@@ -62,7 +73,7 @@ func (r *QuoteRepo) Find(ctx context.Context, id string) (domain.Quote, error) {
 
 func (r *QuoteRepo) List(ctx context.Context, actorID, actorRole, search string) ([]domain.Quote, error) {
 	search = strings.TrimSpace(search)
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, opportunity_id, customer_id, to_char(amount, 'FM999999999999990.00'), status, validity_end, owner_id, version, updated_at
 		FROM commercial.quotes
 		WHERE ($1 <> 'Sales' OR owner_id = $2)
@@ -86,7 +97,7 @@ func (r *QuoteRepo) List(ctx context.Context, actorID, actorRole, search string)
 
 func (r *QuoteRepo) ChangeStatus(ctx context.Context, id string, expectedVersion int, toStatus string) (domain.Quote, error) {
 	var quote domain.Quote
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		UPDATE commercial.quotes
 		SET status = $2,
 		    version = version + 1,

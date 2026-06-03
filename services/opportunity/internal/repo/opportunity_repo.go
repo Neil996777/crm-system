@@ -18,15 +18,30 @@ var (
 
 type OpportunityRepo struct {
 	db *sql.DB
+	q  sqlRunner
 }
 
 func NewOpportunityRepo(db *sql.DB) *OpportunityRepo {
-	return &OpportunityRepo{db: db}
+	return &OpportunityRepo{db: db, q: db}
+}
+
+func NewOpportunityRepoTx(tx *sql.Tx) *OpportunityRepo {
+	return &OpportunityRepo{q: tx}
+}
+
+func (r *OpportunityRepo) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	return r.db.BeginTx(ctx, nil)
+}
+
+type sqlRunner interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 func (r *OpportunityRepo) Create(ctx context.Context, opportunity domain.Opportunity) (domain.Opportunity, error) {
 	opportunity.ID = "opp_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO opportunity.opportunities
 			(id, customer_id, owner_id, stage, expected_amount, expected_close_date, title, version)
 		VALUES ($1, $2, $3, $4, $5::numeric, $6, $7, 1)
@@ -40,7 +55,7 @@ func (r *OpportunityRepo) Create(ctx context.Context, opportunity domain.Opportu
 
 func (r *OpportunityRepo) Find(ctx context.Context, id string) (domain.Opportunity, error) {
 	var opportunity domain.Opportunity
-	err := scanOpportunityRow(r.db.QueryRowContext(ctx, `
+	err := scanOpportunityRow(r.q.QueryRowContext(ctx, `
 		SELECT id, customer_id, owner_id, stage, to_char(expected_amount, 'FM999999999999990.00'), expected_close_date, title,
 		       close_date, won_contract_id, lost_reason_code, lost_reason_detail, closed_at,
 		       archived_at, archived_by, archive_reason, version, updated_at
@@ -56,7 +71,7 @@ func (r *OpportunityRepo) Find(ctx context.Context, id string) (domain.Opportuni
 func (r *OpportunityRepo) List(ctx context.Context, actorID, actorRole, search, stage string, includeArchived bool) ([]domain.Opportunity, error) {
 	search = strings.TrimSpace(search)
 	stage = strings.TrimSpace(stage)
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, customer_id, owner_id, stage, to_char(expected_amount, 'FM999999999999990.00'), expected_close_date, title,
 		       close_date, won_contract_id, lost_reason_code, lost_reason_detail, closed_at,
 		       archived_at, archived_by, archive_reason, version, updated_at
@@ -83,7 +98,7 @@ func (r *OpportunityRepo) List(ctx context.Context, actorID, actorRole, search, 
 }
 
 func (r *OpportunityRepo) Update(ctx context.Context, id string, expectedVersion int, updated domain.Opportunity) (domain.Opportunity, error) {
-	err := scanOpportunityRow(r.db.QueryRowContext(ctx, `
+	err := scanOpportunityRow(r.q.QueryRowContext(ctx, `
 		UPDATE opportunity.opportunities
 		SET customer_id = $2,
 		    owner_id = $3,
@@ -109,7 +124,7 @@ func (r *OpportunityRepo) Update(ctx context.Context, id string, expectedVersion
 
 func (r *OpportunityRepo) ChangeStage(ctx context.Context, id string, expectedVersion int, toStage string) (domain.Opportunity, error) {
 	var updated domain.Opportunity
-	err := scanOpportunityRow(r.db.QueryRowContext(ctx, `
+	err := scanOpportunityRow(r.q.QueryRowContext(ctx, `
 		UPDATE opportunity.opportunities
 		SET stage = $2,
 		    version = version + 1,
@@ -126,7 +141,7 @@ func (r *OpportunityRepo) ChangeStage(ctx context.Context, id string, expectedVe
 }
 
 func (r *OpportunityRepo) Close(ctx context.Context, id string, expectedVersion int, closed domain.Opportunity) (domain.Opportunity, error) {
-	err := scanOpportunityRow(r.db.QueryRowContext(ctx, `
+	err := scanOpportunityRow(r.q.QueryRowContext(ctx, `
 		UPDATE opportunity.opportunities
 		SET stage = $2,
 		    close_date = $3,
@@ -152,7 +167,7 @@ func (r *OpportunityRepo) Close(ctx context.Context, id string, expectedVersion 
 
 func (r *OpportunityRepo) Archive(ctx context.Context, id string, expectedVersion int, actorID, reason string) (domain.Opportunity, error) {
 	var archived domain.Opportunity
-	err := scanOpportunityRow(r.db.QueryRowContext(ctx, `
+	err := scanOpportunityRow(r.q.QueryRowContext(ctx, `
 		UPDATE opportunity.opportunities
 		SET archived_at = now(),
 		    archived_by = $2,

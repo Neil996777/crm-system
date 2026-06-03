@@ -17,15 +17,26 @@ var (
 
 type WorkRepo struct {
 	db *sql.DB
+	q  sqlRunner
 }
 
 func NewWorkRepo(db *sql.DB) *WorkRepo {
-	return &WorkRepo{db: db}
+	return &WorkRepo{db: db, q: db}
+}
+
+func NewWorkRepoTx(tx *sql.Tx) *WorkRepo {
+	return &WorkRepo{q: tx}
+}
+
+type sqlRunner interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 func (r *WorkRepo) CreateActivity(ctx context.Context, activity domain.Activity) (domain.Activity, error) {
 	activity.ID = "activity_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO work.activities (id, related_type, related_id, activity_type, content, actor_id, owner_id, occurred_at, version)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
 		RETURNING updated_at
@@ -35,7 +46,7 @@ func (r *WorkRepo) CreateActivity(ctx context.Context, activity domain.Activity)
 
 func (r *WorkRepo) CreateNote(ctx context.Context, note domain.Note) (domain.Note, error) {
 	note.ID = "note_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO work.notes (id, related_type, related_id, content, actor_id, owner_id, occurred_at, version)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, 1)
 		RETURNING updated_at
@@ -44,7 +55,7 @@ func (r *WorkRepo) CreateNote(ctx context.Context, note domain.Note) (domain.Not
 }
 
 func (r *WorkRepo) ListActivities(ctx context.Context, actorID, actorRole, relatedType, relatedID string) ([]domain.Activity, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, related_type, related_id, activity_type, content, actor_id, owner_id, occurred_at, version, updated_at
 		FROM work.activities
 		WHERE ($1 <> 'Sales' OR owner_id = $2)
@@ -68,7 +79,7 @@ func (r *WorkRepo) ListActivities(ctx context.Context, actorID, actorRole, relat
 }
 
 func (r *WorkRepo) ListNotes(ctx context.Context, actorID, actorRole, relatedType, relatedID string) ([]domain.Note, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, related_type, related_id, content, actor_id, owner_id, occurred_at, version, updated_at
 		FROM work.notes
 		WHERE ($1 <> 'Sales' OR owner_id = $2)
@@ -93,7 +104,7 @@ func (r *WorkRepo) ListNotes(ctx context.Context, actorID, actorRole, relatedTyp
 
 func (r *WorkRepo) CreateTask(ctx context.Context, task domain.Task) (domain.Task, error) {
 	task.ID = "task_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO work.tasks (id, related_type, related_id, title, due_date, status, actor_id, owner_id, version)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
 		RETURNING updated_at
@@ -106,7 +117,7 @@ func (r *WorkRepo) FindTask(ctx context.Context, id string) (domain.Task, error)
 	var completedAt sql.NullTime
 	var cancelledAt sql.NullTime
 	var cancellationReason sql.NullString
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT id, related_type, related_id, title, due_date, status, actor_id, owner_id, completed_at, cancelled_at, cancellation_reason, version, updated_at
 		FROM work.tasks
 		WHERE id = $1
@@ -134,7 +145,7 @@ func (r *WorkRepo) UpdateTaskStatus(ctx context.Context, task domain.Task) (doma
 	if !task.CancelledAt.IsZero() {
 		cancelledAt = sql.NullTime{Time: task.CancelledAt, Valid: true}
 	}
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		UPDATE work.tasks
 		SET status = $2,
 		    completed_at = $3,
@@ -152,7 +163,7 @@ func (r *WorkRepo) UpdateTaskStatus(ctx context.Context, task domain.Task) (doma
 }
 
 func (r *WorkRepo) ListTasks(ctx context.Context, actorID, actorRole, relatedType, relatedID string, activeOnly bool) ([]domain.Task, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, related_type, related_id, title, due_date, status, actor_id, owner_id, completed_at, cancelled_at, cancellation_reason, version, updated_at
 		FROM work.tasks
 		WHERE ($1 <> 'Sales' OR owner_id = $2)
@@ -188,7 +199,7 @@ func (r *WorkRepo) ListTasks(ctx context.Context, actorID, actorRole, relatedTyp
 }
 
 func (r *WorkRepo) TransferOpenWork(ctx context.Context, relatedType, relatedID, fromOwnerID, toOwnerID string) (int64, error) {
-	result, err := r.db.ExecContext(ctx, `
+	result, err := r.q.ExecContext(ctx, `
 		UPDATE work.tasks
 		SET owner_id = $4,
 		    version = version + 1,
@@ -202,7 +213,7 @@ func (r *WorkRepo) TransferOpenWork(ctx context.Context, relatedType, relatedID,
 }
 
 func (r *WorkRepo) ActiveObligations(ctx context.Context, relatedType, relatedID string) ([]domain.Task, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, related_type, related_id, title, due_date, status, actor_id, owner_id, completed_at, cancelled_at, cancellation_reason, version, updated_at
 		FROM work.tasks
 		WHERE related_type = $1 AND related_id = $2 AND status = 'Open'

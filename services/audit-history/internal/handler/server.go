@@ -41,6 +41,7 @@ func (h *AuditHandler) appendEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request struct {
+		EventUID           string         `json:"eventUid"`
 		EventID            string         `json:"eventId"`
 		EventVersion       int            `json:"eventVersion"`
 		Surfaces           []string       `json:"surfaces"`
@@ -69,6 +70,9 @@ func (h *AuditHandler) appendEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	event := domain.NewEvent()
+	if strings.TrimSpace(request.EventUID) != "" {
+		event.EventUID = strings.TrimSpace(request.EventUID)
+	}
 	event.EventID = request.EventID
 	event.EventVersion = request.EventVersion
 	event.ProducerService = claims.Issuer

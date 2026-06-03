@@ -26,6 +26,19 @@ func (r *EventRepo) Append(ctx context.Context, event domain.Event) (domain.Even
 	}
 	defer tx.Rollback()
 
+	var duplicateSequenceID int64
+	err = tx.QueryRowContext(ctx, `
+		SELECT sequence_id
+		FROM audit_history.events
+		WHERE event_uid = $1
+	`, event.EventUID).Scan(&duplicateSequenceID)
+	if err == nil {
+		return event, tx.Commit()
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return domain.Event{}, err
+	}
+
 	var prevHash sql.NullString
 	err = tx.QueryRowContext(ctx, `
 		SELECT event_hash

@@ -147,6 +147,7 @@ services:
       PORT: "8080"
       DATABASE_URL: ${ACCOUNT_DATABASE_URL:?ACCOUNT_DATABASE_URL required}
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET:?SERVICE_TOKEN_SECRET required}
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
       WORK_SERVICE_URL: http://work:8080
     volumes:
       - /opt/crm-system/logs/account:/var/log/crm-system
@@ -163,6 +164,7 @@ services:
       PORT: "8080"
       DATABASE_URL: ${OPPORTUNITY_DATABASE_URL:?OPPORTUNITY_DATABASE_URL required}
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET:?SERVICE_TOKEN_SECRET required}
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
       COMMERCIAL_SERVICE_URL: http://commercial:8080
     volumes:
       - /opt/crm-system/logs/opportunity:/var/log/crm-system
@@ -179,6 +181,7 @@ services:
       PORT: "8080"
       DATABASE_URL: ${COMMERCIAL_DATABASE_URL:?COMMERCIAL_DATABASE_URL required}
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET:?SERVICE_TOKEN_SECRET required}
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
     volumes:
       - /opt/crm-system/logs/commercial:/var/log/crm-system
 
@@ -194,6 +197,7 @@ services:
       PORT: "8080"
       DATABASE_URL: ${WORK_DATABASE_URL:?WORK_DATABASE_URL required}
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET:?SERVICE_TOKEN_SECRET required}
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
       COMMERCIAL_SERVICE_URL: http://commercial:8080
     volumes:
       - /opt/crm-system/logs/work:/var/log/crm-system

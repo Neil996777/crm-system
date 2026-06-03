@@ -62,6 +62,32 @@ restore rehearsal, HTTPS/TLS endpoint, security-group, and monitoring evidence. 
 TASK-040; G12 still performs independent audit before any release decision. Refs:
 OQ-001, RISK-002, `docs/architecture/deployment-notes.md`.
 
+## G12 Audit Findings — Rework before release (2026-06-03)
+
+Surfaced by the G12 independent audit (`archive/reviews/g12-audit/g12-audit-decision-2026-06-03.md`),
+five parallel author≠auditor passes. Two dimensions FAILED. G11 is set back to
+`Gate Blocked`; rework package: `delivery/G12-rework.md`. No-downgrade applies — P0/P1
+findings may only move to `Resolved` (with the deciding artifact) or `Formal Scope Change
+by User`. **BLK-G11-002 is REOPENED** (its "Resolved" claim was not backed by a raw API
+artifact; see BLK-G12-003).
+
+| ID | Severity | Blocker | Owner | Blocks | Touches | Status | Opened |
+|---|---|---|---|---|---|---|---|
+| BLK-G12-001 | BLOCKER | `opportunity/commercial/work/account` write `EVT-*` events only to a local `outbox_events` table; no relay delivers them to audit-history, so required audit records never reach the append-only store. | backend-engineer | G12 release | ACC-014, ACC-022 (P0); AUD-IMM-002 | Resolved | 2026-06-03 |
+| BLK-G12-002 | BLOCKER | `reporting` `POST /internal/projections` has no S2S token verification; any caller can inject/overwrite report read-models. | backend-engineer | G12 release | SEC-SVC-BLK-002 | Open | 2026-06-03 |
+| BLK-G12-003 | BLOCKER | Security-group "cleanup" (8088/8443/3389 removal) is unsubstantiated: the only raw `DescribeSecurityGroupAttributes` export still shows them public, and the "post-cleanup" files are hand-authored and contradict it. Reopens BLK-G11-002. | infrastructure-ops + security-compliance | G12 release | ACC-017 (P0); ARCH-ACC-013/014 | Open | 2026-06-03 |
+| BLK-G12-004 | MAJOR | Outbox append is not in the same transaction as the business mutation and its error is discarded (`_ = h.outbox.Append`); a 201 can return with no event row. | backend-engineer | G12 release | AUD-IMM-002 | Resolved | 2026-06-03 |
+| BLK-G12-005 | MAJOR | `reporting` projection ingest path is never invoked; report authz is enforced over empty/untrusted data. | backend-engineer | G12 release | PM-043..045 (P1) | Open | 2026-06-03 |
+| BLK-G12-006 | MAJOR | Release evidence not independently verifiable: TLS facts hand-typed (no openssl/curl/certbot capture), restore rehearsal is operator-authored counts (no transcript/checksum output), operator-access conditions 2 & 3 unevidenced (root deploy), no external negative probe for 8080/5432. | infrastructure-ops | G12 release | ACC-017 (P0); operator-access review conditions | Open | 2026-06-03 |
+| BLK-G12-007 | MAJOR | CRM instance shares the `Default` security group (all-protocol self-referential allow) instead of a dedicated least-exposure group. | infrastructure-ops | G12 release | ACC-017; deployment-notes Network Exposure | Open | 2026-06-03 |
+| BLK-G12-008 | MINOR | Test-traceability + hardening: untagged P0 tests (TEST-ABUSE-MUTATE-001, TEST-AUTHZ-SCOPE-005, TEST-PERM-CRUD-ADMIN/MGR/SALES-001, TEST-OWNER-TRANSFER-002/004); `work` S2S verifier omits the 5-min lifetime cap; `AUTHZ_VERSION_STALE` is dead code; stray screenshot at repo root. | backend-engineer | G12 close (non-release-blocking) | traceability; minor security hardening | Open | 2026-06-03 |
+
+> **BLK-G11-002 REOPENED (2026-06-03):** the 2026-06-03 Resolution Log entry below is
+> superseded by BLK-G12-003. The deciding source it cited
+> (`volcengine-security-group-post-cleanup-2026-06-03.json`) is a hand-authored conclusion,
+> not a raw API export, and contradicts the raw export still on disk. Re-resolve only with
+> a post-cleanup raw `DescribeSecurityGroupAttributes` export.
+
 ## Resolution Log
 
 | Date | ID | Resolution | Deciding source |
@@ -73,3 +99,5 @@ OQ-001, RISK-002, `docs/architecture/deployment-notes.md`.
 | 2026-06-03 | BLK-G11-001 | The user approved `https://118.196.44.193` as the production HTTPS endpoint. Codex installed Certbot 5.6.0, issued a Let's Encrypt IP certificate with SAN `IP Address:118.196.44.193`, enabled Nginx 443, verified HTTP→HTTPS redirect and server-side deploy smoke, and configured renewal timer/dry-run. | `docs/release/acc-017-evidence-template.md`; TASK-039 server evidence |
 | 2026-06-03 | BLK-G11-002 | Volcengine API evidence confirms CRM `8080` and PostgreSQL `5432` are not publicly allowed; host-network Hermes `8642` was stopped/removed; old/non-CRM security-group rules TCP `8088`, TCP `8443`, and TCP `3389` were removed by the user and verified by API. | `docs/release/evidence/volcengine-security-group-post-cleanup-2026-06-03.json`; `docs/release/evidence/old-deployment-release-2026-06-03.json`; TASK-039 closure evidence |
 | 2026-06-03 | TASK-040 release evidence | Encrypted PostgreSQL backup `crm-postgres-20260603T104620Z.sql.gz.enc` was produced on `srv-volcengine-sh-01`, copied to `srv-aliyun-bj-01`, verified by checksum, and restored in rehearsal run `20260603T104837Z`. `crm-backup.timer` is enabled and active for daily 02:00 backups. | `docs/release/acc-017-backup-evidence-template.md`; `docs/release/evidence/backup-restore-rehearsal-2026-06-03.json`; TASK-040 closure evidence |
+| 2026-06-03 | BLK-G12-001 | Implemented outbox dispatchers for opportunity, account, commercial, and work services. Dispatchers read unpublished local `outbox_events`, send S2S-signed `audit.append` calls to audit-history with the outbox row ID as `eventUid`, leave failed deliveries unpublished for retry, and mark success with `published_at`. audit-history accepts producer event UID and is idempotent on duplicate UID. Compose/prod compose now configure `AUDIT_HISTORY_SERVICE_URL` for the four producers. | `services/*/internal/event/outbox.go`; `services/*/cmd/server/main.go`; `services/opportunity/internal/event/dispatcher_test.go`; `services/audit-history/internal/handler/append_test.go`; `go test ./...` in opportunity/account/commercial/work/audit-history |
+| 2026-06-03 | BLK-G12-004 | Moved append-bearing mutations in opportunity, account, commercial, and work onto one local DB transaction with the outbox insert; append errors are no longer discarded. Added fail-first rollback coverage for opportunity create (`TEST-HISTORY-TX-001`) and removed dropped outbox append patterns from the four audited service handlers. | `services/opportunity/internal/handler/opportunity_command_test.go`; `services/{opportunity,account,commercial,work}/internal/handler`; `services/{opportunity,account,commercial,work}/internal/repo`; `go test ./...` in opportunity/account/commercial/work |

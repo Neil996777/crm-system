@@ -73,7 +73,23 @@ func (h *CommercialHandler) createContract(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The contract input is invalid.")
 		return
 	}
-	created, err := h.contracts.Create(r.Context(), contract)
+	var created domain.Contract
+	err = h.inTransaction(r.Context(), func(_ *repo.QuoteRepo, txContracts *repo.ContractRepo, _ *repo.PaymentRepo, txOutbox *event.Outbox) error {
+		var err error
+		created, err = txContracts.Create(r.Context(), contract)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.ContractCreated, created.ID, map[string]any{
+			"traceability":  "TASK-018 ACC-010 CIM-021 CIM-PROC-009 PIM-009 PIM-SM-005 PIM-INV-016 PIM-INV-018 PIM-BEH-014 PIM-BEH-016 PSM-006 CONTRACT-009 CONTRACT-010",
+			"actorId":       actor.ID,
+			"actorRole":     actor.Role,
+			"actorDisplay":  actor.ID,
+			"contractId":    created.ID,
+			"quoteId":       created.QuoteID,
+			"opportunityId": created.OpportunityID,
+		})
+	})
 	if errors.Is(err, domain.ErrContractAlreadyExists) {
 		writeError(w, http.StatusConflict, "CONTRACT_ALREADY_EXISTS", "conflict", "A contract already exists for this quote.")
 		return
@@ -82,12 +98,5 @@ func (h *CommercialHandler) createContract(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The contract input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.ContractCreated, created.ID, map[string]any{
-		"traceability":  "TASK-018 ACC-010 CIM-021 CIM-PROC-009 PIM-009 PIM-SM-005 PIM-INV-016 PIM-INV-018 PIM-BEH-014 PIM-BEH-016 PSM-006 CONTRACT-009 CONTRACT-010",
-		"actorId":       actor.ID,
-		"contractId":    created.ID,
-		"quoteId":       created.QuoteID,
-		"opportunityId": created.OpportunityID,
-	})
 	writeJSON(w, http.StatusCreated, contractDTO(created))
 }

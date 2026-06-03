@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -23,6 +24,7 @@ type Config struct {
 }
 
 type OpportunityHandler struct {
+	db         *sql.DB
 	repo       *repo.OpportunityRepo
 	outbox     *event.Outbox
 	commercial authz.CommercialClient
@@ -34,6 +36,7 @@ func NewOpportunityServer(db *sql.DB, config Config) http.Handler {
 		config.ServiceID = "opportunity"
 	}
 	handler := &OpportunityHandler{
+		db:     db,
 		repo:   repo.NewOpportunityRepo(db),
 		outbox: event.NewOutbox(db),
 		commercial: authz.CommercialClient{
@@ -55,6 +58,22 @@ func NewOpportunityServer(db *sql.DB, config Config) http.Handler {
 	mux.HandleFunc("GET /opportunities", handler.listOpportunities)
 	mux.HandleFunc("GET /opportunities/{id}", handler.getOpportunity)
 	return mux
+}
+
+func (h *OpportunityHandler) inTransaction(ctx context.Context, fn func(*repo.OpportunityRepo, *event.Outbox) error) error {
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := fn(repo.NewOpportunityRepoTx(tx), event.NewOutboxTx(tx)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func writeOutboxFailure(w http.ResponseWriter) {
+	writeError(w, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "dependency", "The audit event could not be persisted.")
 }
 
 func (h *OpportunityHandler) createOpportunityFromLeadConversion(w http.ResponseWriter, r *http.Request) {
@@ -81,21 +100,29 @@ func (h *OpportunityHandler) createOpportunity(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The opportunity input is invalid.")
 		return
 	}
-	created, err := h.repo.Create(r.Context(), opportunity)
-	if err != nil {
+	var created domain.Opportunity
+	if err := h.inTransaction(r.Context(), func(txRepo *repo.OpportunityRepo, txOutbox *event.Outbox) error {
+		var err error
+		created, err = txRepo.Create(r.Context(), opportunity)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.OpportunityCreated, created.ID, map[string]any{
+			"traceability":      "TASK-013 ACC-007 PIM-007 PIM-SM-002 PIM-BEH-009 PSM-004 CONTRACT-007 CONTRACT-008",
+			"actorId":           actor.ID,
+			"actorRole":         actor.Role,
+			"actorDisplay":      actor.ID,
+			"opportunityId":     created.ID,
+			"customerId":        created.CustomerID,
+			"ownerId":           created.OwnerID,
+			"stage":             created.Stage,
+			"expectedAmount":    created.ExpectedAmount,
+			"expectedCloseDate": domain.FormatCloseDate(created.ExpectedCloseDate),
+		})
+	}); err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The opportunity input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.OpportunityCreated, created.ID, map[string]any{
-		"traceability":      "TASK-013 ACC-007 PIM-007 PIM-SM-002 PIM-BEH-009 PSM-004 CONTRACT-007 CONTRACT-008",
-		"actorId":           actor.ID,
-		"opportunityId":     created.ID,
-		"customerId":        created.CustomerID,
-		"ownerId":           created.OwnerID,
-		"stage":             created.Stage,
-		"expectedAmount":    created.ExpectedAmount,
-		"expectedCloseDate": domain.FormatCloseDate(created.ExpectedCloseDate),
-	})
 	writeJSON(w, http.StatusCreated, opportunityDTO(created))
 }
 
@@ -132,23 +159,32 @@ func (h *OpportunityHandler) updateOpportunity(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The opportunity input is invalid.")
 		return
 	}
-	updated, err = h.repo.Update(r.Context(), current.ID, request.ExpectedVersion, updated)
+	var saved domain.Opportunity
+	err = h.inTransaction(r.Context(), func(txRepo *repo.OpportunityRepo, txOutbox *event.Outbox) error {
+		var err error
+		saved, err = txRepo.Update(r.Context(), current.ID, request.ExpectedVersion, updated)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.OpportunityUpdated, saved.ID, map[string]any{
+			"traceability":  "TASK-013 ACC-007 PIM-BEH-009 CONTRACT-007 CONTRACT-008 CONTRACT-020",
+			"actorId":       actor.ID,
+			"actorRole":     actor.Role,
+			"actorDisplay":  actor.ID,
+			"opportunityId": saved.ID,
+			"version":       saved.Version,
+			"stage":         saved.Stage,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The opportunity input is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.OpportunityUpdated, updated.ID, map[string]any{
-		"traceability":  "TASK-013 ACC-007 PIM-BEH-009 CONTRACT-007 CONTRACT-008 CONTRACT-020",
-		"actorId":       actor.ID,
-		"opportunityId": updated.ID,
-		"version":       updated.Version,
-		"stage":         updated.Stage,
-	})
-	writeJSON(w, http.StatusOK, opportunityDTO(updated))
+	writeJSON(w, http.StatusOK, opportunityDTO(saved))
 }
 
 func (h *OpportunityHandler) archiveEligibility(w http.ResponseWriter, r *http.Request) {
@@ -186,21 +222,30 @@ func (h *OpportunityHandler) archiveOpportunity(w http.ResponseWriter, r *http.R
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
-	archived, err := h.repo.Archive(r.Context(), opportunity.ID, request.ExpectedVersion, actor.ID, request.Reason)
+	var archived domain.Opportunity
+	err = h.inTransaction(r.Context(), func(txRepo *repo.OpportunityRepo, txOutbox *event.Outbox) error {
+		var err error
+		archived, err = txRepo.Archive(r.Context(), opportunity.ID, request.ExpectedVersion, actor.ID, request.Reason)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.OpportunityArchived, archived.ID, map[string]any{
+			"traceability":  "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-SM-010 PIM-BEH-024 PSM-004 FLOW-010 TEST-ARCHIVE",
+			"actorId":       actor.ID,
+			"actorRole":     actor.Role,
+			"actorDisplay":  actor.ID,
+			"opportunityId": archived.ID,
+			"reason":        request.Reason,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.OpportunityArchived, archived.ID, map[string]any{
-		"traceability":  "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-SM-010 PIM-BEH-024 PSM-004 FLOW-010 TEST-ARCHIVE",
-		"actorId":       actor.ID,
-		"opportunityId": archived.ID,
-		"reason":        request.Reason,
-	})
 	writeJSON(w, http.StatusOK, opportunityDTO(archived))
 }
 

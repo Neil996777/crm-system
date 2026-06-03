@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -24,6 +25,7 @@ type Config struct {
 }
 
 type AccountHandler struct {
+	db         *sql.DB
 	repo       *repo.AccountRepo
 	contacts   *repo.ContactRepo
 	duplicates *repo.DuplicateRepo
@@ -35,7 +37,7 @@ func NewAccountServer(db *sql.DB, config Config) http.Handler {
 	if config.ServiceID == "" {
 		config.ServiceID = "account"
 	}
-	handler := &AccountHandler{repo: repo.NewAccountRepo(db), contacts: repo.NewContactRepo(db), duplicates: repo.NewDuplicateRepo(db), outbox: event.NewOutbox(db), config: config}
+	handler := &AccountHandler{db: db, repo: repo.NewAccountRepo(db), contacts: repo.NewContactRepo(db), duplicates: repo.NewDuplicateRepo(db), outbox: event.NewOutbox(db), config: config}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /accounts", handler.createAccount)
 	mux.HandleFunc("POST /accounts/duplicate-checks", handler.duplicateCheck)
@@ -52,6 +54,22 @@ func NewAccountServer(db *sql.DB, config Config) http.Handler {
 	mux.HandleFunc("GET /accounts", handler.listAccounts)
 	mux.HandleFunc("GET /accounts/{id}", handler.getAccount)
 	return mux
+}
+
+func (h *AccountHandler) inTransaction(ctx context.Context, fn func(*repo.AccountRepo, *repo.ContactRepo, *event.Outbox) error) error {
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := fn(repo.NewAccountRepoTx(tx), repo.NewContactRepoTx(tx), event.NewOutboxTx(tx)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func writeOutboxFailure(w http.ResponseWriter) {
+	writeError(w, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "dependency", "The audit event could not be persisted.")
 }
 
 func (h *AccountHandler) createAccountFromLeadConversion(w http.ResponseWriter, r *http.Request) {
@@ -95,18 +113,26 @@ func (h *AccountHandler) createAccount(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	created, err := h.repo.Create(r.Context(), account)
-	if err != nil {
+	var created domain.Account
+	if err := h.inTransaction(r.Context(), func(txAccounts *repo.AccountRepo, _ *repo.ContactRepo, txOutbox *event.Outbox) error {
+		var err error
+		created, err = txAccounts.Create(r.Context(), account)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.AccountCreated, created.ID, map[string]any{
+			"traceability":   "TASK-010 ACC-005 PIM-005 PIM-BEH-007 PSM-003 CONTRACT-005 CONTRACT-006",
+			"actorId":        actor.ID,
+			"actorRole":      actor.Role,
+			"actorDisplay":   actor.ID,
+			"accountId":      created.ID,
+			"ownerId":        created.OwnerID,
+			"customerStatus": created.CustomerStatus,
+		})
+	}); err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The account input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.AccountCreated, created.ID, map[string]any{
-		"traceability":   "TASK-010 ACC-005 PIM-005 PIM-BEH-007 PSM-003 CONTRACT-005 CONTRACT-006",
-		"actorId":        actor.ID,
-		"accountId":      created.ID,
-		"ownerId":        created.OwnerID,
-		"customerStatus": created.CustomerStatus,
-	})
 	writeJSON(w, http.StatusCreated, accountDTO(created))
 }
 
@@ -144,31 +170,45 @@ func (h *AccountHandler) updateAccount(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The account input is invalid.")
 		return
 	}
-	updated, err = h.repo.Update(r.Context(), current.ID, request.ExpectedVersion, updated)
+	var saved domain.Account
+	err = h.inTransaction(r.Context(), func(txAccounts *repo.AccountRepo, _ *repo.ContactRepo, txOutbox *event.Outbox) error {
+		var err error
+		saved, err = txAccounts.Update(r.Context(), current.ID, request.ExpectedVersion, updated)
+		if err != nil {
+			return err
+		}
+		if err := txOutbox.Append(r.Context(), event.AccountUpdated, saved.ID, map[string]any{
+			"traceability":   "TASK-010 ACC-005 PIM-BEH-007 CONTRACT-005 CONTRACT-006 CONTRACT-020",
+			"actorId":        actor.ID,
+			"actorRole":      actor.Role,
+			"actorDisplay":   actor.ID,
+			"accountId":      saved.ID,
+			"customerStatus": saved.CustomerStatus,
+			"version":        saved.Version,
+		}); err != nil {
+			return err
+		}
+		if current.OwnerID != saved.OwnerID {
+			return txOutbox.Append(r.Context(), event.OwnerChanged, saved.ID, map[string]any{
+				"traceability": "TASK-010 ACC-005 ACC-014 PIM-BEH-007 CONTRACT-006 EVT-OWNER-CHANGED",
+				"actorId":      actor.ID,
+				"actorRole":    actor.Role,
+				"actorDisplay": actor.ID,
+				"oldOwnerId":   current.OwnerID,
+				"newOwnerId":   saved.OwnerID,
+			})
+		}
+		return nil
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The account input is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.AccountUpdated, updated.ID, map[string]any{
-		"traceability":   "TASK-010 ACC-005 PIM-BEH-007 CONTRACT-005 CONTRACT-006 CONTRACT-020",
-		"actorId":        actor.ID,
-		"accountId":      updated.ID,
-		"customerStatus": updated.CustomerStatus,
-		"version":        updated.Version,
-	})
-	if current.OwnerID != updated.OwnerID {
-		_ = h.outbox.Append(r.Context(), event.OwnerChanged, updated.ID, map[string]any{
-			"traceability": "TASK-010 ACC-005 ACC-014 PIM-BEH-007 CONTRACT-006 EVT-OWNER-CHANGED",
-			"actorId":      actor.ID,
-			"oldOwnerId":   current.OwnerID,
-			"newOwnerId":   updated.OwnerID,
-		})
-	}
-	writeJSON(w, http.StatusOK, accountDTO(updated))
+	writeJSON(w, http.StatusOK, accountDTO(saved))
 }
 
 func (h *AccountHandler) verifyServiceToken(r *http.Request, intent string) bool {

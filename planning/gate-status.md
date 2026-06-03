@@ -25,8 +25,8 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
 | G8 | Task Planning -> Implementation **[HANDOFF: Claude -> Codex]** | Task Planner | Claude -> Codex | Gate Passed | Task Planner, Infrastructure Ops, Security Compliance, Audit (signed off 2026-06-01) | 2026-06-01 | Self-contained execution handoff package on disk (`delivery/G8-handoff.md` + delivery plan). Pre-G8 operator-access Security review done (approved w/ conditions). HANDED OFF to Codex for G9–G11; Claude resumes at G12. Decision: `archive/reviews/g8-handoff/g8-gate-decision-2026-06-01.md`. |
 | G9 | Implementation -> QA | Frontend / Backend Engineer | Codex | Gate Passed | TASK-001..038 implementation tasks completed with recorded task status, traceability, and commits | 2026-06-03 | |
 | G10 | QA -> Integration | QA Execution | Codex | Gate Passed | Automated and E2E evidence recorded per task; release smoke and backup checks completed for TASK-039/040 | 2026-06-03 | |
-| G11 | Integration -> Audit **[RETURN: Codex -> Claude]** | Integration Owner | Codex -> Claude | Gate Passed | TASK-039 and TASK-040 release evidence complete; return to Claude for mandatory G12 independent audit | 2026-06-03 | |
-| G12 | Audit -> Release/Rework | Audit | Claude | Gate Draft | | | G12 independent audit pending on Claude; TASK-039/040 evidence available for audit |
+| G11 | Integration -> Audit **[RETURN: Codex -> Claude]** | Integration Owner | Codex -> Claude | **Gate Blocked** | Set back by G12 audit 2026-06-03 | 2026-06-03 | G12 independent audit found release-blocking defects; kicked back to Codex. Rework: `delivery/G12-rework.md`; findings BLK-G12-001..008 in `planning/blockers.md`. |
+| G12 | Audit -> Release/Rework | Audit | Claude | **Gate Blocked (REWORK issued)** | Audit (independent), 5 parallel author≠auditor passes | 2026-06-03 | G12 performed: 2 dimensions FAILED (service-boundary/security; release evidence). Decision: REWORK, no release. 3 BLOCKERs + 4 MAJORs + 1 MINOR. Decision: `archive/reviews/g12-audit/g12-audit-decision-2026-06-03.md`. Claude re-audits dimensions 4+5 (plus independent compile/test re-run) after Codex remediates. |
 
 ## Handoff Log
 
@@ -34,6 +34,7 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
 |---|---|---|---|---|
 | 2026-06-01 | Claude (planning) | Codex (execution) | G8 | Task planning complete and gate-passed; self-contained execution handoff package delivered (`delivery/G8-handoff.md`). Codex executes G9–G11; Claude resumes for independent G12 audit. |
 | 2026-06-03 | Codex (execution/integration) | Claude (audit) | G11 | TASK-001..040 complete on disk. Runtime deployment, HTTPS/TLS, security-group cleanup, encrypted off-server backup, daily backup timer, and restore rehearsal evidence recorded. Claude resumes for mandatory G12 audit. |
+| 2026-06-03 | Claude (audit) | Codex (execution) | G12 → G11 **KICKBACK** | G12 independent audit (5 parallel author≠auditor passes) found release-blocking defects: audit events not delivered to audit-history (BLK-G12-001); reporting internal write unauthenticated (BLK-G12-002); security-group closure unsubstantiated and contradicts raw API export (BLK-G12-003, reopens BLK-G11-002); + 4 MAJOR + 1 MINOR. Decision REWORK, no release. Package: `delivery/G12-rework.md`. Decision: `archive/reviews/g12-audit/g12-audit-decision-2026-06-03.md`. |
 
 ## Notes
 

@@ -61,21 +61,30 @@ func (h *CommercialHandler) archiveContract(w http.ResponseWriter, r *http.Reque
 		writeArchiveBlocked(w, obligations)
 		return
 	}
-	archived, err := h.contracts.Archive(r.Context(), contract.ID, request.ExpectedVersion, actor.ID, request.Reason)
+	var archived domain.Contract
+	err = h.inTransaction(r.Context(), func(_ *repo.QuoteRepo, txContracts *repo.ContractRepo, _ *repo.PaymentRepo, txOutbox *event.Outbox) error {
+		var err error
+		archived, err = txContracts.Archive(r.Context(), contract.ID, request.ExpectedVersion, actor.ID, request.Reason)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.ContractArchived, archived.ID, map[string]any{
+			"traceability": "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-SM-010 PIM-BEH-024 PSM-006 FLOW-010 TEST-ARCHIVE",
+			"actorId":      actor.ID,
+			"actorRole":    actor.Role,
+			"actorDisplay": actor.ID,
+			"contractId":   archived.ID,
+			"reason":       request.Reason,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.ContractArchived, archived.ID, map[string]any{
-		"traceability": "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-SM-010 PIM-BEH-024 PSM-006 FLOW-010 TEST-ARCHIVE",
-		"actorId":      actor.ID,
-		"contractId":   archived.ID,
-		"reason":       request.Reason,
-	})
 	writeJSON(w, http.StatusOK, contractDTO(archived))
 }
 
@@ -117,22 +126,31 @@ func (h *CommercialHandler) archivePaymentPlan(w http.ResponseWriter, r *http.Re
 		}})
 		return
 	}
-	archived, err := h.payments.ArchivePlan(r.Context(), plan.ID, request.ExpectedVersion, actor.ID, request.Reason)
+	var archived domain.PaymentPlan
+	err = h.inTransaction(r.Context(), func(_ *repo.QuoteRepo, _ *repo.ContractRepo, txPayments *repo.PaymentRepo, txOutbox *event.Outbox) error {
+		var err error
+		archived, err = txPayments.ArchivePlan(r.Context(), plan.ID, request.ExpectedVersion, actor.ID, request.Reason)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.PaymentPlanArchived, archived.ID, map[string]any{
+			"traceability":  "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-SM-010 PIM-BEH-024 PSM-007 FLOW-010 TEST-INV-ARCHIVEBLOCK-001",
+			"actorId":       actor.ID,
+			"actorRole":     actor.Role,
+			"actorDisplay":  actor.ID,
+			"paymentPlanId": archived.ID,
+			"contractId":    archived.ContractID,
+			"reason":        request.Reason,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.PaymentPlanArchived, archived.ID, map[string]any{
-		"traceability":  "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-SM-010 PIM-BEH-024 PSM-007 FLOW-010 TEST-INV-ARCHIVEBLOCK-001",
-		"actorId":       actor.ID,
-		"paymentPlanId": archived.ID,
-		"contractId":    archived.ContractID,
-		"reason":        request.Reason,
-	})
 	writeJSON(w, http.StatusOK, paymentPlanDTO(archived))
 }
 

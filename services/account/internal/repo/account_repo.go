@@ -18,15 +18,26 @@ var (
 
 type AccountRepo struct {
 	db *sql.DB
+	q  sqlRunner
 }
 
 func NewAccountRepo(db *sql.DB) *AccountRepo {
-	return &AccountRepo{db: db}
+	return &AccountRepo{db: db, q: db}
+}
+
+func NewAccountRepoTx(tx *sql.Tx) *AccountRepo {
+	return &AccountRepo{q: tx}
+}
+
+type sqlRunner interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 func (r *AccountRepo) Create(ctx context.Context, account domain.Account) (domain.Account, error) {
 	account.ID = "acct_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO account.accounts (id, company_name, customer_status, owner_id, version)
 		VALUES ($1, $2, $3, $4, 1)
 		RETURNING updated_at
@@ -40,7 +51,7 @@ func (r *AccountRepo) Create(ctx context.Context, account domain.Account) (domai
 func (r *AccountRepo) Find(ctx context.Context, id string) (domain.Account, error) {
 	var account domain.Account
 	var archivedAt sql.NullTime
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT id, company_name, customer_status, owner_id, archived_at, archived_by, archive_reason, version, updated_at
 		FROM account.accounts
 		WHERE id = $1
@@ -57,7 +68,7 @@ func (r *AccountRepo) Find(ctx context.Context, id string) (domain.Account, erro
 func (r *AccountRepo) List(ctx context.Context, actorID, actorRole, search, customerStatus string, includeArchived bool) ([]domain.Account, error) {
 	search = strings.TrimSpace(search)
 	customerStatus = strings.TrimSpace(customerStatus)
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, company_name, customer_status, owner_id, archived_at, archived_by, archive_reason, version, updated_at
 		FROM account.accounts
 		WHERE ($1 <> 'Sales' OR owner_id = $2)
@@ -86,7 +97,7 @@ func (r *AccountRepo) List(ctx context.Context, actorID, actorRole, search, cust
 }
 
 func (r *AccountRepo) Update(ctx context.Context, id string, expectedVersion int, updated domain.Account) (domain.Account, error) {
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		UPDATE account.accounts
 		SET company_name = $2, customer_status = $3, owner_id = $4, version = version + 1, updated_at = now()
 		WHERE id = $1 AND version = $5
@@ -105,7 +116,7 @@ func (r *AccountRepo) Update(ctx context.Context, id string, expectedVersion int
 func (r *AccountRepo) Archive(ctx context.Context, id string, expectedVersion int, actorID, reason string) (domain.Account, error) {
 	var account domain.Account
 	var archivedAt sql.NullTime
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		UPDATE account.accounts
 		SET archived_at = now(),
 		    archived_by = $2,

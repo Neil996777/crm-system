@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -17,6 +18,7 @@ type Config struct {
 }
 
 type CommercialHandler struct {
+	db        *sql.DB
 	quotes    *repo.QuoteRepo
 	contracts *repo.ContractRepo
 	payments  *repo.PaymentRepo
@@ -28,7 +30,7 @@ func NewCommercialServer(db *sql.DB, config Config) http.Handler {
 	if config.ServiceID == "" {
 		config.ServiceID = "commercial"
 	}
-	handler := &CommercialHandler{quotes: repo.NewQuoteRepo(db), contracts: repo.NewContractRepo(db), payments: repo.NewPaymentRepo(db), outbox: event.NewOutbox(db), config: config}
+	handler := &CommercialHandler{db: db, quotes: repo.NewQuoteRepo(db), contracts: repo.NewContractRepo(db), payments: repo.NewPaymentRepo(db), outbox: event.NewOutbox(db), config: config}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /quotes", handler.listQuotes)
 	mux.HandleFunc("POST /quotes", handler.createQuote)
@@ -46,6 +48,22 @@ func NewCommercialServer(db *sql.DB, config Config) http.Handler {
 	mux.HandleFunc("GET /internal/contracts/{id}/signed-status", handler.getContractSignedStatus)
 	mux.HandleFunc("GET /internal/reminders/eligibility", handler.getReminderEligibility)
 	return mux
+}
+
+func (h *CommercialHandler) inTransaction(ctx context.Context, fn func(*repo.QuoteRepo, *repo.ContractRepo, *repo.PaymentRepo, *event.Outbox) error) error {
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := fn(repo.NewQuoteRepoTx(tx), repo.NewContractRepoTx(tx), repo.NewPaymentRepoTx(tx), event.NewOutboxTx(tx)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func writeOutboxFailure(w http.ResponseWriter) {
+	writeError(w, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "dependency", "The audit event could not be persisted.")
 }
 
 func (h *CommercialHandler) createQuote(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +110,22 @@ func (h *CommercialHandler) createQuote(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The quote input is invalid.")
 		return
 	}
-	created, err := h.quotes.Create(r.Context(), quote)
+	var created domain.Quote
+	err = h.inTransaction(r.Context(), func(txQuotes *repo.QuoteRepo, _ *repo.ContractRepo, _ *repo.PaymentRepo, txOutbox *event.Outbox) error {
+		var err error
+		created, err = txQuotes.Create(r.Context(), quote)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.QuoteCreated, created.ID, map[string]any{
+			"traceability":  "TASK-017 ACC-009 PIM-008 PIM-SM-004 PSM-005 CONTRACT-009 CONTRACT-010",
+			"actorId":       actor.ID,
+			"actorRole":     actor.Role,
+			"actorDisplay":  actor.ID,
+			"quoteId":       created.ID,
+			"opportunityId": created.OpportunityID,
+		})
+	})
 	if errors.Is(err, domain.ErrQuoteAlreadyExists) {
 		writeError(w, http.StatusConflict, "QUOTE_ALREADY_EXISTS", "conflict", "A quote already exists for this opportunity.")
 		return
@@ -101,12 +134,6 @@ func (h *CommercialHandler) createQuote(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The quote input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.QuoteCreated, created.ID, map[string]any{
-		"traceability":  "TASK-017 ACC-009 PIM-008 PIM-SM-004 PSM-005 CONTRACT-009 CONTRACT-010",
-		"actorId":       actor.ID,
-		"quoteId":       created.ID,
-		"opportunityId": created.OpportunityID,
-	})
 	writeJSON(w, http.StatusCreated, quoteDTO(created))
 }
 
@@ -141,27 +168,36 @@ func (h *CommercialHandler) changeQuoteStatus(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "INVALID_TRANSITION", "business_rule", "The requested quote status transition is not allowed.")
 		return
 	}
-	updated, err := h.quotes.ChangeStatus(r.Context(), current.ID, request.ExpectedVersion, request.ToStatus)
+	eventType := event.QuoteStatusChanged
+	trace := "TASK-017 ACC-009 PIM-SM-004 PIM-BEH-012 CONTRACT-009 CONTRACT-010"
+	if request.ToStatus == domain.StatusAccepted {
+		eventType = event.QuoteAccepted
+		trace = "TASK-017 ACC-009 ACC-014 ACC-022 PIM-BEH-013 PIM-INV-012 PSM-005 CONTRACT-009 CONTRACT-010 EVT-QUOTE-ACCEPTED"
+	}
+	var updated domain.Quote
+	err = h.inTransaction(r.Context(), func(txQuotes *repo.QuoteRepo, _ *repo.ContractRepo, _ *repo.PaymentRepo, txOutbox *event.Outbox) error {
+		var err error
+		updated, err = txQuotes.ChangeStatus(r.Context(), current.ID, request.ExpectedVersion, request.ToStatus)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), eventType, updated.ID, map[string]any{
+			"traceability": trace,
+			"actorId":      actor.ID,
+			"actorRole":    actor.Role,
+			"actorDisplay": actor.ID,
+			"quoteId":      updated.ID,
+			"fromStatus":   current.Status,
+			"toStatus":     updated.Status,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	eventType := event.QuoteStatusChanged
-	trace := "TASK-017 ACC-009 PIM-SM-004 PIM-BEH-012 CONTRACT-009 CONTRACT-010"
-	if updated.Status == domain.StatusAccepted {
-		eventType = event.QuoteAccepted
-		trace = "TASK-017 ACC-009 ACC-014 ACC-022 PIM-BEH-013 PIM-INV-012 PSM-005 CONTRACT-009 CONTRACT-010 EVT-QUOTE-ACCEPTED"
-	}
-	_ = h.outbox.Append(r.Context(), eventType, updated.ID, map[string]any{
-		"traceability": trace,
-		"actorId":      actor.ID,
-		"quoteId":      updated.ID,
-		"fromStatus":   current.Status,
-		"toStatus":     updated.Status,
-	})
 	writeJSON(w, http.StatusOK, quoteDTO(updated))
 }

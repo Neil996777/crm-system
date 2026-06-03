@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"crm-system/services/commercial/internal/event"
 	"crm-system/services/commercial/internal/handler"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -50,6 +51,7 @@ func main() {
 		ServiceID:          envOrDefault("SERVICE_ID", "commercial"),
 		ServiceTokenSecret: []byte(os.Getenv("SERVICE_TOKEN_SECRET")),
 	})
+	startAuditDispatcher(db)
 	mux.Handle("/quotes", commercialServer)
 	mux.Handle("/quotes/", commercialServer)
 	mux.Handle("/contracts", commercialServer)
@@ -58,6 +60,32 @@ func main() {
 	addr := ":" + envOrDefault("PORT", "8080")
 	log.Printf("%s listening on %s", defaultServiceName, addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
+}
+
+func startAuditDispatcher(db *sql.DB) {
+	auditURL := os.Getenv("AUDIT_HISTORY_SERVICE_URL")
+	secret := []byte(os.Getenv("SERVICE_TOKEN_SECRET"))
+	if auditURL == "" || len(secret) == 0 {
+		return
+	}
+	outbox := event.NewOutbox(db)
+	config := event.DispatchConfig{
+		ServiceID:              envOrDefault("SERVICE_ID", "commercial"),
+		ServiceTokenSecret:     secret,
+		AuditHistoryServiceURL: auditURL,
+	}
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+		for {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := outbox.DispatchOnce(ctx, config); err != nil {
+				log.Printf("audit outbox dispatch: %v", err)
+			}
+			cancel()
+			<-ticker.C
+		}
+	}()
 }
 
 func pingDatabase() error {

@@ -68,23 +68,32 @@ func (h *OpportunityHandler) closeWon(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	closed = domain.ApplyClosureDates(closed, closeDate, time.Now().UTC())
-	updated, err := h.repo.Close(r.Context(), current.ID, request.ExpectedVersion, closed)
+	var updated domain.Opportunity
+	err = h.inTransaction(r.Context(), func(txRepo *repo.OpportunityRepo, txOutbox *event.Outbox) error {
+		var err error
+		updated, err = txRepo.Close(r.Context(), current.ID, request.ExpectedVersion, closed)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.OpportunityClosedWon, updated.ID, map[string]any{
+			"traceability":  "TASK-015 ACC-013 CIM-017 CIM-PROC-011 PIM-SM-009 PIM-INV-035 PIM-BEH-011 PSM-004 CONTRACT-007 CONTRACT-008 FLOW-004 DEC-017 DEC-019",
+			"actorId":       actor.ID,
+			"actorRole":     actor.Role,
+			"actorDisplay":  actor.ID,
+			"opportunityId": updated.ID,
+			"contractId":    updated.WonContractID,
+			"stage":         updated.Stage,
+			"closeDate":     domain.FormatCloseDate(updated.CloseDate),
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.OpportunityClosedWon, updated.ID, map[string]any{
-		"traceability":  "TASK-015 ACC-013 CIM-017 CIM-PROC-011 PIM-SM-009 PIM-INV-035 PIM-BEH-011 PSM-004 CONTRACT-007 CONTRACT-008 FLOW-004 DEC-017 DEC-019",
-		"actorId":       actor.ID,
-		"opportunityId": updated.ID,
-		"contractId":    updated.WonContractID,
-		"stage":         updated.Stage,
-		"closeDate":     domain.FormatCloseDate(updated.CloseDate),
-	})
 	writeJSON(w, http.StatusOK, closeResultDTO(updated))
 }
 

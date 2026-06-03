@@ -65,24 +65,33 @@ func (h *CommercialHandler) changeContractStatus(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The contract status input is invalid.")
 		return
 	}
-	updated, err := h.contracts.ChangeStatus(r.Context(), current.ID, request.ExpectedVersion, request.ToStatus, resolvedSignedDate)
+	var updated domain.Contract
+	err = h.inTransaction(r.Context(), func(_ *repo.QuoteRepo, txContracts *repo.ContractRepo, _ *repo.PaymentRepo, txOutbox *event.Outbox) error {
+		var err error
+		updated, err = txContracts.ChangeStatus(r.Context(), current.ID, request.ExpectedVersion, request.ToStatus, resolvedSignedDate)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.ContractStatusChanged, updated.ID, map[string]any{
+			"traceability":        "TASK-019 ACC-010 ACC-014 ACC-022 CIM-022 CIM-024 PIM-SM-005 PIM-INV-017 PIM-INV-021 PIM-BEH-015 PSM-006 CONTRACT-009 CONTRACT-010 FLOW-004",
+			"actorId":             actor.ID,
+			"actorRole":           actor.Role,
+			"actorDisplay":        actor.ID,
+			"contractId":          updated.ID,
+			"opportunityId":       updated.OpportunityID,
+			"fromStatus":          current.Status,
+			"toStatus":            updated.Status,
+			"signedEffectiveDate": optionalDate(updated.SignedEffectiveDate),
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.ContractStatusChanged, updated.ID, map[string]any{
-		"traceability":        "TASK-019 ACC-010 ACC-014 ACC-022 CIM-022 CIM-024 PIM-SM-005 PIM-INV-017 PIM-INV-021 PIM-BEH-015 PSM-006 CONTRACT-009 CONTRACT-010 FLOW-004",
-		"actorId":             actor.ID,
-		"contractId":          updated.ID,
-		"opportunityId":       updated.OpportunityID,
-		"fromStatus":          current.Status,
-		"toStatus":            updated.Status,
-		"signedEffectiveDate": optionalDate(updated.SignedEffectiveDate),
-	})
 	writeJSON(w, http.StatusOK, contractDTO(updated))
 }
 

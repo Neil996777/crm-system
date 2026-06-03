@@ -104,18 +104,26 @@ func (h *CommercialHandler) recordPayment(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "INVALID_AMOUNT", "business_rule", "Payment amount must be greater than zero.")
 		return
 	}
-	created, err := h.payments.CreatePayment(r.Context(), payment)
-	if err != nil {
+	var created domain.ActualPayment
+	if err := h.inTransaction(r.Context(), func(_ *repo.QuoteRepo, _ *repo.ContractRepo, txPayments *repo.PaymentRepo, txOutbox *event.Outbox) error {
+		var err error
+		created, err = txPayments.CreatePayment(r.Context(), payment)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.PaymentRecorded, created.ID, map[string]any{
+			"traceability":    "TASK-020 ACC-011 CIM-026 CIM-PROC-010 PIM-010 PIM-011 PIM-SM-006 PIM-INV-022 PIM-INV-023 PIM-BEH-017 PIM-BEH-018 PSM-007 CONTRACT-009 CONTRACT-010 DEC-019",
+			"actorId":         actor.ID,
+			"actorRole":       actor.Role,
+			"actorDisplay":    actor.ID,
+			"contractId":      created.ContractID,
+			"paymentId":       created.ID,
+			"paymentStatus":   created.PaymentStatus,
+			"remainingAmount": created.RemainingAmount,
+		})
+	}); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.PaymentRecorded, created.ID, map[string]any{
-		"traceability":    "TASK-020 ACC-011 CIM-026 CIM-PROC-010 PIM-010 PIM-011 PIM-SM-006 PIM-INV-022 PIM-INV-023 PIM-BEH-017 PIM-BEH-018 PSM-007 CONTRACT-009 CONTRACT-010 DEC-019",
-		"actorId":         actor.ID,
-		"contractId":      created.ContractID,
-		"paymentId":       created.ID,
-		"paymentStatus":   created.PaymentStatus,
-		"remainingAmount": created.RemainingAmount,
-	})
 	writeJSON(w, http.StatusCreated, actualPaymentDTO(created))
 }

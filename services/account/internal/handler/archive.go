@@ -83,21 +83,30 @@ func (h *AccountHandler) archiveAccount(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	archived, err := h.repo.Archive(r.Context(), account.ID, request.ExpectedVersion, actor.ID, request.Reason)
+	var archived domain.Account
+	err = h.inTransaction(r.Context(), func(txAccounts *repo.AccountRepo, _ *repo.ContactRepo, txOutbox *event.Outbox) error {
+		var err error
+		archived, err = txAccounts.Archive(r.Context(), account.ID, request.ExpectedVersion, actor.ID, request.Reason)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.AccountArchived, archived.ID, map[string]any{
+			"traceability": "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-BEH-024 PSM-003 CONTRACT-005 FLOW-010 TEST-ARCHIVE",
+			"actorId":      actor.ID,
+			"actorRole":    actor.Role,
+			"actorDisplay": actor.ID,
+			"accountId":    archived.ID,
+			"reason":       request.Reason,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.AccountArchived, archived.ID, map[string]any{
-		"traceability": "TASK-032 ACC-002 ACC-014 CIM-037 CIM-PROC-020 PIM-020 PIM-BEH-024 PSM-003 CONTRACT-005 FLOW-010 TEST-ARCHIVE",
-		"actorId":      actor.ID,
-		"accountId":    archived.ID,
-		"reason":       request.Reason,
-	})
 	writeJSON(w, http.StatusOK, accountDTO(archived))
 }
 

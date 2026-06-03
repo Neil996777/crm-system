@@ -55,17 +55,25 @@ func (h *AccountHandler) createContactForAccount(w http.ResponseWriter, r *http.
 			return
 		}
 	}
-	created, err := h.contacts.Create(r.Context(), contact)
-	if err != nil {
+	var created domain.Contact
+	if err := h.inTransaction(r.Context(), func(_ *repo.AccountRepo, txContacts *repo.ContactRepo, txOutbox *event.Outbox) error {
+		var err error
+		created, err = txContacts.Create(r.Context(), contact)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.ContactCreated, created.ID, map[string]any{
+			"traceability": "TASK-011 ACC-006 PIM-006 PIM-BEH-008 PSM-003 CONTRACT-005 CONTRACT-006",
+			"actorId":      actor.ID,
+			"actorRole":    actor.Role,
+			"actorDisplay": actor.ID,
+			"accountId":    created.AccountID,
+			"contactId":    created.ID,
+		})
+	}); err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The contact input is invalid.")
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.ContactCreated, created.ID, map[string]any{
-		"traceability": "TASK-011 ACC-006 PIM-006 PIM-BEH-008 PSM-003 CONTRACT-005 CONTRACT-006",
-		"actorId":      actor.ID,
-		"accountId":    created.AccountID,
-		"contactId":    created.ID,
-	})
 	writeJSON(w, http.StatusCreated, contactDTO(created))
 }
 

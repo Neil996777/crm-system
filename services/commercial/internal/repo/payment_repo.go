@@ -10,16 +10,20 @@ import (
 )
 
 type PaymentRepo struct {
-	db *sql.DB
+	q sqlRunner
 }
 
 func NewPaymentRepo(db *sql.DB) *PaymentRepo {
-	return &PaymentRepo{db: db}
+	return &PaymentRepo{q: db}
+}
+
+func NewPaymentRepoTx(tx *sql.Tx) *PaymentRepo {
+	return &PaymentRepo{q: tx}
 }
 
 func (r *PaymentRepo) CreatePlan(ctx context.Context, plan domain.PaymentPlan) (domain.PaymentPlan, error) {
 	plan.ID = "plan_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO commercial.payment_plans (id, contract_id, due_amount, due_date, currency, status, version)
 		VALUES ($1, $2, $3::numeric, $4, $5, $6, 1)
 		RETURNING updated_at
@@ -32,7 +36,7 @@ func (r *PaymentRepo) CreatePlan(ctx context.Context, plan domain.PaymentPlan) (
 
 func (r *PaymentRepo) FindPlan(ctx context.Context, id string) (domain.PaymentPlan, error) {
 	var plan domain.PaymentPlan
-	err := scanPaymentPlan(r.db.QueryRowContext(ctx, `
+	err := scanPaymentPlan(r.q.QueryRowContext(ctx, `
 		SELECT id, contract_id, to_char(due_amount, 'FM999999999999990.00'), due_date, currency, status,
 		       archived_at, archived_by, archive_reason, version, updated_at
 		FROM commercial.payment_plans
@@ -45,7 +49,7 @@ func (r *PaymentRepo) FindPlan(ctx context.Context, id string) (domain.PaymentPl
 }
 
 func (r *PaymentRepo) ReminderRows(ctx context.Context, actorID, actorRole string, businessDate time.Time) ([]domain.ReminderRow, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT p.id, p.contract_id, c.opportunity_id, p.due_date, p.status, p.version, c.owner_id
 		FROM commercial.payment_plans p
 		JOIN commercial.contracts c ON c.id = p.contract_id
@@ -97,7 +101,7 @@ func (r *PaymentRepo) ReminderRows(ctx context.Context, actorID, actorRole strin
 
 func (r *PaymentRepo) PaidTotal(ctx context.Context, contractID string) (string, error) {
 	var total string
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT to_char(COALESCE(sum(amount), 0), 'FM999999999999990.00')
 		FROM commercial.actual_payments
 		WHERE contract_id = $1
@@ -107,7 +111,7 @@ func (r *PaymentRepo) PaidTotal(ctx context.Context, contractID string) (string,
 
 func (r *PaymentRepo) FindPaymentByKey(ctx context.Context, contractID, idempotencyKey string) (domain.ActualPayment, error) {
 	var payment domain.ActualPayment
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT id, contract_id, idempotency_key, to_char(amount, 'FM999999999999990.00'), payment_date, note,
 		       currency, payment_status, to_char(remaining_amount, 'FM999999999999990.00'), version, updated_at
 		FROM commercial.actual_payments
@@ -123,7 +127,7 @@ func (r *PaymentRepo) FindPaymentByKey(ctx context.Context, contractID, idempote
 
 func (r *PaymentRepo) CreatePayment(ctx context.Context, payment domain.ActualPayment) (domain.ActualPayment, error) {
 	payment.ID = "payment_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO commercial.actual_payments
 			(id, contract_id, idempotency_key, amount, payment_date, note, currency, payment_status, remaining_amount, version)
 		VALUES ($1, $2, $3, $4::numeric, $5, $6, $7, $8, $9::numeric, 1)
@@ -133,19 +137,21 @@ func (r *PaymentRepo) CreatePayment(ctx context.Context, payment domain.ActualPa
 	if err != nil {
 		return domain.ActualPayment{}, err
 	}
-	_, _ = r.db.ExecContext(ctx, `
+	if _, err := r.q.ExecContext(ctx, `
 		UPDATE commercial.payment_plans
 		SET status = $2,
 		    version = version + 1,
 		    updated_at = now()
 		WHERE contract_id = $1
-	`, payment.ContractID, payment.PaymentStatus)
+	`, payment.ContractID, payment.PaymentStatus); err != nil {
+		return domain.ActualPayment{}, err
+	}
 	return payment, nil
 }
 
 func (r *PaymentRepo) ArchivePlan(ctx context.Context, id string, expectedVersion int, actorID, reason string) (domain.PaymentPlan, error) {
 	var plan domain.PaymentPlan
-	err := scanPaymentPlan(r.db.QueryRowContext(ctx, `
+	err := scanPaymentPlan(r.q.QueryRowContext(ctx, `
 		UPDATE commercial.payment_plans
 		SET archived_at = now(),
 		    archived_by = $2,

@@ -45,21 +45,30 @@ func (h *OpportunityHandler) changeStage(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "INVALID_TRANSITION", "business_rule", "The requested stage transition is not allowed.")
 		return
 	}
-	updated, err := h.repo.ChangeStage(r.Context(), current.ID, request.ExpectedVersion, request.ToStage)
+	var updated domain.Opportunity
+	err = h.inTransaction(r.Context(), func(txRepo *repo.OpportunityRepo, txOutbox *event.Outbox) error {
+		var err error
+		updated, err = txRepo.ChangeStage(r.Context(), current.ID, request.ExpectedVersion, request.ToStage)
+		if err != nil {
+			return err
+		}
+		return txOutbox.Append(r.Context(), event.OpportunityStageChanged, updated.ID, map[string]any{
+			"traceability":  "TASK-014 ACC-008 PIM-SM-002 PIM-INV-006 PIM-BEH-010 PSM-004 CONTRACT-007 CONTRACT-008",
+			"actorId":       actor.ID,
+			"actorRole":     actor.Role,
+			"actorDisplay":  actor.ID,
+			"opportunityId": updated.ID,
+			"fromStage":     current.Stage,
+			"toStage":       updated.Stage,
+		})
+	})
 	if errors.Is(err, repo.ErrVersionConflict) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		writeOutboxFailure(w)
 		return
 	}
-	_ = h.outbox.Append(r.Context(), event.OpportunityStageChanged, updated.ID, map[string]any{
-		"traceability":  "TASK-014 ACC-008 PIM-SM-002 PIM-INV-006 PIM-BEH-010 PSM-004 CONTRACT-007 CONTRACT-008",
-		"actorId":       actor.ID,
-		"opportunityId": updated.ID,
-		"fromStage":     current.Stage,
-		"toStage":       updated.Stage,
-	})
 	writeJSON(w, http.StatusOK, opportunityDTO(updated))
 }

@@ -97,6 +97,39 @@ func TestAppendRejectsMissingS2SAndEventsAreAppendOnly(t *testing.T) {
 	}
 }
 
+func TestAppendIsIdempotentByProducerEventUID(t *testing.T) {
+	adminDB, serviceDB := newAuditTestDB(t)
+	app := NewAuditServer(serviceDB, Config{ServiceID: "audit-history", ServiceTokenSecret: []byte("audit-secret")})
+	token := signTestServiceToken(t, []byte("audit-secret"), "lead", "audit-history", "audit.append")
+	body := map[string]any{
+		"eventUid":      "evt_outbox_retry_same_uid",
+		"eventId":       "EVT-STAGE-CHANGED",
+		"eventVersion":  1,
+		"surfaces":      []string{"record_history", "operation_log"},
+		"action":        "Stage changed",
+		"resourceType":  "Opportunity",
+		"resourceId":    "opp-1",
+		"result":        "success",
+		"safeSummary":   "Stage changed",
+		"acceptanceIds": []string{"ACC-014", "ACC-022"},
+	}
+	first := appendEvent(t, app, token, body, actorHeaders("sales-1", "Sales", "Sales One"))
+	if first.Code != http.StatusCreated {
+		t.Fatalf("expected first append 201, got %d body=%s", first.Code, first.Body.String())
+	}
+	second := appendEvent(t, app, token, body, actorHeaders("sales-1", "Sales", "Sales One"))
+	if second.Code != http.StatusCreated {
+		t.Fatalf("TEST-HISTORY-IDEMPOTENT-001 expected duplicate eventUid to be idempotent 201, got %d body=%s", second.Code, second.Body.String())
+	}
+	var count int
+	if err := adminDB.QueryRow(`SELECT count(*) FROM audit_history.events WHERE event_uid = $1`, "evt_outbox_retry_same_uid").Scan(&count); err != nil {
+		t.Fatalf("count duplicate event uid: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly one stored event for duplicate eventUid, got %d", count)
+	}
+}
+
 func newAuditTestDB(t *testing.T) (*sql.DB, *sql.DB) {
 	t.Helper()
 	ctx := context.Background()

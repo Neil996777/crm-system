@@ -11,16 +11,20 @@ import (
 )
 
 type ContractRepo struct {
-	db *sql.DB
+	q sqlRunner
 }
 
 func NewContractRepo(db *sql.DB) *ContractRepo {
-	return &ContractRepo{db: db}
+	return &ContractRepo{q: db}
+}
+
+func NewContractRepoTx(tx *sql.Tx) *ContractRepo {
+	return &ContractRepo{q: tx}
 }
 
 func (r *ContractRepo) Create(ctx context.Context, contract domain.Contract) (domain.Contract, error) {
 	contract.ID = "contract_" + randomHex(16)
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO commercial.contracts
 			(id, quote_id, opportunity_id, customer_id, amount, status, contract_note, expected_signed_date,
 			 amount_difference_reason, owner_id, version)
@@ -39,7 +43,7 @@ func (r *ContractRepo) Create(ctx context.Context, contract domain.Contract) (do
 
 func (r *ContractRepo) Find(ctx context.Context, id string) (domain.Contract, error) {
 	var contract domain.Contract
-	err := scanContract(r.db.QueryRowContext(ctx, `
+	err := scanContract(r.q.QueryRowContext(ctx, `
 		SELECT id, quote_id, opportunity_id, customer_id, to_char(amount, 'FM999999999999990.00'), status,
 		       contract_note, expected_signed_date, signed_effective_date, amount_difference_reason, owner_id,
 		       archived_at, archived_by, archive_reason, version, updated_at
@@ -54,7 +58,7 @@ func (r *ContractRepo) Find(ctx context.Context, id string) (domain.Contract, er
 
 func (r *ContractRepo) List(ctx context.Context, actorID, actorRole, search string, includeArchived bool) ([]domain.Contract, error) {
 	search = strings.TrimSpace(search)
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, quote_id, opportunity_id, customer_id, to_char(amount, 'FM999999999999990.00'), status,
 		       contract_note, expected_signed_date, signed_effective_date, amount_difference_reason, owner_id,
 		       archived_at, archived_by, archive_reason, version, updated_at
@@ -80,7 +84,7 @@ func (r *ContractRepo) List(ctx context.Context, actorID, actorRole, search stri
 }
 
 func (r *ContractRepo) PendingSignatureReminderRows(ctx context.Context, actorID, actorRole string, businessDate time.Time) ([]domain.ReminderRow, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, opportunity_id, expected_signed_date, owner_id, version
 		FROM commercial.contracts
 		WHERE status = $1
@@ -124,7 +128,7 @@ func (r *ContractRepo) ChangeStatus(ctx context.Context, id string, expectedVers
 		dateParam = sql.NullTime{Time: signedEffectiveDate, Valid: true}
 	}
 	var contract domain.Contract
-	err := scanContract(r.db.QueryRowContext(ctx, `
+	err := scanContract(r.q.QueryRowContext(ctx, `
 		UPDATE commercial.contracts
 		SET status = $2,
 		    signed_effective_date = COALESCE($4, signed_effective_date),
@@ -143,7 +147,7 @@ func (r *ContractRepo) ChangeStatus(ctx context.Context, id string, expectedVers
 
 func (r *ContractRepo) Archive(ctx context.Context, id string, expectedVersion int, actorID, reason string) (domain.Contract, error) {
 	var contract domain.Contract
-	err := scanContract(r.db.QueryRowContext(ctx, `
+	err := scanContract(r.q.QueryRowContext(ctx, `
 		UPDATE commercial.contracts
 		SET archived_at = now(),
 		    archived_by = $2,

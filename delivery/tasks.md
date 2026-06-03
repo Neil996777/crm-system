@@ -206,12 +206,18 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 12. **Automated tests:** `TEST-HISTORY-001..004`, `TEST-OPLOG-005` (not editable),
     `TEST-RETENTION-001` (append-only/no shorten), `TEST-ABUSE-ACTAS-001` (act-on-behalf-of:
     recorded actor is the authenticated principal; payload-claimed actor ignored; owner/assignee
-    are separate fields from actor — ABUSE-019, AUTHZ-009). Type: Integration.
+    are separate fields from actor — ABUSE-019, AUTHZ-009), G12 rework
+    `TEST-HISTORY-DISPATCH-RETRY-001`, `TEST-HISTORY-IDEMPOTENT-001`,
+    `TEST-HISTORY-TX-001`. Type: Integration.
 13. **Manual verification:** Append an event via S2S; query as record owner → visible;
     query as non-owner → denied; attempt to edit an event → unavailable.
 14. **Traceability:** CIM-035/036 → PIM-018/019/PIM-BEH-028/029 → PSM-009 →
     CONTRACT-013/014 → ACC-014 → TEST-HISTORY-001..004.
 15. **TDD:** Write history-permission + non-editable + hash-chain tests first (fail).
+    G12 rework fail-first evidence: opportunity dispatcher test initially failed on missing
+    `DispatchOnce`/`DispatchConfig`; audit-history duplicate UID test initially failed before
+    idempotent append support; outbox transaction rollback test initially returned 201 before
+    transaction coupling.
 16. **No-downgrade items:** Real append-only persistence (no in-memory log); real
     hash chain; real record-permission gate on history query (ABUSE-013); actor identity
     is the authenticated principal, never a client-supplied field (ABUSE-019, AUTHZ-009).
