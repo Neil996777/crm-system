@@ -59,6 +59,7 @@ func TestOutboxDispatcherDeliversAndRetriesAuditHistoryEvents(t *testing.T) {
 	requirePublishedState(t, db, eventUID, false)
 
 	var received map[string]any
+	var receivedProjection map[string]any
 	okServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Service-Id") != "opportunity" || r.Header.Get("X-Intent") != "audit.append" {
 			t.Fatalf("missing S2S identity headers: service=%q intent=%q", r.Header.Get("X-Service-Id"), r.Header.Get("X-Intent"))
@@ -76,11 +77,29 @@ func TestOutboxDispatcherDeliversAndRetriesAuditHistoryEvents(t *testing.T) {
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	}))
 	defer okServer.Close()
+	reportingServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/internal/projections" {
+			t.Fatalf("unexpected reporting path %s", r.URL.Path)
+		}
+		if r.Header.Get("X-Service-Id") != "opportunity" || r.Header.Get("X-Intent") != "reporting.projection_ingest" {
+			t.Fatalf("missing reporting S2S headers: service=%q intent=%q", r.Header.Get("X-Service-Id"), r.Header.Get("X-Intent"))
+		}
+		if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
+			t.Fatalf("missing reporting bearer service token")
+		}
+		if err := json.NewDecoder(r.Body).Decode(&receivedProjection); err != nil {
+			t.Fatalf("decode reporting projection body: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"updated"}`))
+	}))
+	defer reportingServer.Close()
 
 	if err := outbox.DispatchOnce(ctx, DispatchConfig{
 		ServiceID:              "opportunity",
 		ServiceTokenSecret:     []byte("dispatch-secret"),
 		AuditHistoryServiceURL: okServer.URL,
+		ReportingServiceURL:    reportingServer.URL,
 	}); err != nil {
 		t.Fatalf("dispatch retry: %v", err)
 	}
@@ -90,6 +109,9 @@ func TestOutboxDispatcherDeliversAndRetriesAuditHistoryEvents(t *testing.T) {
 	}
 	if received["eventId"] != "EVT-STAGE-CHANGED" {
 		t.Fatalf("expected EVT-STAGE-CHANGED, got %#v", received["eventId"])
+	}
+	if receivedProjection["sourceService"] != "opportunity" || receivedProjection["recordType"] != "opportunity" || receivedProjection["recordId"] != "opp_dispatch_1" {
+		t.Fatalf("TEST-REPORTING-PROJECTION-INGEST-001 expected opportunity projection from dispatcher, got %#v", receivedProjection)
 	}
 }
 

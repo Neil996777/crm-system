@@ -79,8 +79,10 @@ func (h *CommercialHandler) changeContractStatus(w http.ResponseWriter, r *http.
 			"actorDisplay":        actor.ID,
 			"contractId":          updated.ID,
 			"opportunityId":       updated.OpportunityID,
+			"ownerId":             updated.OwnerID,
 			"fromStatus":          current.Status,
 			"toStatus":            updated.Status,
+			"amount":              updated.Amount,
 			"signedEffectiveDate": optionalDate(updated.SignedEffectiveDate),
 		})
 	})

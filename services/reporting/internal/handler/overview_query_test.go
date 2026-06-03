@@ -111,6 +111,20 @@ func TestProjectionIngestRequiresS2SToken(t *testing.T) {
 		t.Fatalf("expected valid S2S projection ingest 200, got %d body=%s", rec.Code, rec.Body.String())
 	}
 	requireProjectionCount(t, db, "opp_s2s", 1)
+	overview := getReportingJSON(app, "/reports/team-overview", actorHeaders("mgr-1", "Sales Manager", "single-team"))
+	if overview.Code != http.StatusOK {
+		t.Fatalf("TEST-REPORTING-PROJECTION-INGEST-006 expected manager query over ingested projection 200, got %d body=%s", overview.Code, overview.Body.String())
+	}
+	metrics := decodeJSON(t, overview)["metrics"].(map[string]any)
+	pipeline := decodeJSON(t, overview)["pipeline"].([]any)
+	if metrics["opportunityCount"].(float64) != 1 || len(pipeline) != 1 || pipeline[0].(map[string]any)["amount"] != "1000.00" {
+		t.Fatalf("expected ingested projection in manager aggregate, got %s", overview.Body.String())
+	}
+	denied := getReportingJSON(app, "/reports/team-overview", actorHeaders("sales-1", "Sales", "single-team"))
+	if denied.Code != http.StatusForbidden {
+		t.Fatalf("expected Sales denied with no aggregate leakage, got %d body=%s", denied.Code, denied.Body.String())
+	}
+	requireErrorCode(t, denied, "PERMISSION_DENIED")
 }
 
 func newReportingTestDB(t *testing.T) *sql.DB {

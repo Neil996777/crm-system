@@ -88,6 +88,9 @@ func (h *CommercialHandler) createContract(w http.ResponseWriter, r *http.Reques
 			"contractId":    created.ID,
 			"quoteId":       created.QuoteID,
 			"opportunityId": created.OpportunityID,
+			"ownerId":       created.OwnerID,
+			"amount":        created.Amount,
+			"status":        created.Status,
 		})
 	})
 	if errors.Is(err, domain.ErrContractAlreadyExists) {

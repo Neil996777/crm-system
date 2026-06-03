@@ -124,6 +124,9 @@ func (h *CommercialHandler) createQuote(w http.ResponseWriter, r *http.Request) 
 			"actorDisplay":  actor.ID,
 			"quoteId":       created.ID,
 			"opportunityId": created.OpportunityID,
+			"ownerId":       created.OwnerID,
+			"amount":        created.Amount,
+			"status":        created.Status,
 		})
 	})
 	if errors.Is(err, domain.ErrQuoteAlreadyExists) {
@@ -187,8 +190,10 @@ func (h *CommercialHandler) changeQuoteStatus(w http.ResponseWriter, r *http.Req
 			"actorRole":    actor.Role,
 			"actorDisplay": actor.ID,
 			"quoteId":      updated.ID,
+			"ownerId":      updated.OwnerID,
 			"fromStatus":   current.Status,
 			"toStatus":     updated.Status,
+			"amount":       updated.Amount,
 		})
 	})
 	if errors.Is(err, repo.ErrVersionConflict) {

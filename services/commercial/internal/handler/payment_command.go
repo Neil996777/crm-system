@@ -118,6 +118,8 @@ func (h *CommercialHandler) recordPayment(w http.ResponseWriter, r *http.Request
 			"actorDisplay":    actor.ID,
 			"contractId":      created.ContractID,
 			"paymentId":       created.ID,
+			"ownerId":         contract.OwnerID,
+			"amount":          created.Amount,
 			"paymentStatus":   created.PaymentStatus,
 			"remainingAmount": created.RemainingAmount,
 		})

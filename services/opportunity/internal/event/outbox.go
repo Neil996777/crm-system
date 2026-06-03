@@ -39,6 +39,7 @@ type DispatchConfig struct {
 	ServiceID              string
 	ServiceTokenSecret     []byte
 	AuditHistoryServiceURL string
+	ReportingServiceURL    string
 	HTTPClient             *http.Client
 	BatchSize              int
 }
@@ -116,6 +117,14 @@ func (o *Outbox) DispatchOnce(ctx context.Context, config DispatchConfig) error 
 			}
 			continue
 		}
+		if strings.TrimSpace(config.ReportingServiceURL) != "" {
+			if err := deliverReportingProjection(ctx, config, serviceID, item); err != nil {
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+		}
 		if _, err := o.q.ExecContext(ctx, `
 			UPDATE opportunity.outbox_events
 			SET published_at = now()
@@ -161,6 +170,50 @@ func deliverAuditEvent(ctx context.Context, config DispatchConfig, serviceID str
 		return fmt.Errorf("audit append failed: status %d", resp.StatusCode)
 	}
 	return nil
+}
+
+func deliverReportingProjection(ctx context.Context, config DispatchConfig, serviceID string, item outboxEvent) error {
+	body, err := json.Marshal(reportingProjectionBody(serviceID, item))
+	if err != nil {
+		return err
+	}
+	token, err := signServiceToken(serviceID, "reporting", "reporting.projection_ingest", config.ServiceTokenSecret)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(config.ReportingServiceURL, "/")+"/internal/projections", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("X-Service-Id", serviceID)
+	req.Header.Set("X-Intent", "reporting.projection_ingest")
+	client := config.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 5 * time.Second}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("reporting projection failed: status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func reportingProjectionBody(serviceID string, item outboxEvent) map[string]any {
+	return map[string]any{
+		"sourceService": serviceID,
+		"recordType":    "opportunity",
+		"recordId":      item.AggregateID,
+		"ownerId":       payloadString(item.Payload, "ownerId", payloadString(item.Payload, "actorId", "system")),
+		"teamId":        payloadString(item.Payload, "teamId", "single-team"),
+		"stage":         payloadString(item.Payload, "toStage", payloadString(item.Payload, "stage", "")),
+		"amount":        payloadString(item.Payload, "expectedAmount", "0.00"),
+	}
 }
 
 func auditAppendBody(item outboxEvent) map[string]any {

@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"crm-system/services/lead/internal/event"
 	"crm-system/services/lead/internal/handler"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -53,12 +54,39 @@ func main() {
 		ServiceID:              envOrDefault("SERVICE_ID", "lead"),
 		ServiceTokenSecret:     []byte(os.Getenv("SERVICE_TOKEN_SECRET")),
 	})
+	startReportingDispatcher(db)
 	mux.Handle("/leads", leadServer)
 	mux.Handle("/leads/", leadServer)
 	mux.Handle("/duplicate-checks", leadServer)
 	addr := ":" + envOrDefault("PORT", "8080")
 	log.Printf("%s listening on %s", defaultServiceName, addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
+}
+
+func startReportingDispatcher(db *sql.DB) {
+	reportingURL := os.Getenv("REPORTING_SERVICE_URL")
+	secret := []byte(os.Getenv("SERVICE_TOKEN_SECRET"))
+	if reportingURL == "" || len(secret) == 0 {
+		return
+	}
+	outbox := event.NewOutbox(db)
+	config := event.DispatchConfig{
+		ServiceID:           envOrDefault("SERVICE_ID", "lead"),
+		ServiceTokenSecret:  secret,
+		ReportingServiceURL: reportingURL,
+	}
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+		for {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := outbox.DispatchOnce(ctx, config); err != nil {
+				log.Printf("reporting outbox dispatch: %v", err)
+			}
+			cancel()
+			<-ticker.C
+		}
+	}()
 }
 
 func openDatabase() (*sql.DB, error) {

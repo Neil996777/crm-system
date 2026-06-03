@@ -74,7 +74,9 @@ func (h *OpportunityHandler) closeLost(w http.ResponseWriter, r *http.Request) {
 			"actorRole":      actor.Role,
 			"actorDisplay":   actor.ID,
 			"opportunityId":  updated.ID,
+			"ownerId":        updated.OwnerID,
 			"stage":          updated.Stage,
+			"expectedAmount": updated.ExpectedAmount,
 			"closeDate":      domain.FormatCloseDate(updated.CloseDate),
 			"lostReasonCode": updated.LostReasonCode,
 		})

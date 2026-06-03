@@ -53,13 +53,15 @@ func (h *OpportunityHandler) changeStage(w http.ResponseWriter, r *http.Request)
 			return err
 		}
 		return txOutbox.Append(r.Context(), event.OpportunityStageChanged, updated.ID, map[string]any{
-			"traceability":  "TASK-014 ACC-008 PIM-SM-002 PIM-INV-006 PIM-BEH-010 PSM-004 CONTRACT-007 CONTRACT-008",
-			"actorId":       actor.ID,
-			"actorRole":     actor.Role,
-			"actorDisplay":  actor.ID,
-			"opportunityId": updated.ID,
-			"fromStage":     current.Stage,
-			"toStage":       updated.Stage,
+			"traceability":   "TASK-014 ACC-008 PIM-SM-002 PIM-INV-006 PIM-BEH-010 PSM-004 CONTRACT-007 CONTRACT-008",
+			"actorId":        actor.ID,
+			"actorRole":      actor.Role,
+			"actorDisplay":   actor.ID,
+			"opportunityId":  updated.ID,
+			"ownerId":        updated.OwnerID,
+			"fromStage":      current.Stage,
+			"toStage":        updated.Stage,
+			"expectedAmount": updated.ExpectedAmount,
 		})
 	})
 	if errors.Is(err, repo.ErrVersionConflict) {

@@ -75,6 +75,7 @@ func startAuditDispatcher(db *sql.DB) {
 		ServiceID:              envOrDefault("SERVICE_ID", "account"),
 		ServiceTokenSecret:     secret,
 		AuditHistoryServiceURL: auditURL,
+		ReportingServiceURL:    os.Getenv("REPORTING_SERVICE_URL"),
 	}
 	go func() {
 		ticker := time.NewTicker(2 * time.Second)

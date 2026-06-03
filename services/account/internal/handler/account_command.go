@@ -183,6 +183,7 @@ func (h *AccountHandler) updateAccount(w http.ResponseWriter, r *http.Request) {
 			"actorRole":      actor.Role,
 			"actorDisplay":   actor.ID,
 			"accountId":      saved.ID,
+			"ownerId":        saved.OwnerID,
 			"customerStatus": saved.CustomerStatus,
 			"version":        saved.Version,
 		}); err != nil {
