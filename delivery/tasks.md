@@ -1508,7 +1508,11 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 17. **Blocker:** G11 execution update 2026-06-03: the HTTPS endpoint blocker was resolved
     with approved endpoint `https://118.196.44.193` and a Let's Encrypt IP certificate, but
     TASK-039 remains blocked by missing Volcengine cloud security-group inbound-rule evidence
-    and review of the pre-existing public `8642` Hermes exposure (BLK-G11-002). **Pre-G8
+    and review of the pre-existing public `8642` Hermes exposure (BLK-G11-002). Closeout
+    attempt on 2026-06-03 confirmed the CRM host/container/TLS posture again but found no
+    local Volcengine CLI/API credentials or metadata source that can export cloud provider
+    security-group rules; the infrastructure registers still list Hermes `8642` owner as
+    `TBD`. **Pre-G8
     condition:** Security Compliance must review the operator-access design (SSH access, key
     ownership, sudo boundary) before G8 implementation tasks are approved (deployment-notes
     "Operator Access").

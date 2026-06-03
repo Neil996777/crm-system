@@ -59,3 +59,35 @@ Infrastructure Ops read-only verification on 2026-06-03 confirmed:
 Remaining external evidence needed: Volcengine security-group inbound rules for
 instance `i-yemoz0an7kk36d2c9bp6`, including protocol, port, source CIDR, policy,
 and timestamp.
+
+## TASK-039 Closeout Attempt
+
+Closeout verification on 2026-06-03 16:07-16:08 CST confirmed:
+
+- Runtime instance hostname is `iv-yemoz0an7kk36d2c9bp6`, matching instance ID
+  `i-yemoz0an7kk36d2c9bp6`.
+- Server-side metadata probes did not return cloud security-group rules.
+- Local Codex environment has no Volcengine CLI or Volcengine credential
+  configuration available for read-only API export.
+- Server-side `scripts/test_deploy_smoke.sh` passed for
+  `https://118.196.44.193`.
+- `crm-certbot-renew.timer` is active and enabled.
+- TLS certificate remains issued by Let's Encrypt `YE1` with SAN
+  `IP Address:118.196.44.193`.
+- `https://118.196.44.193/health` returns `HTTP/2 200` with HSTS,
+  X-Content-Type-Options, Referrer-Policy, and CSP headers.
+- Current host listeners remain consistent with restricted CRM exposure:
+  public `80/443` for Nginx, public `22` for SSH, public pre-existing non-CRM
+  `8642` for Hermes, CRM gateway on `127.0.0.1:8080`, and no PostgreSQL host
+  port mapping.
+- Workspace infrastructure registers still list Hermes `8642` owner as `TBD`
+  and require Security Compliance review.
+
+TASK-039 cannot be marked Done from this closeout attempt. Required closure
+evidence remains:
+
+- Volcengine console/API export for the inbound security-group rules bound to
+  instance `i-yemoz0an7kk36d2c9bp6`, proving CRM `8080` and PostgreSQL `5432`
+  are not publicly allowed.
+- Owner and Security Compliance disposition for the pre-existing public Hermes
+  `8642` exposure on the same production candidate host.
