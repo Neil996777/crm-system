@@ -70,10 +70,11 @@ five parallel author≠auditor passes; two dimensions FAILED; first rework packa
 multi-agent **G12 RE-AUDIT** (`archive/reviews/g12-audit/g12-reaudit-2026-06-03.md`),
 including an **independent compile/test run** (11/11 Go modules build/vet/test green
 against real PostgreSQL testcontainers; frontend tsc+build green) and a **Claude-run
-read-only live Volcengine query**. Result: **6 of 8 findings genuinely closed; BLK-G12-001
-and BLK-G12-006 remain Open (partially fixed)**. Second rework package:
-`delivery/G12-rework-2.md`. No-downgrade applies. The Status column below reflects the
-RE-AUDIT verdict, which supersedes Codex's self-reported "Resolved".
+read-only live Volcengine query**. Re-audit result at kickback time: **6 of 8 findings
+genuinely closed; BLK-G12-001 and BLK-G12-006 remained Open (partially fixed)**,
+with new BLK-G12-009/010 added. Second rework package: `delivery/G12-rework-2.md`.
+Codex second rework has since resolved BLK-G12-001/006/009/010 below; G11/G12 remain
+Gate Blocked pending Claude final focused re-audit. No-downgrade applies.
 
 | ID | Severity | Blocker | Owner | Touches | Status (re-audit) | Opened |
 |---|---|---|---|---|---|---|
