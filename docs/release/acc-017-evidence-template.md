@@ -40,3 +40,22 @@ This evidence is not sufficient to mark TASK-039 Done until the Volcengine cloud
 security-group inbound rules are exported or otherwise recorded. The host-level
 state is consistent with restricted CRM exposure, but the provider security-group
 record is still required for ACC-017 closure.
+
+## Infrastructure Ops Read-Only Check
+
+Infrastructure Ops read-only verification on 2026-06-03 confirmed:
+
+- CRM Compose project `current` is running with all 11 containers healthy.
+- Nginx exposes CRM through `80/443`; `80` redirects to HTTPS.
+- `https://118.196.44.193/health` returns `HTTP/2 200` from the server.
+- The CRM gateway is host-published only as `127.0.0.1:8080->8080/tcp`.
+- PostgreSQL has no host port mapping; it is container/Compose internal only.
+- Host-level evidence does not show CRM `8080` or PostgreSQL `5432` listening on
+  public interfaces.
+- Pre-existing public `8642` is Hermes, not CRM, but still requires owner and
+  Security Compliance review because it is exposed on the same production
+  candidate host.
+
+Remaining external evidence needed: Volcengine security-group inbound rules for
+instance `i-yemoz0an7kk36d2c9bp6`, including protocol, port, source CIDR, policy,
+and timestamp.
