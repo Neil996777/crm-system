@@ -1539,7 +1539,12 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     external-edge negative probes from `srv-aliyun-bj-01`, restore catalog counts,
     `sshd -T` effective hardening, and distinct `crm-deploy`/`crm-ops` SSH key
     fingerprints under `docs/release/evidence/`; `scripts/test_release_evidence_transcripts.sh`
-    passed. TASK-039 is complete again, pending independent G12 re-audit.
+    passed. BLK-G12-009 is resolved: `scripts/test_security_group_evidence.py`
+    now treats read-only exports as verification-only and requires mutating
+    `CreateSecurityGroup`/`AuthorizeSecurityGroupIngress`/`RevokeSecurityGroupIngress`/
+    `ModifyNetworkInterfaceAttributes` RequestIds with HTTP 200 for `--apply`;
+    `scripts/test_security_group_evidence_checker.sh` passed. TASK-039 is complete
+    again, pending independent G12 re-audit.
     Previous G11 text retained for historical context: Resolved on 2026-06-03. The HTTPS endpoint blocker was resolved
     with approved endpoint `https://118.196.44.193` and a Let's Encrypt IP certificate.
     Volcengine security-group API evidence was exported for security group

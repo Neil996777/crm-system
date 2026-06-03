@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -10,6 +11,12 @@ FORBIDDEN_PUBLIC_PORTS = {8080, 5432, 8088, 8443, 3389}
 EXPECTED_PUBLIC_PORTS = {22, 80, 443}
 INSTANCE_ID = "i-yemoz0an7kk36d2c9bp6"
 ENI_ID = "eni-13e8tbocd8f0g79iu5jer8idt"
+REQUIRED_REMEDIATION_ACTIONS = {
+    "CreateSecurityGroup",
+    "AuthorizeSecurityGroupIngress",
+    "RevokeSecurityGroupIngress",
+    "ModifyNetworkInterfaceAttributes",
+}
 
 
 def fail(message: str) -> None:
@@ -45,16 +52,62 @@ def port_range_covers(rule: dict, port: int) -> bool:
     return int(start) <= port <= int(end)
 
 
-def load_raw_evidence() -> dict:
-    if not EVIDENCE.exists():
-        fail(f"missing raw API evidence file {EVIDENCE.relative_to(ROOT)}")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Validate CRM Volcengine security-group evidence.")
+    parser.add_argument("--evidence", type=Path, default=EVIDENCE, help="raw Volcengine evidence JSON")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--apply", action="store_true", help="require remediation provenance with mutating API RequestIds")
+    mode.add_argument("--verification", action="store_true", help="verification-only read-only evidence")
+    return parser.parse_args()
+
+
+def load_raw_evidence(path: Path) -> dict:
+    if not path.exists():
+        fail(f"missing raw API evidence file {path.relative_to(ROOT)}")
     try:
-        return json.loads(EVIDENCE.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         fail(f"raw API evidence is not valid JSON: {exc}")
 
 
-data = load_raw_evidence()
+def response_request_id(call: dict) -> str:
+    metadata = call.get("ResponseMetadata", {}) if isinstance(call, dict) else {}
+    result = call.get("Result", {}) if isinstance(call, dict) else {}
+    return str(metadata.get("RequestId") or result.get("RequestId") or "")
+
+
+def response_action(name: str, call: dict) -> str:
+    metadata = call.get("ResponseMetadata", {}) if isinstance(call, dict) else {}
+    return str(metadata.get("Action") or name.split(":", 1)[0])
+
+
+def response_http_status(call: dict) -> int | None:
+    status = call.get("_http_status") if isinstance(call, dict) else None
+    try:
+        return int(status)
+    except (TypeError, ValueError):
+        return None
+
+
+def require_remediation_provenance(data: dict) -> None:
+    calls = data.get("calls", {})
+    proven = set()
+    for name, call in calls.items():
+        if not isinstance(call, dict):
+            continue
+        action = response_action(name, call)
+        if action in REQUIRED_REMEDIATION_ACTIONS and response_request_id(call) and response_http_status(call) == 200:
+            proven.add(action)
+    missing = sorted(REQUIRED_REMEDIATION_ACTIONS - proven)
+    if missing:
+        fail(f"--apply remediation evidence is missing mutating RequestIds with http=200 for {missing}")
+
+
+args = parse_args()
+data = load_raw_evidence(args.evidence)
+
+if args.apply:
+    require_remediation_provenance(data)
 
 if "calls" not in data:
     fail("evidence must contain raw API responses under a calls object")
@@ -93,15 +146,19 @@ group_types = {group.get("Type") for group in groups if "Type" in group}
 if "Default" in group_names or "default" in group_types:
     fail(f"CRM must not remain on the shared Default security group: {security_group_id}")
 
-final_attrs = [
-    call.get("Result", {})
+attribute_exports = [
+    (name, call.get("Result", {}))
     for name, call in data["calls"].items()
     if name.startswith("DescribeSecurityGroupAttributes:")
     and name.endswith(":ingress")
-    and (":dedicated-final:" in name or ":default-final:" in name)
+]
+final_attrs = [
+    attrs
+    for name, attrs in attribute_exports
+    if (":dedicated-final:" in name or ":default-final:" in name or ":dedicated-now:" in name or ":default-now:" in name)
 ]
 if len(final_attrs) < 2:
-    fail("missing dedicated-final/default-final raw security-group permission exports")
+    fail("missing dedicated/default final or verification raw security-group permission exports")
 
 dedicated_attrs = [
     attrs
