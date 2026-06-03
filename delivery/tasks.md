@@ -1523,7 +1523,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 ### TASK-040 — Encrypted off-server backup + restore rehearsal (release evidence)
 
 1. **Task ID:** TASK-040
-2. **Status:** Not Started
+2. **Status:** Done
 3. **Objective:** Automated encrypted PostgreSQL backups with 7-day local retention, an encrypted
    off-server copy to the Beijing backup target, and a documented restore rehearsal proving
    recoverability — the carried release blocker for ACC-016/017.
@@ -1562,6 +1562,14 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 16. **No-downgrade items:** Real encrypted off-server copy (same-host-only backup does NOT
     satisfy release); real restore rehearsal; encryption keys outside repo/service config.
     ARCH-ACC-004 is `Release-evidence pending` until proven at G11 and audited at G12.
-17. **Blocker:** Off-server backup copy + restore rehearsal evidence is a carried release
-    blocker (not a gate blocker); production closure is blocked until Infrastructure Ops records
-    successful encrypted off-server copy + restore rehearsal evidence (deployment-notes.md).
+17. **Blocker:** Resolved on 2026-06-03. Encrypted backup
+    `crm-postgres-20260603T104620Z.sql.gz.enc` was produced on `srv-volcengine-sh-01`
+    with checksum `f7381eaa9d246126cac93b304a147ea01721de404f52de76b340e3cfa9ba9d2a`,
+    copied to `srv-aliyun-bj-01`, and verified with `sha256sum -c` returning `OK`.
+    Restore rehearsal run `20260603T104837Z` restored the off-server encrypted backup
+    into a controlled PostgreSQL target and passed verification for roles, `crm_system`,
+    service schemas, `identity_authz.users`, audit-history tables, and service permission
+    roles. `crm-backup.timer` is enabled and active with next run
+    `2026-06-04 02:00:00 CST`. Evidence:
+    `docs/release/acc-017-backup-evidence-template.md` and
+    `docs/release/evidence/backup-restore-rehearsal-2026-06-03.json`.

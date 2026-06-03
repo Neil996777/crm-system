@@ -23,16 +23,17 @@ Status values: `Gate Draft` / `Gate Review` / `Gate Blocked` / `Gate Passed`.
 | G6 | Architecture Design -> MDA Modeling | Domain Modeling + Architecture | Claude | Gate Passed | PM, BA, UX, UI, Security, QA Test Design (all signed off 2026-06-01) | 2026-06-01 | MDA package (CIM/PIM/PSM/Traceability/Test Model) complete, multi-agent audited, and signed off by all six reviewer roles. Formal Scope Change by User 2026-06-01 (DEC-017..020) applied across baseline → architecture → MDA → UX/UI → security and re-audited; BLK-001/002/003 RESOLVED. Decision: `archive/reviews/g6-mda/g6-mda-gate-decision-2026-06-01.md`. |
 | G7 | MDA + Test Model -> Task Planning | Domain Modeling + QA Test Design | Claude | Gate Passed | PM, Architecture, Security, QA Test Design, Infrastructure Ops, Task Planner (all signed off 2026-06-01) | 2026-06-01 | Acceptance-driven delivery plan in `delivery/` (40 tasks, ACC 23/23, Codex-executable, multi-agent audited). Decision: `archive/reviews/g7-task-planning/g7-gate-decision-2026-06-01.md`. Pre-G8 entry condition: Security Compliance review of operator-access (deployment-notes), recorded on TASK-039. |
 | G8 | Task Planning -> Implementation **[HANDOFF: Claude -> Codex]** | Task Planner | Claude -> Codex | Gate Passed | Task Planner, Infrastructure Ops, Security Compliance, Audit (signed off 2026-06-01) | 2026-06-01 | Self-contained execution handoff package on disk (`delivery/G8-handoff.md` + delivery plan). Pre-G8 operator-access Security review done (approved w/ conditions). HANDED OFF to Codex for G9–G11; Claude resumes at G12. Decision: `archive/reviews/g8-handoff/g8-gate-decision-2026-06-01.md`. |
-| G9 | Implementation -> QA | Frontend / Backend Engineer | Codex | Gate Draft | | | |
-| G10 | QA -> Integration | QA Execution | Codex | Gate Draft | | | |
-| G11 | Integration -> Audit **[RETURN: Codex -> Claude]** | Integration Owner | Codex -> Claude | Gate Draft | | 2026-06-03 | TASK-039 deployment/security-group blocker resolved; TASK-040 encrypted off-server backup + restore rehearsal pending. |
-| G12 | Audit -> Release/Rework | Audit | Claude | Gate Draft | | | release blockers carried: off-server backup+restore, HTTPS/TLS, security-group, monitoring evidence |
+| G9 | Implementation -> QA | Frontend / Backend Engineer | Codex | Gate Passed | TASK-001..038 implementation tasks completed with recorded task status, traceability, and commits | 2026-06-03 | |
+| G10 | QA -> Integration | QA Execution | Codex | Gate Passed | Automated and E2E evidence recorded per task; release smoke and backup checks completed for TASK-039/040 | 2026-06-03 | |
+| G11 | Integration -> Audit **[RETURN: Codex -> Claude]** | Integration Owner | Codex -> Claude | Gate Passed | TASK-039 and TASK-040 release evidence complete; return to Claude for mandatory G12 independent audit | 2026-06-03 | |
+| G12 | Audit -> Release/Rework | Audit | Claude | Gate Draft | | | G12 independent audit pending on Claude; TASK-039/040 evidence available for audit |
 
 ## Handoff Log
 
 | Date | From platform | To platform | Gate | Note |
 |---|---|---|---|---|
 | 2026-06-01 | Claude (planning) | Codex (execution) | G8 | Task planning complete and gate-passed; self-contained execution handoff package delivered (`delivery/G8-handoff.md`). Codex executes G9–G11; Claude resumes for independent G12 audit. |
+| 2026-06-03 | Codex (execution/integration) | Claude (audit) | G11 | TASK-001..040 complete on disk. Runtime deployment, HTTPS/TLS, security-group cleanup, encrypted off-server backup, daily backup timer, and restore rehearsal evidence recorded. Claude resumes for mandatory G12 audit. |
 
 ## Notes
 

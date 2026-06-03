@@ -1,0 +1,44 @@
+{
+  "taskId": "TASK-040",
+  "acceptanceId": "ACC-017",
+  "runtimeHost": "srv-volcengine-sh-01",
+  "runtimePublicIp": "118.196.44.193",
+  "offsiteTarget": "srv-aliyun-bj-01",
+  "offsitePublicIp": "47.95.119.211",
+  "operator": "Codex acting as infrastructure-ops",
+  "timestamp": "2026-06-03T18:48:37+08:00",
+  "backup": {
+    "localPath": "/opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc",
+    "checksumPath": "/opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc.sha256",
+    "sha256": "f7381eaa9d246126cac93b304a147ea01721de404f52de76b340e3cfa9ba9d2a",
+    "sizeBytes": 9680,
+    "encryption": "OpenSSL AES-256-CBC with PBKDF2; passphrase file outside repository",
+    "retention": "local encrypted backups older than 7 days pruned by backup.sh"
+  },
+  "offsiteCopy": {
+    "remotePath": "/opt/crm-system/backups/postgres/crm-postgres-20260603T104620Z.sql.gz.enc",
+    "checksumResult": "passed",
+    "verification": "sha256sum -c on srv-aliyun-bj-01 returned OK"
+  },
+  "restoreRehearsal": {
+    "runId": "20260603T104837Z",
+    "source": "off-server encrypted backup copied back from srv-aliyun-bj-01",
+    "restoreDatabase": "crm_system",
+    "checksum": "passed",
+    "roles": 10,
+    "databaseExists": 1,
+    "schemas": 9,
+    "identityUsersTable": 1,
+    "auditHistoryTables": 1,
+    "servicePermissionRoles": 9,
+    "decryptedSqlRetained": false,
+    "result": "passed"
+  },
+  "schedule": {
+    "unit": "crm-backup.timer",
+    "enabled": true,
+    "active": true,
+    "nextRun": "2026-06-04T02:00:00+08:00"
+  },
+  "result": "passed"
+}

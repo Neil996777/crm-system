@@ -55,10 +55,12 @@ monitoring, or runtime evidence.
 
 ## Carried-forward Release Blockers (not gate blockers)
 
-Recorded in `planning/gate-status.md` G12 row; repeated here for visibility. These are
-release-time evidence items, not modeling or current-gate blockers:
-encrypted off-server backup copy + restore rehearsal, HTTPS/TLS endpoint, security-group,
-and monitoring evidence. Refs: OQ-001, RISK-002, `docs/architecture/deployment-notes.md`.
+Recorded in `planning/gate-status.md` G12 row; repeated here for visibility. These were
+release-time evidence items, not modeling blockers: encrypted off-server backup copy +
+restore rehearsal, HTTPS/TLS endpoint, security-group, and monitoring evidence. As of
+2026-06-03, Codex has recorded runtime evidence for these items under TASK-039 and
+TASK-040; G12 still performs independent audit before any release decision. Refs:
+OQ-001, RISK-002, `docs/architecture/deployment-notes.md`.
 
 ## Resolution Log
 
@@ -70,3 +72,4 @@ and monitoring evidence. Refs: OQ-001, RISK-002, `docs/architecture/deployment-n
 | 2026-06-01 | BLK-A01 | Overdue-evaluation trigger resolved at PSM as on-read evaluation against the supplied `businessDate` (Asia/Shanghai); deterministic for G7 test design. | PSM "Resolved Mechanisms"; api-spec.md Reminder Query; FLOW-005 |
 | 2026-06-03 | BLK-G11-001 | The user approved `https://118.196.44.193` as the production HTTPS endpoint. Codex installed Certbot 5.6.0, issued a Let's Encrypt IP certificate with SAN `IP Address:118.196.44.193`, enabled Nginx 443, verified HTTP→HTTPS redirect and server-side deploy smoke, and configured renewal timer/dry-run. | `docs/release/acc-017-evidence-template.md`; TASK-039 server evidence |
 | 2026-06-03 | BLK-G11-002 | Volcengine API evidence confirms CRM `8080` and PostgreSQL `5432` are not publicly allowed; host-network Hermes `8642` was stopped/removed; old/non-CRM security-group rules TCP `8088`, TCP `8443`, and TCP `3389` were removed by the user and verified by API. | `docs/release/evidence/volcengine-security-group-post-cleanup-2026-06-03.json`; `docs/release/evidence/old-deployment-release-2026-06-03.json`; TASK-039 closure evidence |
+| 2026-06-03 | TASK-040 release evidence | Encrypted PostgreSQL backup `crm-postgres-20260603T104620Z.sql.gz.enc` was produced on `srv-volcengine-sh-01`, copied to `srv-aliyun-bj-01`, verified by checksum, and restored in rehearsal run `20260603T104837Z`. `crm-backup.timer` is enabled and active for daily 02:00 backups. | `docs/release/acc-017-backup-evidence-template.md`; `docs/release/evidence/backup-restore-rehearsal-2026-06-03.json`; TASK-040 closure evidence |

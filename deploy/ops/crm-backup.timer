@@ -1,0 +1,10 @@
+[Unit]
+Description=Run CRM encrypted PostgreSQL backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+Unit=crm-backup.service
+
+[Install]
+WantedBy=timers.target
