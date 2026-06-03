@@ -49,5 +49,6 @@ CREATE TABLE IF NOT EXISTS work.outbox_events (
   event_type text NOT NULL,
   aggregate_id text NOT NULL,
   payload jsonb NOT NULL,
-  occurred_at timestamptz NOT NULL
+  occurred_at timestamptz NOT NULL,
+  published_at timestamptz
 );

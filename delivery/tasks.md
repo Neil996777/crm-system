@@ -208,7 +208,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     recorded actor is the authenticated principal; payload-claimed actor ignored; owner/assignee
     are separate fields from actor — ABUSE-019, AUTHZ-009), G12 rework
     `TEST-HISTORY-DISPATCH-RETRY-001`, `TEST-HISTORY-IDEMPOTENT-001`,
-    `TEST-HISTORY-TX-001`. Type: Integration.
+    `TEST-HISTORY-TX-001`; G12 second rework per-service dispatcher tests in
+    account, commercial, and work covering successful audit-history delivery,
+    failed-delivery retry retention, and duplicate event UID idempotency. Type:
+    Integration.
 13. **Manual verification:** Append an event via S2S; query as record owner → visible;
     query as non-owner → denied; attempt to edit an event → unavailable.
 14. **Traceability:** CIM-035/036 → PIM-018/019/PIM-BEH-028/029 → PSM-009 →
@@ -217,7 +220,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     G12 rework fail-first evidence: opportunity dispatcher test initially failed on missing
     `DispatchOnce`/`DispatchConfig`; audit-history duplicate UID test initially failed before
     idempotent append support; outbox transaction rollback test initially returned 201 before
-    transaction coupling.
+    transaction coupling. G12 second rework fail-first evidence: work dispatcher test
+    initially failed because `work.outbox_events` lacked `published_at`; after the
+    migration fix, account/commercial/work dispatcher tests and full service test suites
+    passed.
 16. **No-downgrade items:** Real append-only persistence (no in-memory log); real
     hash chain; real record-permission gate on history query (ABUSE-013); actor identity
     is the authenticated principal, never a client-supplied field (ABUSE-019, AUTHZ-009).
