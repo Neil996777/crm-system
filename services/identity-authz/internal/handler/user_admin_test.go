@@ -95,3 +95,34 @@ func TestUserAdminGuardsAndPermissions(t *testing.T) {
 		}
 	})
 }
+
+func TestUserAdminAuditOutboxFailureRollsBackMutation(t *testing.T) {
+	db := newAuthTestDB(t)
+	app := NewAuthServer(db, Config{CookieSecure: true, SessionTTL: 12 * time.Hour, IdleSessionTTL: 30 * time.Minute})
+
+	adminEmail := "admin-audit-tx-" + randomSuffix(t) + "@example.com"
+	insertUser(t, db, adminEmail, "pw", "Administrator", "Active")
+	adminCookie := requireSessionCookie(t, postJSON(app, "/auth/sign-in", map[string]string{"email": adminEmail, "password": "pw"}, nil))
+	if _, err := db.Exec(`DROP TABLE identity_authz.outbox_events`); err != nil {
+		t.Fatalf("force outbox failure: %v", err)
+	}
+
+	email := "rollback-" + randomSuffix(t) + "@example.com"
+	rec := postJSON(app, "/admin/users", map[string]any{
+		"email":       email,
+		"displayName": "Rollback User",
+		"password":    "pw",
+		"role":        "Sales Manager",
+	}, adminCookie)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected dependency failure 503, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	requireErrorCode(t, rec, "DEPENDENCY_UNAVAILABLE")
+	var count int
+	if err := db.QueryRow(`SELECT count(*) FROM identity_authz.users WHERE email = $1`, email).Scan(&count); err != nil {
+		t.Fatalf("count rolled-back user: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected user create rolled back when audit outbox append fails, found %d", count)
+	}
+}

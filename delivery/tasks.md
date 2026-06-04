@@ -1115,12 +1115,21 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     timestamp/result/before-after; Manager and Sales denied; not editable.
 11. **Acceptance method:** ACC-022 — admin global operation-log query content + denial for
     non-admins.
-12. **Automated tests:** `TEST-OPLOG-001..005`. Type: Integration + Manual.
+12. **Automated tests:** `TEST-OPLOG-001..005`; G12 systematic rework
+    `TestUserAdminAuditOutboxFailureRollsBackMutation` covers transactional
+    identity-authz user-admin outbox rollback, and
+    `TestOutboxDispatcherDeliversAuditHistoryAndRetries` covers identity-authz
+    outbox S2S audit-history delivery plus retry retention. Type: Integration + Manual.
 13. **Manual verification:** As admin, query logs after performing actions; as manager/sales
     → denied.
 14. **Traceability:** CIM-036/CIM-PROC-018 → PIM-019/PIM-BEH-029 → PSM-009 → CONTRACT-013/014 →
     ACC-022 → TEST-OPLOG-001..005.
 15. **TDD:** Write admin-allow + manager/sales-deny + not-editable tests first (fail).
+    G12 systematic rework fail-first evidence: forced identity-authz outbox failure first
+    returned 201 and persisted a created user; dispatcher test first failed to compile
+    because `identity_authz.outbox_events` had no dispatcher. After transactional
+    user-admin outbox and dispatcher implementation, both target tests and
+    `go test ./... -count=1` passed in services/identity-authz.
 16. **No-downgrade items:** Real admin-only gate; real append-only logs; no editing path.
 17. **Blocker:** None.
 

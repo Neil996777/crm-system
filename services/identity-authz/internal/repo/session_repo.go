@@ -11,14 +11,19 @@ import (
 
 type SessionRepo struct {
 	db *sql.DB
+	q  sqlRunner
 }
 
 func NewSessionRepo(db *sql.DB) *SessionRepo {
-	return &SessionRepo{db: db}
+	return &SessionRepo{db: db, q: db}
+}
+
+func NewSessionRepoTx(tx *sql.Tx) *SessionRepo {
+	return &SessionRepo{q: tx}
 }
 
 func (r *SessionRepo) Create(ctx context.Context, session domain.Session) error {
-	_, err := r.db.ExecContext(ctx, `
+	_, err := r.q.ExecContext(ctx, `
 		INSERT INTO identity_authz.sessions (
 			id, user_id, authz_version_at_issue, expires_at, idle_expires_at, created_at, last_seen_at
 		)
@@ -30,7 +35,7 @@ func (r *SessionRepo) Create(ctx context.Context, session domain.Session) error 
 func (r *SessionRepo) FindByID(ctx context.Context, id string) (domain.Session, error) {
 	var session domain.Session
 	var revokedAt sql.NullTime
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT id, user_id, authz_version_at_issue, expires_at, idle_expires_at, revoked_at, created_at, last_seen_at
 		FROM identity_authz.sessions
 		WHERE id = $1
@@ -57,7 +62,7 @@ func (r *SessionRepo) FindByID(ctx context.Context, id string) (domain.Session, 
 }
 
 func (r *SessionRepo) Touch(ctx context.Context, id string, now, idleExpiresAt time.Time) error {
-	_, err := r.db.ExecContext(ctx, `
+	_, err := r.q.ExecContext(ctx, `
 		UPDATE identity_authz.sessions
 		SET last_seen_at = $2, idle_expires_at = $3
 		WHERE id = $1 AND revoked_at IS NULL
@@ -67,7 +72,7 @@ func (r *SessionRepo) Touch(ctx context.Context, id string, now, idleExpiresAt t
 
 func (r *SessionRepo) Revoke(ctx context.Context, id string, now time.Time) (string, error) {
 	var userID string
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		UPDATE identity_authz.sessions
 		SET revoked_at = $2
 		WHERE id = $1 AND revoked_at IS NULL
@@ -80,7 +85,7 @@ func (r *SessionRepo) Revoke(ctx context.Context, id string, now time.Time) (str
 }
 
 func (r *SessionRepo) RevokeForUser(ctx context.Context, userID string, now time.Time) error {
-	_, err := r.db.ExecContext(ctx, `
+	_, err := r.q.ExecContext(ctx, `
 		UPDATE identity_authz.sessions
 		SET revoked_at = $2
 		WHERE user_id = $1 AND revoked_at IS NULL

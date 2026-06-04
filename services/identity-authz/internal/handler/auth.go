@@ -36,10 +36,10 @@ type Config struct {
 }
 
 type AuthHandler struct {
+	db       *sql.DB
 	users    *repo.UserRepo
 	sessions *repo.SessionRepo
 	outbox   *event.Outbox
-	audit    authz.AuditClient
 	config   Config
 }
 
@@ -54,10 +54,10 @@ func NewAuthServer(db *sql.DB, config Config) http.Handler {
 		config.ServiceID = "identity-authz"
 	}
 	handler := &AuthHandler{
+		db:       db,
 		users:    repo.NewUserRepo(db),
 		sessions: repo.NewSessionRepo(db),
 		outbox:   event.NewOutbox(db),
-		audit:    authz.NewAuditClient(config.AuditHistoryServiceURL, config.ServiceID, config.ServiceTokenSecret, nil),
 		config:   config,
 	}
 	mux := http.NewServeMux()
@@ -129,19 +129,38 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:           now,
 		LastSeenAt:          now,
 	}
-	if err := h.sessions.Create(ctx, session); err != nil {
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("begin sign-in tx: %v", err)
+		writeErrorCode(w, http.StatusServiceUnavailable, "DEPENDENCY_UNAVAILABLE", "dependency", "A required dependency is unavailable.")
+		return
+	}
+	txSessions := repo.NewSessionRepoTx(tx)
+	txOutbox := event.NewOutboxTx(tx)
+	if err := txSessions.Create(ctx, session); err != nil {
+		_ = tx.Rollback()
 		log.Printf("create session: %v", err)
 		writeError(w, http.StatusUnauthorized, safeAuthMessage)
 		return
 	}
-	h.setSessionCookie(w, session.ID, int(h.config.SessionTTL.Seconds()))
-	if err := h.outbox.Append(ctx, event.UserSignedIn, user.ID, map[string]any{
-		"actorId": user.ID,
-		"role":    string(user.Role),
-		"result":  "success",
+	if err := txOutbox.Append(ctx, event.UserSignedIn, user.ID, map[string]any{
+		"actorId":      user.ID,
+		"actorRole":    string(user.Role),
+		"actorDisplay": user.DisplayName,
+		"role":         string(user.Role),
+		"result":       "success",
 	}); err != nil {
+		_ = tx.Rollback()
 		log.Printf("append sign-in event: %v", err)
+		writeErrorCode(w, http.StatusServiceUnavailable, "DEPENDENCY_UNAVAILABLE", "dependency", "A required dependency is unavailable.")
+		return
 	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("commit sign-in tx: %v", err)
+		writeErrorCode(w, http.StatusServiceUnavailable, "DEPENDENCY_UNAVAILABLE", "dependency", "A required dependency is unavailable.")
+		return
+	}
+	h.setSessionCookie(w, session.ID, int(h.config.SessionTTL.Seconds()))
 	writeJSON(w, http.StatusOK, map[string]any{"user": userDTO(user)})
 }
 
@@ -150,13 +169,29 @@ func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err == nil && cookie.Value != "" {
 		now := time.Now().UTC()
-		if userID, revokeErr := h.sessions.Revoke(ctx, cookie.Value, now); revokeErr == nil {
-			if err := h.outbox.Append(ctx, event.UserSignedOut, userID, map[string]any{
+		tx, beginErr := h.db.BeginTx(ctx, nil)
+		if beginErr != nil {
+			log.Printf("begin sign-out tx: %v", beginErr)
+			writeErrorCode(w, http.StatusServiceUnavailable, "DEPENDENCY_UNAVAILABLE", "dependency", "A required dependency is unavailable.")
+			return
+		}
+		txSessions := repo.NewSessionRepoTx(tx)
+		txOutbox := event.NewOutboxTx(tx)
+		if userID, revokeErr := txSessions.Revoke(ctx, cookie.Value, now); revokeErr == nil {
+			if err := txOutbox.Append(ctx, event.UserSignedOut, userID, map[string]any{
 				"actorId": userID,
 				"result":  "success",
 			}); err != nil {
+				_ = tx.Rollback()
 				log.Printf("append sign-out event: %v", err)
+				writeErrorCode(w, http.StatusServiceUnavailable, "DEPENDENCY_UNAVAILABLE", "dependency", "A required dependency is unavailable.")
+				return
 			}
+		}
+		if err := tx.Commit(); err != nil {
+			log.Printf("commit sign-out tx: %v", err)
+			writeErrorCode(w, http.StatusServiceUnavailable, "DEPENDENCY_UNAVAILABLE", "dependency", "A required dependency is unavailable.")
+			return
 		}
 	}
 	h.clearSessionCookie(w)

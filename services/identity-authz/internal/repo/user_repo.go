@@ -16,10 +16,21 @@ var ErrNotFound = errors.New("not found")
 
 type UserRepo struct {
 	db *sql.DB
+	q  sqlRunner
 }
 
 func NewUserRepo(db *sql.DB) *UserRepo {
-	return &UserRepo{db: db}
+	return &UserRepo{db: db, q: db}
+}
+
+func NewUserRepoTx(tx *sql.Tx) *UserRepo {
+	return &UserRepo{q: tx}
+}
+
+type sqlRunner interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 func (r *UserRepo) FindByEmail(ctx context.Context, email string) (domain.User, error) {
@@ -39,7 +50,7 @@ func (r *UserRepo) FindByID(ctx context.Context, id string) (domain.User, error)
 }
 
 func (r *UserRepo) List(ctx context.Context) ([]domain.User, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.q.QueryContext(ctx, `
 		SELECT id, email, display_name, password_hash, role_name, status, authz_version
 		FROM identity_authz.users
 		ORDER BY created_at ASC, id ASC
@@ -79,7 +90,7 @@ func (r *UserRepo) Create(ctx context.Context, email, displayName, password stri
 	}
 	var roleName string
 	var status string
-	err = r.db.QueryRowContext(ctx, `
+	err = r.q.QueryRowContext(ctx, `
 		INSERT INTO identity_authz.users (id, email, display_name, password_hash, role_name, status, authz_version)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, email, display_name, password_hash, role_name, status, authz_version
@@ -98,7 +109,7 @@ func (r *UserRepo) Create(ctx context.Context, email, displayName, password stri
 }
 
 func (r *UserRepo) UpdateRole(ctx context.Context, id string, role domain.Role) (domain.User, error) {
-	_, err := r.db.ExecContext(ctx, `
+	_, err := r.q.ExecContext(ctx, `
 		UPDATE identity_authz.users
 		SET role_name = $2, authz_version = authz_version + 1, updated_at = now()
 		WHERE id = $1
@@ -110,7 +121,7 @@ func (r *UserRepo) UpdateRole(ctx context.Context, id string, role domain.Role) 
 }
 
 func (r *UserRepo) UpdateStatus(ctx context.Context, id string, status domain.UserStatus) (domain.User, error) {
-	_, err := r.db.ExecContext(ctx, `
+	_, err := r.q.ExecContext(ctx, `
 		UPDATE identity_authz.users
 		SET status = $2, authz_version = authz_version + 1, updated_at = now()
 		WHERE id = $1
@@ -123,7 +134,7 @@ func (r *UserRepo) UpdateStatus(ctx context.Context, id string, status domain.Us
 
 func (r *UserRepo) CountActiveAdministrators(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT count(*)
 		FROM identity_authz.users
 		WHERE role_name = 'Administrator' AND status = 'Active'
@@ -135,7 +146,7 @@ func (r *UserRepo) find(ctx context.Context, query string, arg any) (domain.User
 	var user domain.User
 	var role string
 	var status string
-	err := r.db.QueryRowContext(ctx, query, arg).Scan(
+	err := r.q.QueryRowContext(ctx, query, arg).Scan(
 		&user.ID,
 		&user.Email,
 		&user.DisplayName,
