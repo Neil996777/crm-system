@@ -23,6 +23,10 @@ func actorFromRequest(r *http.Request) actorContext {
 	}
 }
 
+func canReadCommercialRecord(actor actorContext, ownerID string) bool {
+	return actor.Role != "Sales" || (actor.ID != "" && actor.ID == ownerID)
+}
+
 func quoteDTO(quote domain.Quote) map[string]any {
 	return map[string]any{
 		"id":            quote.ID,

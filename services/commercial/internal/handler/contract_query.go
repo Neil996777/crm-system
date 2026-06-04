@@ -23,6 +23,7 @@ func (h *CommercialHandler) listContracts(w http.ResponseWriter, r *http.Request
 }
 
 func (h *CommercialHandler) getContract(w http.ResponseWriter, r *http.Request) {
+	actor := actorFromRequest(r)
 	contract, err := h.contracts.Find(r.Context(), r.PathValue("id"))
 	if errors.Is(err, repo.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
@@ -30,6 +31,10 @@ func (h *CommercialHandler) getContract(w http.ResponseWriter, r *http.Request) 
 	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		return
+	}
+	if !canReadCommercialRecord(actor, contract.OwnerID) {
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
 		return
 	}
 	writeJSON(w, http.StatusOK, contractDTO(contract))

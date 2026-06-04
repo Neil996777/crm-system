@@ -719,12 +719,18 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 11. **Acceptance method:** ACC-009 — quote transitions pass; exactly one quote per
     opportunity; contract linkage requires the Accepted quote.
 12. **Automated tests:** `TEST-QUOTE-LIFECYCLE-001..003`, `TEST-QUOTE-ACCEPT-001/002`,
-    `TEST-INV-ONEACCEPT-001`. Type: Integration + E2E (Unit for one-quote guard).
+    `TEST-INV-ONEACCEPT-001`; G12 systematic rework `TEST-AUTHZ-SCOPE-005` covers
+    quote single-record read authorization and no data leak on denied by-id reads.
+    Type: Integration + E2E (Unit for one-quote guard).
 13. **Manual verification:** Create quote; try a second on same opportunity → rejected;
     accept; expire → cannot link contract.
 14. **Traceability:** CIM-019/CIM-PROC-008 → PIM-008/PIM-SM-004/PIM-INV-012/PIM-BEH-013 →
     PSM-005 → CONTRACT-009/010 → ACC-009 → TEST-QUOTE-ACCEPT-001 / TEST-INV-ONEACCEPT-001.
 15. **TDD:** Write one-quote-per-opportunity reject + lifecycle tests first (fail).
+    G12 systematic rework fail-first evidence: commercial quote by-id read test first
+    returned 200 with non-owned quote details to another Sales user; after owner-scope
+    check it returns safe `NOT_FOUND` with no record data, and `go test ./... -count=1`
+    passed in services/commercial.
 16. **No-downgrade items:** Real DB UNIQUE + domain guard (no second quote); real
     persistence; real acceptance history event. Do NOT implement any multi-quote or
     second-accept path (DEC-018, retired TEST-QUOTE-ACCEPT-003).
@@ -760,12 +766,17 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 11. **Acceptance method:** ACC-010 create — Pending Signature valid without signed date but
     requires expected signed date; notes P0-required; amount-diff reason persisted.
 12. **Automated tests:** `TEST-CONTRACT-CREATE-001/002/003`, `TEST-CONTRACT-AMOUNT-DIFF-001`,
-    `TEST-INV-CONTRACTQUOTE-001`, `TEST-INV-NOAPPROVAL-001`. Type: Integration + Unit.
+    `TEST-INV-CONTRACTQUOTE-001`, `TEST-INV-NOAPPROVAL-001`; G12 systematic rework
+    `TEST-AUTHZ-SCOPE-005` covers contract single-record read authorization and no data
+    leak on denied by-id reads. Type: Integration + Unit.
 13. **Manual verification:** Create contract from Accepted quote → ok; from expired quote →
     rejected; without note → blocked; differing amount without reason → blocked.
 14. **Traceability:** CIM-021/CIM-PROC-009 → PIM-009/PIM-SM-005/PIM-INV-016/018/PIM-BEH-014/016 →
     PSM-006 → CONTRACT-009/010 → ACC-010 → TEST-CONTRACT-CREATE-001..003.
 15. **TDD:** Write create + reject (no note / expired quote) + amount-diff tests first (fail).
+    G12 systematic rework fail-first evidence: commercial contract by-id read test first
+    returned 200 with non-owned contract details to another Sales user; after owner-scope
+    check it returns safe `NOT_FOUND` with no record data.
 16. **No-downgrade items:** Real Accepted-quote link check; real required-note guard; no
     approval/e-sign/template (DEC-007); real persistence.
 17. **Blocker:** None.
@@ -797,7 +808,8 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     status is queryable by opportunity-service via S2S/event projection.
 11. **Acceptance method:** ACC-010 lifecycle transition rules pass; signed states without
     signed date rejected.
-12. **Automated tests:** `TEST-CONTRACT-LIFECYCLE-001/002/003`, `TEST-INV-CONTRACTDATE-001`.
+12. **Automated tests:** `TEST-CONTRACT-LIFECYCLE-001/002/003`, `TEST-INV-CONTRACTDATE-001`;
+    G12 systematic rework `TEST-AUTHZ-SCOPE-005` covers contract by-id read scope.
     Type: Integration.
 13. **Manual verification:** Sign without effective date → rejected; sign with date → ok;
     confirm opportunity can now close Won.

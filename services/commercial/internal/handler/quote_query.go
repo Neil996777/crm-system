@@ -22,6 +22,7 @@ func (h *CommercialHandler) listQuotes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CommercialHandler) getQuote(w http.ResponseWriter, r *http.Request) {
+	actor := actorFromRequest(r)
 	quote, err := h.quotes.Find(r.Context(), r.PathValue("id"))
 	if errors.Is(err, repo.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
@@ -29,6 +30,10 @@ func (h *CommercialHandler) getQuote(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+		return
+	}
+	if !canReadCommercialRecord(actor, quote.OwnerID) {
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
 		return
 	}
 	writeJSON(w, http.StatusOK, quoteDTO(quote))
