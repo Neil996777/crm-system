@@ -268,11 +268,18 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 11. **Acceptance method:** ACC-015 spine — authorized list/detail requests routed and
     aggregated; invalid filter returns validation feedback; unauthorized records hidden.
 12. **Automated tests:** `TEST-NAV-RETRIEVE-001` (list+detail routing), `-004`
-    (invalid filter feedback), `-005` (unauthorized hidden). Type: Integration + E2E.
+    (invalid filter feedback), `-005` (unauthorized hidden); G12 systematic rework
+    correlation propagation tests cover opportunity→commercial, lead→account/opportunity,
+    account→work, work→commercial, and import-export→audit-history synchronous calls.
+    Type: Integration + E2E.
 13. **Manual verification:** Hit a list endpoint through gateway → correlationId in
     response and logs; send an invalid filter → safe validation error.
 14. **Traceability:** PIM-026 → PSM-011 → CONTRACT-001 → ACC-015 → TEST-NAV-RETRIEVE-001/004/005.
 15. **TDD:** Write routing + safe-error + correlation tests first (fail).
+    G12 systematic rework fail-first evidence: targeted tests first failed on missing
+    `X-Correlation-Id` in the listed synchronous clients; after propagation fixes, target
+    tests and `go test ./... -count=1` passed in services/opportunity, lead, account,
+    work, import-export, and identity-authz.
 16. **No-downgrade items:** Gateway never writes a DB or decides business state
     (module-boundaries.md); no leakage of unauthorized fields.
 17. **Blocker:** None.

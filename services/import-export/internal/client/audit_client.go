@@ -18,14 +18,15 @@ type AuditClient struct {
 }
 
 type ImportRunLogInput struct {
-	RunID        string
-	ActorID      string
-	ActorRole    string
-	ObjectType   string
-	TotalRows    int
-	SuccessCount int
-	FailureCount int
-	Result       string
+	RunID         string
+	ActorID       string
+	ActorRole     string
+	ObjectType    string
+	TotalRows     int
+	SuccessCount  int
+	FailureCount  int
+	Result        string
+	CorrelationID string
 }
 
 type ExportRunLogInput struct {
@@ -36,6 +37,7 @@ type ExportRunLogInput struct {
 	IncludeArchived bool
 	ExportedCount   int
 	Result          string
+	CorrelationID   string
 }
 
 func NewAuditClient(baseURL, serviceID string, secret []byte, client *http.Client) AuditClient {
@@ -69,7 +71,7 @@ func (c AuditClient) AppendImportRun(ctx context.Context, input ImportRunLogInpu
 		"diffClassification": "Restricted",
 		"scopeSummary":       "import scope",
 		"safeSummary":        fmt.Sprintf("CSV import completed for %s with %d successful and %d failed rows.", input.ObjectType, input.SuccessCount, input.FailureCount),
-		"correlationId":      input.RunID,
+		"correlationId":      firstNonEmpty(input.CorrelationID, input.RunID),
 		"acceptanceIds":      []string{"ACC-020", "ACC-022", "TEST-CSV-IMPORT", "TEST-OPLOG-001"},
 	})
 	if err != nil {
@@ -94,6 +96,9 @@ func (c AuditClient) AppendImportRun(ctx context.Context, input ImportRunLogInpu
 	req.Header.Set("X-Intent", "audit.append")
 	req.Header.Set("X-Actor-User-Id", input.ActorID)
 	req.Header.Set("X-Actor-Role", input.ActorRole)
+	if strings.TrimSpace(input.CorrelationID) != "" {
+		req.Header.Set("X-Correlation-Id", input.CorrelationID)
+	}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
@@ -122,7 +127,7 @@ func (c AuditClient) AppendExportRun(ctx context.Context, input ExportRunLogInpu
 		"diffClassification": "Restricted",
 		"scopeSummary":       "export scope",
 		"safeSummary":        fmt.Sprintf("CSV export completed for %s with %d rows.", input.ObjectType, input.ExportedCount),
-		"correlationId":      input.RunID,
+		"correlationId":      firstNonEmpty(input.CorrelationID, input.RunID),
 		"acceptanceIds":      []string{"ACC-020", "ACC-022", "TEST-CSV-EXPORT", "TEST-OPLOG-001"},
 	})
 	if err != nil {
@@ -147,6 +152,9 @@ func (c AuditClient) AppendExportRun(ctx context.Context, input ExportRunLogInpu
 	req.Header.Set("X-Intent", "audit.append")
 	req.Header.Set("X-Actor-User-Id", input.ActorID)
 	req.Header.Set("X-Actor-Role", input.ActorRole)
+	if strings.TrimSpace(input.CorrelationID) != "" {
+		req.Header.Set("X-Correlation-Id", input.CorrelationID)
+	}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
@@ -156,4 +164,13 @@ func (c AuditClient) AppendExportRun(ctx context.Context, input ExportRunLogInpu
 		return fmt.Errorf("audit append status %d", resp.StatusCode)
 	}
 	return nil
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }

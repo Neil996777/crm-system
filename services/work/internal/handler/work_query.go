@@ -114,6 +114,9 @@ func (h *WorkHandler) commercialReminderRows(r *http.Request, actor actorContext
 	req.Header.Set("X-Intent", "commercial.reminder_eligibility")
 	req.Header.Set("X-Actor-User-Id", actor.ID)
 	req.Header.Set("X-Actor-Role", actor.Role)
+	if correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-Id")); correlationID != "" {
+		req.Header.Set("X-Correlation-Id", correlationID)
+	}
 	client := h.config.HTTPClient
 	if client == nil {
 		client = http.DefaultClient

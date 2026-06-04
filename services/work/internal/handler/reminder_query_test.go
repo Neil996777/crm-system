@@ -18,6 +18,9 @@ func TestReminderQueryAcceptance(t *testing.T) {
 			http.Error(w, "missing service headers", http.StatusUnauthorized)
 			return
 		}
+		if r.Header.Get("X-Correlation-Id") != "corr-reminder" {
+			t.Fatalf("missing reminder correlation id: %q", r.Header.Get("X-Correlation-Id"))
+		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"rows": []map[string]any{
 			{
 				"id":            "contract_reminder_001",
@@ -47,7 +50,9 @@ func TestReminderQueryAcceptance(t *testing.T) {
 			t.Fatalf("expected task create 201, got %d body=%s", task.Code, task.Body.String())
 		}
 
-		rec := getWork(app, "/reminders?businessDate=2026-06-02", actorHeaders("sales-1", "Sales"))
+		headers := actorHeaders("sales-1", "Sales")
+		headers["X-Correlation-Id"] = "corr-reminder"
+		rec := getWork(app, "/reminders?businessDate=2026-06-02", headers)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected reminders 200, got %d body=%s", rec.Code, rec.Body.String())
 		}
@@ -89,7 +94,9 @@ func TestReminderQueryAcceptance(t *testing.T) {
 			t.Fatalf("expected complete 200, got %d body=%s", complete.Code, complete.Body.String())
 		}
 
-		rec := getWork(app, "/reminders?businessDate=2026-06-02", actorHeaders("sales-1", "Sales"))
+		headers := actorHeaders("sales-1", "Sales")
+		headers["X-Correlation-Id"] = "corr-reminder"
+		rec := getWork(app, "/reminders?businessDate=2026-06-02", headers)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected reminders 200, got %d body=%s", rec.Code, rec.Body.String())
 		}

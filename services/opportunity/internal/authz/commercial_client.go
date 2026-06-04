@@ -28,7 +28,7 @@ type ContractSignedStatus struct {
 	Signed        bool
 }
 
-func (c CommercialClient) ContractSignedStatus(ctx context.Context, contractID string) (ContractSignedStatus, error) {
+func (c CommercialClient) ContractSignedStatus(ctx context.Context, contractID, correlationID string) (ContractSignedStatus, error) {
 	if strings.TrimSpace(c.BaseURL) == "" || strings.TrimSpace(contractID) == "" || len(c.ServiceTokenSecret) == 0 {
 		return ContractSignedStatus{}, ErrCommercialUnavailable
 	}
@@ -44,6 +44,9 @@ func (c CommercialClient) ContractSignedStatus(ctx context.Context, contractID s
 	req.Header.Set("Authorization", "Bearer "+createServiceToken(serviceID, "commercial", IntentContractSignedStatus, c.ServiceTokenSecret, time.Now().UTC()))
 	req.Header.Set("X-Service-Id", serviceID)
 	req.Header.Set("X-Intent", IntentContractSignedStatus)
+	if strings.TrimSpace(correlationID) != "" {
+		req.Header.Set("X-Correlation-Id", correlationID)
+	}
 	client := c.HTTPClient
 	if client == nil {
 		client = http.DefaultClient

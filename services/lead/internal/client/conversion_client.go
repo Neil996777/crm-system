@@ -16,9 +16,10 @@ import (
 var ErrDownstreamUnavailable = errors.New("downstream unavailable")
 
 type Actor struct {
-	ID          string
-	Role        string
-	DisplayName string
+	ID            string
+	Role          string
+	DisplayName   string
+	CorrelationID string
 }
 
 type Config struct {
@@ -118,6 +119,9 @@ func (c *ConversionClient) postInternal(ctx context.Context, actor Actor, baseUR
 	req.Header.Set("X-Intent", intent)
 	req.Header.Set("X-Actor-User-Id", actor.ID)
 	req.Header.Set("X-Actor-Role", actor.Role)
+	if strings.TrimSpace(actor.CorrelationID) != "" {
+		req.Header.Set("X-Correlation-Id", actor.CorrelationID)
+	}
 	resp, err := c.config.HTTPClient.Do(req)
 	if err != nil {
 		return ErrDownstreamUnavailable

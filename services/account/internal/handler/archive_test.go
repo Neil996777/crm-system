@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 )
@@ -60,4 +62,39 @@ func TestAccountArchiveAcceptance(t *testing.T) {
 			t.Fatalf("archived record must be retrievable with explicit filter, got %d body=%s", archivedList.Code, archivedList.Body.String())
 		}
 	})
+}
+
+func TestAccountArchivePropagatesCorrelationToWorkObligationQuery(t *testing.T) {
+	db := newAccountTestDB(t)
+	work := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/internal/active-obligations" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Header.Get("X-Correlation-Id") != "corr-archive" {
+			t.Fatalf("missing work obligation correlation id: %q", r.Header.Get("X-Correlation-Id"))
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"obligations": []any{}})
+	}))
+	t.Cleanup(work.Close)
+	app := NewAccountServer(db, Config{
+		ServiceID:          "account",
+		ServiceTokenSecret: []byte("account-test-secret"),
+		WorkServiceURL:     work.URL,
+	})
+	create := postAccountJSON(app, "/accounts", map[string]any{
+		"companyName":    "Archive Correlation Account",
+		"customerStatus": "Active",
+		"ownerId":        "sales-1",
+	}, actorHeaders("mgr-1", "Sales Manager"))
+	if create.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d body=%s", create.Code, create.Body.String())
+	}
+	accountID := decodeJSON(t, create)["id"].(string)
+	headers := actorHeaders("mgr-1", "Sales Manager")
+	headers["X-Correlation-Id"] = "corr-archive"
+	eligibility := getAccountJSON(app, "/accounts/"+accountID+"/archive-eligibility", headers)
+	if eligibility.Code != http.StatusOK {
+		t.Fatalf("expected eligibility 200, got %d body=%s", eligibility.Code, eligibility.Body.String())
+	}
 }

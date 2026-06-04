@@ -148,6 +148,9 @@ func (h *AccountHandler) accountArchiveObligations(r *http.Request, accountID st
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("X-Service-Id", h.config.ServiceID)
 	req.Header.Set("X-Intent", intentWorkActiveObligations)
+	if correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-Id")); correlationID != "" {
+		req.Header.Set("X-Correlation-Id", correlationID)
+	}
 	client := h.config.HTTPClient
 	if client == nil {
 		client = http.DefaultClient

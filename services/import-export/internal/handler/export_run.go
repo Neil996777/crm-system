@@ -146,6 +146,7 @@ func (h *ImportExportHandler) appendExportOperationLog(r *http.Request, run repo
 		IncludeArchived: run.IncludeArchived,
 		ExportedCount:   run.ExportedCount,
 		Result:          run.Status,
+		CorrelationID:   r.Header.Get("X-Correlation-Id"),
 	}); err != nil {
 		return "failed"
 	}

@@ -21,6 +21,9 @@ func TestOpportunityCloseWonAcceptance(t *testing.T) {
 		if r.Header.Get("X-Service-Id") != "opportunity" || r.Header.Get("X-Intent") != "commercial.contract_signed_status" {
 			t.Fatalf("commercial request missing S2S headers: service=%q intent=%q", r.Header.Get("X-Service-Id"), r.Header.Get("X-Intent"))
 		}
+		if r.Header.Get("X-Correlation-Id") != "corr-close-won" {
+			t.Fatalf("commercial request missing correlation id: %q", r.Header.Get("X-Correlation-Id"))
+		}
 		contractID := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/internal/contracts/"), "/signed-status")
 		signed := r.URL.Path == "/internal/contracts/contract_signed/signed-status"
 		writeTestJSON(t, w, http.StatusOK, map[string]any{
@@ -40,11 +43,13 @@ func TestOpportunityCloseWonAcceptance(t *testing.T) {
 	t.Run("TEST-OPP-CLOSE-002 rejects Won without Signed contract", func(t *testing.T) {
 		opportunityID := createOpportunityAtContractNegotiation(t, app, "opp_close_won_unsigned", "acct_close_won_unsigned", "sales-1")
 		contractOpportunity["contract_unsigned"] = opportunityID
+		headers := actorHeaders("sales-1", "Sales")
+		headers["X-Correlation-Id"] = "corr-close-won"
 		rec := postOpportunityJSON(app, "/opportunities/"+opportunityID+"/close-won", map[string]any{
 			"expectedVersion": 4,
 			"contractId":      "contract_unsigned",
 			"closeDate":       "2027-03-15",
-		}, actorHeaders("sales-1", "Sales"))
+		}, headers)
 		if rec.Code != http.StatusBadRequest {
 			t.Fatalf("expected early Won 400, got %d body=%s", rec.Code, rec.Body.String())
 		}
@@ -55,11 +60,13 @@ func TestOpportunityCloseWonAcceptance(t *testing.T) {
 	t.Run("TEST-OPP-CLOSE-001 and TEST-INV-WONAFTERPAY-001 closes Won with Signed contract and no payment gate", func(t *testing.T) {
 		opportunityID := createOpportunityAtContractNegotiation(t, app, "opp_close_won_signed", "acct_close_won_signed", "sales-1")
 		contractOpportunity["contract_signed"] = opportunityID
+		headers := actorHeaders("sales-1", "Sales")
+		headers["X-Correlation-Id"] = "corr-close-won"
 		rec := postOpportunityJSON(app, "/opportunities/"+opportunityID+"/close-won", map[string]any{
 			"expectedVersion": 4,
 			"contractId":      "contract_signed",
 			"closeDate":       "2027-03-15",
-		}, actorHeaders("sales-1", "Sales"))
+		}, headers)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected close Won 200, got %d body=%s", rec.Code, rec.Body.String())
 		}

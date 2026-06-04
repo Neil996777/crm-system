@@ -88,6 +88,9 @@ func (c AuditClient) AppendOperationLog(ctx context.Context, input OperationLogI
 	req.Header.Set("X-Actor-User-Id", input.ActorID)
 	req.Header.Set("X-Actor-Role", input.ActorRole)
 	req.Header.Set("X-Actor-Display", actorDisplay)
+	if strings.TrimSpace(input.CorrelationID) != "" {
+		req.Header.Set("X-Correlation-Id", input.CorrelationID)
+	}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err

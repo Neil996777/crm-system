@@ -87,6 +87,9 @@ func (c *AuditClient) AppendRecordHistory(ctx context.Context, actor Actor, inpu
 	req.Header.Set("X-Actor-User-Id", actor.ID)
 	req.Header.Set("X-Actor-Role", actor.Role)
 	req.Header.Set("X-Actor-Display", actorDisplay)
+	if strings.TrimSpace(input.CorrelationID) != "" {
+		req.Header.Set("X-Correlation-Id", input.CorrelationID)
+	}
 	resp, err := c.config.HTTPClient.Do(req)
 	if err != nil {
 		return ErrDownstreamUnavailable

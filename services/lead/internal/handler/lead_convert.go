@@ -54,7 +54,8 @@ func (h *LeadHandler) convertLead(w http.ResponseWriter, r *http.Request) {
 	if accountInput.OwnerID == "" {
 		accountInput.OwnerID = current.OwnerID
 	}
-	account, err := h.conversion.CreateAccount(r.Context(), client.Actor{ID: actor.ID, Role: actor.Role}, accountInput)
+	downstreamActor := client.Actor{ID: actor.ID, Role: actor.Role, CorrelationID: r.Header.Get("X-Correlation-Id")}
+	account, err := h.conversion.CreateAccount(r.Context(), downstreamActor, accountInput)
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "dependency", "A required service is unavailable.")
 		return
@@ -65,7 +66,7 @@ func (h *LeadHandler) convertLead(w http.ResponseWriter, r *http.Request) {
 	if opportunityInput.OwnerID == "" {
 		opportunityInput.OwnerID = current.OwnerID
 	}
-	opportunity, err := h.conversion.CreateOpportunity(r.Context(), client.Actor{ID: actor.ID, Role: actor.Role}, opportunityInput)
+	opportunity, err := h.conversion.CreateOpportunity(r.Context(), downstreamActor, opportunityInput)
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "dependency", "A required service is unavailable.")
 		return

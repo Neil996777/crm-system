@@ -213,6 +213,9 @@ func TestLeadConversionRetriesUseDownstreamIdempotencyKeys(t *testing.T) {
 		if r.Header.Get("X-Actor-User-Id") == "" || r.Header.Get("X-Actor-Role") == "" {
 			t.Fatalf("missing actor context")
 		}
+		if r.Header.Get("X-Correlation-Id") != "corr-lead-convert" {
+			t.Fatalf("missing account conversion correlation id: %q", r.Header.Get("X-Correlation-Id"))
+		}
 		var body map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatalf("decode account request: %v", err)
@@ -233,6 +236,9 @@ func TestLeadConversionRetriesUseDownstreamIdempotencyKeys(t *testing.T) {
 	opportunityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		opportunityCalls++
 		requireS2SRequest(t, r, "opportunity.create_for_lead_conversion")
+		if r.Header.Get("X-Correlation-Id") != "corr-lead-convert" {
+			t.Fatalf("missing opportunity conversion correlation id: %q", r.Header.Get("X-Correlation-Id"))
+		}
 		if opportunityCalls == 1 {
 			http.Error(w, "temporary failure", http.StatusServiceUnavailable)
 			return
@@ -269,11 +275,13 @@ func TestLeadConversionRetriesUseDownstreamIdempotencyKeys(t *testing.T) {
 			},
 		},
 	}
-	first := postLeadJSON(app, "/leads/"+leadID+"/convert", body, actorHeaders("sales-1", "Sales"))
+	headers := actorHeaders("sales-1", "Sales")
+	headers["X-Correlation-Id"] = "corr-lead-convert"
+	first := postLeadJSON(app, "/leads/"+leadID+"/convert", body, headers)
 	if first.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected first partial failure 503, got %d body=%s", first.Code, first.Body.String())
 	}
-	second := postLeadJSON(app, "/leads/"+leadID+"/convert", body, actorHeaders("sales-1", "Sales"))
+	second := postLeadJSON(app, "/leads/"+leadID+"/convert", body, headers)
 	if second.Code != http.StatusOK {
 		t.Fatalf("expected retry convert 200, got %d body=%s", second.Code, second.Body.String())
 	}

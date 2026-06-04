@@ -49,7 +49,7 @@ func (h *OpportunityHandler) closeWon(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
 		return
 	}
-	contract, err := h.commercial.ContractSignedStatus(r.Context(), request.ContractID)
+	contract, err := h.commercial.ContractSignedStatus(r.Context(), request.ContractID, r.Header.Get("X-Correlation-Id"))
 	if err != nil || contract.OpportunityID != current.ID || !contract.Signed {
 		if errors.Is(err, authz.ErrCommercialUnavailable) {
 			writeError(w, http.StatusBadRequest, "EARLY_WON_BLOCKED", "business_rule", "Won requires a Signed related contract.")

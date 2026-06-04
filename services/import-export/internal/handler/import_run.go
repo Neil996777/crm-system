@@ -142,14 +142,15 @@ func (h *ImportExportHandler) startImport(w http.ResponseWriter, r *http.Request
 
 func (h *ImportExportHandler) appendImportOperationLog(r *http.Request, run repo.ImportRun, actor actorContext) string {
 	if err := h.audit.AppendImportRun(r.Context(), auditclient.ImportRunLogInput{
-		RunID:        run.RunID,
-		ActorID:      actor.ID,
-		ActorRole:    actor.Role,
-		ObjectType:   run.ObjectType,
-		TotalRows:    run.TotalRows,
-		SuccessCount: run.SuccessCount,
-		FailureCount: run.FailureCount,
-		Result:       run.Status,
+		RunID:         run.RunID,
+		ActorID:       actor.ID,
+		ActorRole:     actor.Role,
+		ObjectType:    run.ObjectType,
+		TotalRows:     run.TotalRows,
+		SuccessCount:  run.SuccessCount,
+		FailureCount:  run.FailureCount,
+		Result:        run.Status,
+		CorrelationID: r.Header.Get("X-Correlation-Id"),
 	}); err != nil {
 		if errors.Is(err, auditclient.ErrServiceAuthFailed) {
 			return "failed"
@@ -221,6 +222,9 @@ func (h *ImportExportHandler) createLead(r *http.Request, row map[string]string,
 	req.Header.Set("X-Actor-User-Id", actor.ID)
 	req.Header.Set("X-Actor-Role", actor.Role)
 	req.Header.Set("X-Actor-Team-Id", actor.TeamIDOrDefault())
+	if correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-Id")); correlationID != "" {
+		req.Header.Set("X-Correlation-Id", correlationID)
+	}
 	resp, err := h.targetClient.Do(req)
 	if err != nil {
 		return "", err
