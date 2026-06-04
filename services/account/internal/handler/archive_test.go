@@ -12,7 +12,7 @@ func TestAccountArchiveAcceptance(t *testing.T) {
 	db := newAccountTestDB(t)
 	app := NewAccountServer(db, Config{})
 
-	t.Run("TEST-ARCHIVE-001/002 Sales denied and manager can archive with explicit archived filter", func(t *testing.T) {
+	t.Run("TEST-ARCHIVE-001/002 TEST-NAV-RETRIEVE-006 Sales denied and manager can archive with explicit archived filter", func(t *testing.T) {
 		create := postAccountJSON(app, "/accounts", map[string]any{
 			"companyName":    "Archive Eligible Account",
 			"customerStatus": "Active",

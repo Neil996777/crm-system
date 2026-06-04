@@ -70,7 +70,7 @@ func TestWorkAcceptance(t *testing.T) {
 		requireErrorCode(t, rec, "VALIDATION_FAILED")
 	})
 
-	t.Run("TEST-TASK-LIFECYCLE-002 TEST-TASK-LIFECYCLE-003 and TEST-INV-TASKREMINDER-001 complete overdue task removes active reminder", func(t *testing.T) {
+	t.Run("TEST-TASK-LIFECYCLE-002 TEST-TASK-LIFECYCLE-003 TEST-TASK-LIFECYCLE-004 and TEST-INV-TASKREMINDER-001 complete overdue task removes active reminder", func(t *testing.T) {
 		task := postWorkJSON(app, "/tasks", map[string]any{
 			"relatedType": "Opportunity",
 			"relatedId":   "opp_work_overdue",
@@ -106,7 +106,7 @@ func TestWorkAcceptance(t *testing.T) {
 		requireEvent(t, db, "TaskStatusChanged", taskID)
 	})
 
-	t.Run("TEST-TASK-LIFECYCLE-004 stale expectedVersion returns VERSION_CONFLICT without overwriting", func(t *testing.T) {
+	t.Run("TEST-WORK-VERSION-CONFLICT-001 stale expectedVersion returns VERSION_CONFLICT without overwriting", func(t *testing.T) {
 		task := postWorkJSON(app, "/tasks", map[string]any{
 			"relatedType": "Opportunity",
 			"relatedId":   "opp_work_conflict",

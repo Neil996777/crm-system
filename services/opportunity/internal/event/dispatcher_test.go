@@ -60,6 +60,7 @@ func TestOutboxDispatcherDeliversAndRetriesAuditHistoryEvents(t *testing.T) {
 
 	var received map[string]any
 	var receivedProjection map[string]any
+	seenAuditUIDs := map[string]int{}
 	okServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Service-Id") != "opportunity" || r.Header.Get("X-Intent") != "audit.append" {
 			t.Fatalf("missing S2S identity headers: service=%q intent=%q", r.Header.Get("X-Service-Id"), r.Header.Get("X-Intent"))
@@ -73,10 +74,31 @@ func TestOutboxDispatcherDeliversAndRetriesAuditHistoryEvents(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&received); err != nil {
 			t.Fatalf("decode audit append body: %v", err)
 		}
+		uid, _ := received["eventUid"].(string)
+		seenAuditUIDs[uid]++
 		w.WriteHeader(http.StatusCreated)
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	}))
 	defer okServer.Close()
+	reportingFailures := 0
+	reportingFailServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reportingFailures++
+		http.Error(w, "reporting unavailable", http.StatusServiceUnavailable)
+	}))
+	defer reportingFailServer.Close()
+	if err := outbox.DispatchOnce(ctx, DispatchConfig{
+		ServiceID:              "opportunity",
+		ServiceTokenSecret:     []byte("dispatch-secret"),
+		AuditHistoryServiceURL: okServer.URL,
+		ReportingServiceURL:    reportingFailServer.URL,
+	}); err == nil {
+		t.Fatal("TEST-REPORTING-DISPATCH-OPPORTUNITY-001 expected reporting failure to keep event unpublished")
+	}
+	if reportingFailures != 1 {
+		t.Fatalf("expected one reporting failure attempt, got %d", reportingFailures)
+	}
+	requirePublishedState(t, db, eventUID, false)
+
 	reportingServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/internal/projections" {
 			t.Fatalf("unexpected reporting path %s", r.URL.Path)
@@ -115,6 +137,21 @@ func TestOutboxDispatcherDeliversAndRetriesAuditHistoryEvents(t *testing.T) {
 	}
 	if receivedProjection["sourceService"] != "opportunity" || receivedProjection["recordType"] != "opportunity" || receivedProjection["recordId"] != "opp_dispatch_1" {
 		t.Fatalf("TEST-REPORTING-PROJECTION-INGEST-001 expected opportunity projection from dispatcher, got %#v", receivedProjection)
+	}
+
+	if _, err := db.Exec(`UPDATE opportunity.outbox_events SET published_at = NULL WHERE id = $1`, eventUID); err != nil {
+		t.Fatalf("reset published state for duplicate retry: %v", err)
+	}
+	if err := outbox.DispatchOnce(ctx, DispatchConfig{
+		ServiceID:              "opportunity",
+		ServiceTokenSecret:     []byte("dispatch-secret"),
+		AuditHistoryServiceURL: okServer.URL,
+		ReportingServiceURL:    reportingServer.URL,
+	}); err != nil {
+		t.Fatalf("dispatch duplicate retry: %v", err)
+	}
+	if len(seenAuditUIDs) != 1 || seenAuditUIDs[eventUID] != 3 {
+		t.Fatalf("TEST-HISTORY-IDEMPOTENT-001 expected duplicate attempts to preserve one eventUid, got %#v", seenAuditUIDs)
 	}
 }
 

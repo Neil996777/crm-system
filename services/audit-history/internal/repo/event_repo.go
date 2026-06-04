@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"strings"
 
 	"crm-system/services/audit-history/internal/domain"
 )
@@ -165,13 +164,4 @@ func (r *EventRepo) query(ctx context.Context, query string, args ...any) ([]dom
 		events = append(events, event)
 	}
 	return events, rows.Err()
-}
-
-func HasSurface(surfaces []string, surface string) bool {
-	for _, current := range surfaces {
-		if strings.EqualFold(current, surface) {
-			return true
-		}
-	}
-	return false
 }

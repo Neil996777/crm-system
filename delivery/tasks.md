@@ -55,13 +55,17 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     service connects to a schema other than its own (ARCH-ACC-001, SVC-ACC-006/007).
 12. **Automated tests:** Integration `TEST-PERSISTENCE-005` (scaffold-level: real
     PostgreSQL container per testcontainers reachable; no in-memory substitute);
-    health-endpoint integration test per service. Type: Integration.
+    health-endpoint integration test per service; G12 systematic `TEST-CLEANUP-DEADCODE-001/002`
+    and `TEST-CLEANUP-GITIGNORE-001/002` cover verified dead-code removal and local
+    secret path hygiene. Type: Integration.
 13. **Manual verification:** Run `docker compose up`; `curl` each `/health`; connect
     as `crm_lead_user` and confirm it cannot read `identity_authz` tables.
 14. **Traceability:** CIM-045 → PIM-BEH-033 → PSM-014 / Data Ownership Map →
     CONTRACT-019 (S2S scaffolding) → ACC-016 → TEST-PERSISTENCE-005.
 15. **TDD:** Write the health-endpoint + cross-schema-isolation integration tests
-    first (fail with no services), then scaffold until green.
+    first (fail with no services), then scaffold until green. G12 systematic cleanup
+    script first failed on verified zero-call dead code and missing `.secrets/`; after
+    deletion/ignore updates it passed.
 16. **No-downgrade items:** Real PostgreSQL container (no SQLite/in-memory); real
     per-service DB users with no cross-schema grants; no stubbed health endpoint.
 17. **Blocker:** None.
@@ -1017,7 +1021,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     `TEST-INV-TASKREMINDER-001`, `TEST-OWNER-TRANSFER-004` (EDGE-024 open-work
     cascade: on parent record owner change, open tasks/follow-ups transfer to the new owner
     unless explicitly reassigned — PIM-INV-030/033; this is the test home for the cascade);
-    G12 systematic rework `TEST-TASK-LIFECYCLE-004` additionally verifies stale
+    G12 systematic rework `TEST-WORK-VERSION-CONFLICT-001` additionally verifies stale
     `expectedVersion` returns `VERSION_CONFLICT` without overwriting task status.
     Type: Integration + E2E.
 13. **Manual verification:** Add note to a lead; create task with due date; complete it →
@@ -1028,6 +1032,8 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     tests first (fail).
     G12 systematic rework fail-first evidence: stale task status update first returned
     200 and changed a version-2 task to Completed when called with `expectedVersion:1`;
+    BLK-G12-025 corrected the test citation so `TEST-TASK-LIFECYCLE-004` maps to
+    completed/cancelled not active reminders and stale writes use `TEST-WORK-VERSION-CONFLICT-001`.
     after handler-level expectedVersion validation and repo conflict mapping, it returns
     `409 VERSION_CONFLICT`, and `go test ./... -count=1` passed in services/work.
 16. **No-downgrade items:** Real related-record link; real persistence; real history events.
@@ -1326,13 +1332,16 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 11. **Acceptance method:** ACC-002 archive governance — admin/manager allow, Sales deny,
     obligation-blocked, no hard delete.
 12. **Automated tests:** `TEST-ARCHIVE-001..004`, `TEST-INV-ARCHIVEBLOCK-001`,
-    `TEST-INV-NODELETE-001`, `TEST-ABUSE-ARCHIVED-001`. Type: Integration + E2E.
+    `TEST-INV-NODELETE-001`, `TEST-ABUSE-ARCHIVED-001`, `TEST-NAV-RETRIEVE-006`.
+    Type: Integration + E2E.
 13. **Manual verification:** Try to archive a customer with an open task → blocked; resolve
     task → archive succeeds; confirm hidden from active list, visible under archived filter.
 14. **Traceability:** CIM-037/CIM-PROC-020 → PIM-020/PIM-SM-010/PIM-INV-041/PIM-BEH-024 →
     PSM-002/003/004/006 → CONTRACT-005/007/009/011 + FLOW-010 → ACC-002 → TEST-ARCHIVE-003 /
     TEST-INV-ARCHIVEBLOCK-001.
 15. **TDD:** Write obligation-blocked reject + Sales-denied + archived-filter tests first (fail).
+    BLK-G12-025 corrected archive test names to cite `TEST-NAV-RETRIEVE-006` for
+    archived records excluded from active views.
 16. **No-downgrade items:** Real obligation check across services via S2S (not assumed); real
     archive state; no hard delete.
 17. **Blocker:** None.
@@ -1372,7 +1381,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     S2S headers, `X-Correlation-Id`, and failed-delivery retry retention; G12 systematic
     `TestOutboxDispatcherDeliversReportingProjectionAndRetries` in account/commercial proves
     those two producer dispatchers also send signed reporting projection requests and retain
-    unpublished rows on reporting failure. Type: E2E + Integration.
+    unpublished rows on reporting failure; BLK-G12-025 deepens opportunity dispatcher coverage
+    for reporting failure retry retention and stable audit event UID across duplicate attempts.
+    Type: E2E + Integration.
 13. **Manual verification:** As manager, open overview; as Sales → denied.
 14. **Traceability:** CIM-043/CIM-PROC-015 → PIM-024/PIM-BEH-031 → PSM-010 → CONTRACT-015/016 →
     ACC-018 → TEST-TEAM-OVERVIEW-001..004.
@@ -1390,6 +1401,7 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     evidence: account/commercial previously had reporting delivery logic but no dispatcher
     tests with `ReportingServiceURL`; new real PostgreSQL dispatcher tests now verify S2S
     reporting headers, `X-Correlation-Id`, projection payloads, and retry retention.
+    BLK-G12-025 added opportunity reporting failure-path and UID-dedup assertions.
 16. **No-downgrade items:** Read model from events/contracts, NOT source DB (ARCH-ACC-006);
     real authz-before-aggregate; no static numbers.
 17. **Blocker:** None.

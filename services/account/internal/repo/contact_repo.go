@@ -94,7 +94,3 @@ func (r *ContactRepo) FindAuthorized(ctx context.Context, id, actorID, actorRole
 	}
 	return contact, err
 }
-
-func IsForeignKeyError(err error) bool {
-	return err != nil && !errors.Is(err, sql.ErrNoRows)
-}

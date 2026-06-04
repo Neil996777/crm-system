@@ -10,7 +10,7 @@ func TestLeadArchiveAcceptance(t *testing.T) {
 	db := newLeadTestDB(t)
 	app := NewLeadServer(db, Config{})
 
-	t.Run("TEST-ARCHIVE-001/002 lead Sales denied and manager archives with explicit archived filter", func(t *testing.T) {
+	t.Run("TEST-ARCHIVE-001/002 TEST-NAV-RETRIEVE-006 lead Sales denied and manager archives with explicit archived filter", func(t *testing.T) {
 		create := postLeadJSON(app, "/leads", map[string]any{
 			"leadName":    "Archive lead",
 			"companyName": "Archive Lead Co",

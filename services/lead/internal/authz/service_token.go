@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"strings"
 	"time"
 )
 
@@ -36,8 +35,4 @@ func sign(payload string, secret []byte) string {
 	mac := hmac.New(sha256.New, secret)
 	mac.Write([]byte(payload))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
-}
-
-func IsServiceAuthFailed(err error) bool {
-	return errors.Is(err, ErrServiceAuthFailed) || strings.Contains(err.Error(), "SERVICE_AUTH_FAILED")
 }

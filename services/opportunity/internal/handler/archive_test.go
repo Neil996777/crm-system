@@ -9,7 +9,7 @@ func TestOpportunityArchiveAcceptance(t *testing.T) {
 	db := newOpportunityTestDB(t)
 	app := NewOpportunityServer(db, Config{})
 
-	t.Run("TEST-ARCHIVE-001/002 opportunity Sales denied and manager archives with explicit archived filter", func(t *testing.T) {
+	t.Run("TEST-ARCHIVE-001/002 TEST-NAV-RETRIEVE-006 opportunity Sales denied and manager archives with explicit archived filter", func(t *testing.T) {
 		create := postOpportunityJSON(app, "/opportunities", map[string]any{
 			"customerId":        "acct_archive_opp",
 			"ownerId":           "sales-1",

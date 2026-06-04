@@ -259,7 +259,3 @@ func (m OverviewMetrics) Map() map[string]any {
 		"receivableAmount": m.ReceivableAmount,
 	}
 }
-
-func ProjectionTableName() string {
-	return fmt.Sprintf("%s.%s", "reporting", "record_projections")
-}
