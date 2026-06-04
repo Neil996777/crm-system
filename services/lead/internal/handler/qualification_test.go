@@ -199,6 +199,90 @@ func TestLeadQualificationAndConversionAcceptance(t *testing.T) {
 	})
 }
 
+func TestLeadConversionRetriesUseDownstreamIdempotencyKeys(t *testing.T) {
+	db := newLeadTestDB(t)
+	accountCreates := 0
+	accountByKey := map[string]string{}
+	accountServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Service-Id") != "lead" || r.Header.Get("X-Intent") != "account.create_for_lead_conversion" {
+			t.Fatalf("missing account conversion S2S headers: service=%q intent=%q", r.Header.Get("X-Service-Id"), r.Header.Get("X-Intent"))
+		}
+		if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
+			t.Fatalf("missing bearer service token")
+		}
+		if r.Header.Get("X-Actor-User-Id") == "" || r.Header.Get("X-Actor-Role") == "" {
+			t.Fatalf("missing actor context")
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode account request: %v", err)
+		}
+		key, _ := body["idempotencyKey"].(string)
+		accountID := accountByKey[key]
+		if accountID == "" {
+			accountCreates++
+			accountID = "acct_retry_" + string(rune('0'+accountCreates))
+			if key != "" {
+				accountByKey[key] = accountID
+			}
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"id": accountID})
+	}))
+	t.Cleanup(accountServer.Close)
+	opportunityCalls := 0
+	opportunityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		opportunityCalls++
+		requireS2SRequest(t, r, "opportunity.create_for_lead_conversion")
+		if opportunityCalls == 1 {
+			http.Error(w, "temporary failure", http.StatusServiceUnavailable)
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"id": "opp_retry_1"})
+	}))
+	t.Cleanup(opportunityServer.Close)
+	app := NewLeadServer(db, Config{
+		AccountServiceURL:     accountServer.URL,
+		OpportunityServiceURL: opportunityServer.URL,
+		ServiceID:             "lead",
+		ServiceTokenSecret:    []byte("task-008-secret"),
+	})
+
+	leadID := createOwnedLead(t, app, "Retry Conversion Co", "sales-1")
+	valid := postLeadJSON(app, "/leads/"+leadID+"/qualify-valid", map[string]any{"expectedVersion": 1}, actorHeaders("sales-1", "Sales"))
+	if valid.Code != http.StatusOK {
+		t.Fatalf("expected valid 200, got %d body=%s", valid.Code, valid.Body.String())
+	}
+	body := map[string]any{
+		"idempotencyKey": "retry-key",
+		"target": map[string]any{
+			"accountInput": map[string]any{
+				"companyName":    "Retry Conversion Co",
+				"customerStatus": "Prospect",
+				"ownerId":        "sales-1",
+			},
+			"opportunityInput": map[string]any{
+				"ownerId":           "sales-1",
+				"stage":             "New Opportunity",
+				"expectedAmount":    "70000.00",
+				"expectedCloseDate": "2026-11-01",
+				"title":             "Retry conversion",
+			},
+		},
+	}
+	first := postLeadJSON(app, "/leads/"+leadID+"/convert", body, actorHeaders("sales-1", "Sales"))
+	if first.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected first partial failure 503, got %d body=%s", first.Code, first.Body.String())
+	}
+	second := postLeadJSON(app, "/leads/"+leadID+"/convert", body, actorHeaders("sales-1", "Sales"))
+	if second.Code != http.StatusOK {
+		t.Fatalf("expected retry convert 200, got %d body=%s", second.Code, second.Body.String())
+	}
+	if accountCreates != 1 {
+		t.Fatalf("expected downstream account create to be idempotent across retry, got %d creates", accountCreates)
+	}
+	requireJSONValue(t, decodeJSON(t, second), "accountId", "acct_retry_1")
+}
+
 func createOwnedLead(t *testing.T, app http.Handler, companyName, ownerID string) string {
 	t.Helper()
 	create := postLeadJSON(app, "/leads", map[string]any{

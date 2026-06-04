@@ -35,12 +35,14 @@ type ConversionClient struct {
 }
 
 type AccountInput struct {
+	IDempotencyKey string `json:"idempotencyKey,omitempty"`
 	CompanyName    string `json:"companyName"`
 	CustomerStatus string `json:"customerStatus"`
 	OwnerID        string `json:"ownerId"`
 }
 
 type OpportunityInput struct {
+	IDempotencyKey    string `json:"idempotencyKey,omitempty"`
 	CustomerID        string `json:"customerId,omitempty"`
 	OwnerID           string `json:"ownerId"`
 	Stage             string `json:"stage"`

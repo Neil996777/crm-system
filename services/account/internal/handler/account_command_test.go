@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	accountauthz "crm-system/services/account/internal/authz"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -137,6 +138,37 @@ func TestAccountCRUDAcceptance(t *testing.T) {
 	})
 }
 
+func TestAccountLeadConversionCreateIdempotency(t *testing.T) {
+	db := newAccountTestDB(t)
+	app := NewAccountServer(db, Config{ServiceID: "account", ServiceTokenSecret: []byte("account-test-secret")})
+	headers := leadConversionHeaders(t, "account-test-secret")
+	body := map[string]any{
+		"idempotencyKey": "lead-convert-account-key",
+		"companyName":    "Lead Converted Account",
+		"customerStatus": "Prospect",
+		"ownerId":        "sales-1",
+	}
+	first := postAccountJSON(app, "/internal/accounts", body, headers)
+	if first.Code != http.StatusCreated {
+		t.Fatalf("expected first internal create 201, got %d body=%s", first.Code, first.Body.String())
+	}
+	firstID := decodeJSON(t, first)["id"].(string)
+	second := postAccountJSON(app, "/internal/accounts", body, headers)
+	if second.Code != http.StatusOK {
+		t.Fatalf("expected idempotent retry 200, got %d body=%s", second.Code, second.Body.String())
+	}
+	if decodeJSON(t, second)["id"] != firstID {
+		t.Fatalf("expected retry to return original account id %s, got %s", firstID, second.Body.String())
+	}
+	var count int
+	if err := db.QueryRow(`SELECT count(*) FROM account.accounts WHERE company_name = $1`, "Lead Converted Account").Scan(&count); err != nil {
+		t.Fatalf("count accounts: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected one account row for idempotent conversion create, got %d", count)
+	}
+}
+
 func newAccountTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	ctx := context.Background()
@@ -171,7 +203,7 @@ func newAccountTestDB(t *testing.T) *sql.DB {
 	}
 	adminDSN := fmt.Sprintf("postgres://crm_admin:crm_admin_dev_password@%s:%s/crm_system?sslmode=disable", host, port.Port())
 	db := openAccountDB(t, adminDSN)
-	for _, migration := range []string{"0001_init_schema.up.sql", "0002_accounts.up.sql", "0003_contacts.up.sql", "0004_duplicate_warnings.up.sql", "0005_archive.up.sql"} {
+	for _, migration := range []string{"0001_init_schema.up.sql", "0002_accounts.up.sql", "0003_contacts.up.sql", "0004_duplicate_warnings.up.sql", "0005_archive.up.sql", "0006_lead_conversion_idempotency.up.sql"} {
 		sqlBytes, err := os.ReadFile(filepath.Join("..", "..", "migrations", migration))
 		if err != nil {
 			t.Fatalf("read migration %s: %v", migration, err)
@@ -182,6 +214,24 @@ func newAccountTestDB(t *testing.T) *sql.DB {
 	}
 	t.Cleanup(func() { db.Close() })
 	return db
+}
+
+func leadConversionHeaders(t *testing.T, secret string) map[string]string {
+	t.Helper()
+	token, err := accountauthz.SignServiceToken(accountauthz.ServiceTokenClaims{
+		Issuer:   "lead",
+		Audience: "account",
+		Intent:   "account.create_for_lead_conversion",
+		Expires:  time.Now().UTC().Add(2 * time.Minute),
+	}, []byte(secret))
+	if err != nil {
+		t.Fatalf("sign service token: %v", err)
+	}
+	headers := actorHeaders("sales-1", "Sales")
+	headers["Authorization"] = "Bearer " + token
+	headers["X-Service-Id"] = "lead"
+	headers["X-Intent"] = "account.create_for_lead_conversion"
+	return headers
 }
 
 func openAccountDB(t *testing.T, dsn string) *sql.DB {

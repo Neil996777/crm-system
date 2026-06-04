@@ -398,13 +398,21 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     G12 third rework regression in services/lead covers the same transactional outbox
     helper used by qualification and conversion mutations. G12 fourth micro-rework adds
     distinct disqualify event coverage (`LeadDisqualified` → `EVT-LEAD-DISQUALIFIED`) and
-    dispatcher audit retry coverage for qualification events.
+    dispatcher audit retry coverage for qualification events. G12 systematic rework adds
+    `TestLeadConversionRetriesUseDownstreamIdempotencyKeys`,
+    `TestAccountLeadConversionCreateIdempotency`, and
+    `TestOpportunityLeadConversionCreateIdempotency` for partial-failure retry safety.
     Type: Integration + E2E.
 13. **Manual verification:** Mark Valid → convert → opportunity created, lead history
     intact; mark Invalid then convert → rejected; restore as Sales → denied.
 14. **Traceability:** CIM-PROC-004 → PIM-SM-001/PIM-INV-002/003/PIM-BEH-006 → PSM-002
     → CONTRACT-003/004 + FLOW-002 → ACC-004 → TEST-LEAD-QUALIFY-001..007.
 15. **TDD:** Write qualify/convert positive + all reject tests first (fail).
+    G12 systematic rework fail-first evidence: a partial conversion failure first retried
+    account creation twice; account/opportunity internal create tests first returned 201
+    twice and inserted duplicates for the same conversion key. After downstream
+    idempotency-key persistence and lead key propagation, all three target tests and
+    `go test ./... -count=1` passed in services/lead, services/account, and services/opportunity.
 16. **No-downgrade items:** Real conversion-once guard in aggregate; real cross-service
     create via S2S (not a stub); preserved history is a real event.
 17. **Blocker:** None.

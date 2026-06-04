@@ -50,6 +50,7 @@ func (h *LeadHandler) convertLead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	accountInput := request.Target.AccountInput
+	accountInput.IDempotencyKey = request.IDempotencyKey + ":account"
 	if accountInput.OwnerID == "" {
 		accountInput.OwnerID = current.OwnerID
 	}
@@ -59,6 +60,7 @@ func (h *LeadHandler) convertLead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	opportunityInput := request.Target.OpportunityInput
+	opportunityInput.IDempotencyKey = request.IDempotencyKey + ":opportunity"
 	opportunityInput.CustomerID = account.ID
 	if opportunityInput.OwnerID == "" {
 		opportunityInput.OwnerID = current.OwnerID

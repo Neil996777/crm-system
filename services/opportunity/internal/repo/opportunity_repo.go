@@ -40,17 +40,36 @@ type sqlRunner interface {
 }
 
 func (r *OpportunityRepo) Create(ctx context.Context, opportunity domain.Opportunity) (domain.Opportunity, error) {
+	return r.CreateForLeadConversion(ctx, opportunity, "")
+}
+
+func (r *OpportunityRepo) CreateForLeadConversion(ctx context.Context, opportunity domain.Opportunity, idempotencyKey string) (domain.Opportunity, error) {
 	opportunity.ID = "opp_" + randomHex(16)
 	err := r.q.QueryRowContext(ctx, `
 		INSERT INTO opportunity.opportunities
-			(id, customer_id, owner_id, stage, expected_amount, expected_close_date, title, version)
-		VALUES ($1, $2, $3, $4, $5::numeric, $6, $7, 1)
+			(id, customer_id, owner_id, stage, expected_amount, expected_close_date, title, version, lead_conversion_idempotency_key)
+		VALUES ($1, $2, $3, $4, $5::numeric, $6, $7, 1, NULLIF($8, ''))
 		RETURNING updated_at
-	`, opportunity.ID, opportunity.CustomerID, opportunity.OwnerID, opportunity.Stage, opportunity.ExpectedAmount, opportunity.ExpectedCloseDate, opportunity.Title).Scan(&opportunity.UpdatedAt)
+	`, opportunity.ID, opportunity.CustomerID, opportunity.OwnerID, opportunity.Stage, opportunity.ExpectedAmount, opportunity.ExpectedCloseDate, opportunity.Title, strings.TrimSpace(idempotencyKey)).Scan(&opportunity.UpdatedAt)
 	if err != nil {
 		return domain.Opportunity{}, err
 	}
 	return opportunity, nil
+}
+
+func (r *OpportunityRepo) FindByLeadConversionIDempotencyKey(ctx context.Context, idempotencyKey string) (domain.Opportunity, error) {
+	var opportunity domain.Opportunity
+	err := scanOpportunityRow(r.q.QueryRowContext(ctx, `
+		SELECT id, customer_id, owner_id, stage, to_char(expected_amount, 'FM999999999999990.00'), expected_close_date, title,
+		       close_date, won_contract_id, lost_reason_code, lost_reason_detail, closed_at,
+		       archived_at, archived_by, archive_reason, version, updated_at
+		FROM opportunity.opportunities
+		WHERE lead_conversion_idempotency_key = $1 AND $1 <> ''
+	`, strings.TrimSpace(idempotencyKey)), &opportunity)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.Opportunity{}, ErrNotFound
+	}
+	return opportunity, err
 }
 
 func (r *OpportunityRepo) Find(ctx context.Context, id string) (domain.Opportunity, error) {

@@ -81,15 +81,35 @@ func (h *OpportunityHandler) createOpportunityFromLeadConversion(w http.Response
 		writeError(w, http.StatusUnauthorized, "SERVICE_AUTH_FAILED", "authentication", "Service authentication failed.")
 		return
 	}
-	h.createOpportunity(w, r)
+	h.createOpportunityCommand(w, r, true)
 }
 
 func (h *OpportunityHandler) createOpportunity(w http.ResponseWriter, r *http.Request) {
+	h.createOpportunityCommand(w, r, false)
+}
+
+func (h *OpportunityHandler) createOpportunityCommand(w http.ResponseWriter, r *http.Request, requireIDempotency bool) {
 	actor := actorFromRequest(r)
 	request, err := decodeOpportunityInput(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The opportunity input is invalid.")
 		return
+	}
+	if requireIDempotency {
+		request.IDempotencyKey = strings.TrimSpace(request.IDempotencyKey)
+		if request.IDempotencyKey == "" {
+			writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The opportunity input is invalid.")
+			return
+		}
+		existing, err := h.repo.FindByLeadConversionIDempotencyKey(r.Context(), request.IDempotencyKey)
+		if err == nil {
+			writeJSON(w, http.StatusOK, opportunityDTO(existing))
+			return
+		}
+		if !errors.Is(err, repo.ErrNotFound) {
+			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+			return
+		}
 	}
 	if !domain.CanCreateOpportunity(actor.ID, actor.Role, request.OwnerID) {
 		writeError(w, http.StatusForbidden, "PERMISSION_DENIED", "permission", "Permission denied.")
@@ -103,7 +123,7 @@ func (h *OpportunityHandler) createOpportunity(w http.ResponseWriter, r *http.Re
 	var created domain.Opportunity
 	if err := h.inTransaction(r.Context(), func(txRepo *repo.OpportunityRepo, txOutbox *event.Outbox) error {
 		var err error
-		created, err = txRepo.Create(r.Context(), opportunity)
+		created, err = txRepo.CreateForLeadConversion(r.Context(), opportunity, request.IDempotencyKey)
 		if err != nil {
 			return err
 		}
@@ -267,6 +287,7 @@ func (h *OpportunityHandler) authorizedArchiveOpportunity(r *http.Request, actor
 }
 
 type opportunityInput struct {
+	IDempotencyKey    string `json:"idempotencyKey"`
 	ExpectedVersion   int    `json:"expectedVersion"`
 	CustomerID        string `json:"customerId"`
 	OwnerID           string `json:"ownerId"`

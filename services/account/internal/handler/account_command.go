@@ -77,12 +77,17 @@ func (h *AccountHandler) createAccountFromLeadConversion(w http.ResponseWriter, 
 		writeError(w, http.StatusUnauthorized, "SERVICE_AUTH_FAILED", "authentication", "Service authentication failed.")
 		return
 	}
-	h.createAccount(w, r)
+	h.createAccountCommand(w, r, true)
 }
 
 func (h *AccountHandler) createAccount(w http.ResponseWriter, r *http.Request) {
+	h.createAccountCommand(w, r, false)
+}
+
+func (h *AccountHandler) createAccountCommand(w http.ResponseWriter, r *http.Request, requireIDempotency bool) {
 	actor := actorFromRequest(r)
 	var request struct {
+		IDempotencyKey      string `json:"idempotencyKey"`
 		CompanyName         string `json:"companyName"`
 		CustomerStatus      string `json:"customerStatus"`
 		OwnerID             string `json:"ownerId"`
@@ -91,6 +96,22 @@ func (h *AccountHandler) createAccount(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The account input is invalid.")
 		return
+	}
+	if requireIDempotency {
+		request.IDempotencyKey = strings.TrimSpace(request.IDempotencyKey)
+		if request.IDempotencyKey == "" {
+			writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The account input is invalid.")
+			return
+		}
+		existing, err := h.repo.FindByLeadConversionIDempotencyKey(r.Context(), request.IDempotencyKey)
+		if err == nil {
+			writeJSON(w, http.StatusOK, accountDTO(existing))
+			return
+		}
+		if !errors.Is(err, repo.ErrNotFound) {
+			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
+			return
+		}
 	}
 	if !domain.CanCreateAccount(actor.ID, actor.Role, request.OwnerID) {
 		writeError(w, http.StatusForbidden, "PERMISSION_DENIED", "permission", "Permission denied.")
@@ -116,7 +137,7 @@ func (h *AccountHandler) createAccount(w http.ResponseWriter, r *http.Request) {
 	var created domain.Account
 	if err := h.inTransaction(r.Context(), func(txAccounts *repo.AccountRepo, _ *repo.ContactRepo, txOutbox *event.Outbox) error {
 		var err error
-		created, err = txAccounts.Create(r.Context(), account)
+		created, err = txAccounts.CreateForLeadConversion(r.Context(), account, request.IDempotencyKey)
 		if err != nil {
 			return err
 		}

@@ -3,7 +3,10 @@ package handler
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -157,6 +160,40 @@ func TestOpportunityCreateAcceptance(t *testing.T) {
 	})
 }
 
+func TestOpportunityLeadConversionCreateIdempotency(t *testing.T) {
+	db := newOpportunityTestDB(t)
+	app := NewOpportunityServer(db, Config{ServiceID: "opportunity", ServiceTokenSecret: []byte("opportunity-test-secret")})
+	headers := leadConversionHeaders(t, "opportunity-test-secret")
+	body := map[string]any{
+		"idempotencyKey":    "lead-convert-opportunity-key",
+		"customerId":        "acct_from_conversion",
+		"ownerId":           "sales-1",
+		"stage":             "New Opportunity",
+		"expectedAmount":    "50000.00",
+		"expectedCloseDate": "2026-10-01",
+		"title":             "Lead converted opportunity",
+	}
+	first := postOpportunityJSON(app, "/internal/opportunities", body, headers)
+	if first.Code != http.StatusCreated {
+		t.Fatalf("expected first internal create 201, got %d body=%s", first.Code, first.Body.String())
+	}
+	firstID := decodeJSON(t, first)["id"].(string)
+	second := postOpportunityJSON(app, "/internal/opportunities", body, headers)
+	if second.Code != http.StatusOK {
+		t.Fatalf("expected idempotent retry 200, got %d body=%s", second.Code, second.Body.String())
+	}
+	if decodeJSON(t, second)["id"] != firstID {
+		t.Fatalf("expected retry to return original opportunity id %s, got %s", firstID, second.Body.String())
+	}
+	var count int
+	if err := db.QueryRow(`SELECT count(*) FROM opportunity.opportunities WHERE title = $1`, "Lead converted opportunity").Scan(&count); err != nil {
+		t.Fatalf("count opportunities: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected one opportunity row for idempotent conversion create, got %d", count)
+	}
+}
+
 func newOpportunityTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	ctx := context.Background()
@@ -191,7 +228,7 @@ func newOpportunityTestDB(t *testing.T) *sql.DB {
 	}
 	adminDSN := fmt.Sprintf("postgres://crm_admin:crm_admin_dev_password@%s:%s/crm_system?sslmode=disable", host, port.Port())
 	db := openOpportunityDB(t, adminDSN)
-	for _, migration := range []string{"0001_init_schema.up.sql", "0002_opportunities.up.sql", "0003_archive.up.sql"} {
+	for _, migration := range []string{"0001_init_schema.up.sql", "0002_opportunities.up.sql", "0003_archive.up.sql", "0004_lead_conversion_idempotency.up.sql"} {
 		sqlBytes, err := os.ReadFile(filepath.Join("..", "..", "migrations", migration))
 		if err != nil {
 			t.Fatalf("read migration %s: %v", migration, err)
@@ -202,6 +239,28 @@ func newOpportunityTestDB(t *testing.T) *sql.DB {
 	}
 	t.Cleanup(func() { db.Close() })
 	return db
+}
+
+func leadConversionHeaders(t *testing.T, secret string) map[string]string {
+	t.Helper()
+	payload, err := json.Marshal(map[string]any{
+		"iss":    "lead",
+		"aud":    "opportunity",
+		"intent": "opportunity.create_for_lead_conversion",
+		"exp":    time.Now().UTC().Add(2 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("marshal service token: %v", err)
+	}
+	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(encodedPayload))
+	token := encodedPayload + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	headers := actorHeaders("sales-1", "Sales")
+	headers["Authorization"] = "Bearer " + token
+	headers["X-Service-Id"] = "lead"
+	headers["X-Intent"] = "opportunity.create_for_lead_conversion"
+	return headers
 }
 
 func openOpportunityDB(t *testing.T, dsn string) *sql.DB {

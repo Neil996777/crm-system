@@ -36,26 +36,42 @@ type sqlRunner interface {
 }
 
 func (r *AccountRepo) Create(ctx context.Context, account domain.Account) (domain.Account, error) {
+	return r.CreateForLeadConversion(ctx, account, "")
+}
+
+func (r *AccountRepo) CreateForLeadConversion(ctx context.Context, account domain.Account, idempotencyKey string) (domain.Account, error) {
 	account.ID = "acct_" + randomHex(16)
 	err := r.q.QueryRowContext(ctx, `
-		INSERT INTO account.accounts (id, company_name, customer_status, owner_id, version)
-		VALUES ($1, $2, $3, $4, 1)
+		INSERT INTO account.accounts (id, company_name, customer_status, owner_id, version, lead_conversion_idempotency_key)
+		VALUES ($1, $2, $3, $4, 1, NULLIF($5, ''))
 		RETURNING updated_at
-	`, account.ID, account.CompanyName, account.CustomerStatus, account.OwnerID).Scan(&account.UpdatedAt)
+	`, account.ID, account.CompanyName, account.CustomerStatus, account.OwnerID, strings.TrimSpace(idempotencyKey)).Scan(&account.UpdatedAt)
 	if err != nil {
 		return domain.Account{}, err
 	}
 	return account, nil
 }
 
+func (r *AccountRepo) FindByLeadConversionIDempotencyKey(ctx context.Context, idempotencyKey string) (domain.Account, error) {
+	return r.find(ctx, `
+		SELECT id, company_name, customer_status, owner_id, archived_at, archived_by, archive_reason, version, updated_at
+		FROM account.accounts
+		WHERE lead_conversion_idempotency_key = $1 AND $1 <> ''
+	`, strings.TrimSpace(idempotencyKey))
+}
+
 func (r *AccountRepo) Find(ctx context.Context, id string) (domain.Account, error) {
-	var account domain.Account
-	var archivedAt sql.NullTime
-	err := r.q.QueryRowContext(ctx, `
+	return r.find(ctx, `
 		SELECT id, company_name, customer_status, owner_id, archived_at, archived_by, archive_reason, version, updated_at
 		FROM account.accounts
 		WHERE id = $1
-	`, id).Scan(&account.ID, &account.CompanyName, &account.CustomerStatus, &account.OwnerID, &archivedAt, &account.ArchivedBy, &account.ArchiveReason, &account.Version, &account.UpdatedAt)
+	`, id)
+}
+
+func (r *AccountRepo) find(ctx context.Context, query string, arg any) (domain.Account, error) {
+	var account domain.Account
+	var archivedAt sql.NullTime
+	err := r.q.QueryRowContext(ctx, query, arg).Scan(&account.ID, &account.CompanyName, &account.CustomerStatus, &account.OwnerID, &archivedAt, &account.ArchivedBy, &account.ArchiveReason, &account.Version, &account.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Account{}, ErrNotFound
 	}
