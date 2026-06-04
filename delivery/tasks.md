@@ -1396,12 +1396,18 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 11. **Acceptance method:** ACC-020 import — valid import + row-level errors + no corruption +
     authorization.
 12. **Automated tests:** `TEST-CSV-IMPORT-001..004`, `TEST-ABUSE-CSVINJECT-001`,
-    `TEST-ABUSE-IMPORTAUTHZ-001`. Type: Integration + E2E.
+    `TEST-ABUSE-IMPORTAUTHZ-001`; G12 systematic rework
+    `TestImportRunReadAuthorization` covers import-run single-record read authorization
+    and no run-id/filename/row-error leak on denied by-id reads. Type: Integration + E2E.
 13. **Manual verification:** Import a mixed CSV → valid rows in, invalid reported, existing
     untouched; as Sales → denied.
 14. **Traceability:** CIM-041/CIM-PROC-016 → PIM-022/PIM-BEH-026 → PSM-012 → CONTRACT-017/018 +
     FLOW-008 → ACC-020 → TEST-CSV-IMPORT-001..004.
 15. **TDD:** Write mixed-row + unsupported-format + Sales-denied + formula-injection tests first (fail).
+    G12 systematic rework fail-first evidence: import-run by-id read test first returned
+    200 with run id, filename, and row-error details to cross-team Manager/Sales/anonymous
+    actors; after owner/team/Admin scope check it returns safe `NOT_FOUND`, and
+    `go test ./... -count=1` passed in services/import-export.
 16. **No-downgrade items:** Mutations only via target Command APIs (no direct domain DB,
     ARCH-ACC-005); real row-level isolation; real authorization; real formula-injection safety.
 17. **Blocker:** None.

@@ -167,6 +167,7 @@ func (h *ImportExportHandler) auditConfigured() bool {
 }
 
 func (h *ImportExportHandler) getImportRun(w http.ResponseWriter, r *http.Request) {
+	actor := actorFromRequest(r)
 	run, err := h.repo.FindImportRun(r.Context(), r.PathValue("id"))
 	if errors.Is(err, sql.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
@@ -176,7 +177,24 @@ func (h *ImportExportHandler) getImportRun(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
 		return
 	}
+	if !canReadImportRun(actor, run) {
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
+		return
+	}
 	writeJSON(w, http.StatusOK, importRunDTO(run))
+}
+
+func canReadImportRun(actor actorContext, run repo.ImportRun) bool {
+	if actor.ID == "" || actor.Role == "" {
+		return false
+	}
+	if actor.Role == "Administrator" {
+		return true
+	}
+	if actor.Role == "Sales Manager" {
+		return actor.ID == run.ActorID || actor.TeamIDOrDefault() == run.TeamID
+	}
+	return false
 }
 
 func (h *ImportExportHandler) createLead(r *http.Request, row map[string]string, actor actorContext) (string, error) {

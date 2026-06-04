@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -111,6 +112,71 @@ func TestCSVImportRunAcceptance(t *testing.T) {
 	})
 }
 
+func TestImportRunReadAuthorization(t *testing.T) {
+	db := newImportExportTestDB(t)
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/leads" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(map[string]any{"id": "lead-authz-1"})
+	}))
+	t.Cleanup(target.Close)
+	app := NewImportExportServer(db, Config{LeadServiceURL: target.URL, HTTPClient: target.Client()})
+
+	create := postImportJSON(app, "/imports", map[string]any{
+		"objectType": "lead",
+		"filename":   "private-import-run.csv",
+		"content":    "companyName,leadName,source,ownerId\nVisible Co,Visible Lead,Website,sales-1\nPrivate Bad Co,Bad lead,,sales-1\n",
+	}, actorHeaders("mgr-owner", "Sales Manager", "team-a"))
+	if create.Code != http.StatusCreated {
+		t.Fatalf("expected import 201, got %d body=%s", create.Code, create.Body.String())
+	}
+	runID, ok := decodeJSON(t, create)["runId"].(string)
+	if !ok || runID == "" {
+		t.Fatalf("missing runId in response %s", create.Body.String())
+	}
+
+	for name, headers := range map[string]map[string]string{
+		"owner manager":     actorHeaders("mgr-owner", "Sales Manager", "team-a"),
+		"same-team manager": actorHeaders("mgr-peer", "Sales Manager", "team-a"),
+		"administrator":     actorHeaders("admin-1", "Administrator", "other-team"),
+	} {
+		t.Run(name+" may read import run", func(t *testing.T) {
+			rec := getImportJSON(app, "/imports/"+runID, headers)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected authorized read 200, got %d body=%s", rec.Code, rec.Body.String())
+			}
+			body := decodeJSON(t, rec)
+			if body["runId"] != runID || body["filename"] != "private-import-run.csv" {
+				t.Fatalf("expected import run detail, got %#v", body)
+			}
+		})
+	}
+
+	for name, headers := range map[string]map[string]string{
+		"cross-team manager": actorHeaders("mgr-other", "Sales Manager", "team-b"),
+		"sales":              actorHeaders("sales-1", "Sales", "team-a"),
+		"anonymous":          {},
+	} {
+		t.Run(name+" cannot infer import run existence", func(t *testing.T) {
+			rec := getImportJSON(app, "/imports/"+runID, headers)
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("expected unauthorized read hidden as 404, got %d body=%s", rec.Code, rec.Body.String())
+			}
+			requireErrorCode(t, rec, "NOT_FOUND")
+			body := rec.Body.String()
+			for _, leaked := range []string{runID, "private-import-run.csv", "Private Bad Co"} {
+				if strings.Contains(body, leaked) {
+					t.Fatalf("unauthorized response leaked %q: %s", leaked, body)
+				}
+			}
+		})
+	}
+}
+
 func newImportExportTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	ctx := context.Background()
@@ -177,6 +243,16 @@ func postImportJSON(handler http.Handler, path string, body any, headers map[str
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, path, &requestBody)
 	req.Header.Set("Content-Type", "application/json")
+	for name, value := range headers {
+		req.Header.Set(name, value)
+	}
+	handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func getImportJSON(handler http.Handler, path string, headers map[string]string) *httptest.ResponseRecorder {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, path, nil)
 	for name, value := range headers {
 		req.Header.Set(name, value)
 	}
