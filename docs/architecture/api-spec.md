@@ -379,7 +379,7 @@ POST /opportunities/{opportunityId}/close-won
 
 Request:
 {
-  "idempotencyKey": "...",
+  "contractId": "...",
   "closeDate": "YYYY-MM-DD"
 }
 

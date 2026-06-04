@@ -668,13 +668,17 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 11. **Acceptance method:** ACC-013 — Signed-contract Won, lost-reason Lost, forbidden
     reopen/early-won rejected.
 12. **Automated tests:** `TEST-OPP-CLOSE-001..006`, `TEST-INV-WONAFTERPAY-001`,
-    `TEST-INV-TERMINAL-001`. Type: Integration + E2E.
+    `TEST-INV-TERMINAL-001`; G12 systematic `TEST-API-SPEC-CLOSE-WON-001/002`
+    covers Close-Won API spec request alignment with required `contractId` and no unused
+    `idempotencyKey`. Type: Integration + E2E.
 13. **Manual verification:** Try Won with no Signed contract → blocked; sign contract →
     Won succeeds; reopen → rejected; add a note after close → allowed.
 14. **Traceability:** CIM-017/CIM-PROC-011 → PIM-SM-009/PIM-INV-035/037/PIM-BEH-011 →
     PSM-004 → CONTRACT-007/008 + FLOW-004 → ACC-013 → TEST-OPP-CLOSE-001/002/005.
 15. **TDD:** Write Won-without-Signed reject, Lost-without-reason reject, reopen reject
-    first (fail).
+    first (fail). G12 systematic doc-contract test first failed because api-spec omitted
+    required `contractId`; after the doc fix `python3 scripts/test_api_spec_contract.py`
+    passed.
 16. **No-downgrade items:** Real S2S contract-Signed verification (not assumed/stubbed);
     real terminal lock; payment is NOT a Won gate (DEC-019) but overpayment still blocked
     elsewhere; real history preservation.
