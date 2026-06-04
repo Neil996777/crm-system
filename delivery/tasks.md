@@ -1348,7 +1348,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     producer dispatcher projection delivery and manager aggregate query; G12 second
     rework `TEST-REPORTING-CORRELATION-001` for projection ingest correlation-id
     propagation; G12 fourth micro-rework lead dispatcher test proves lead outbox→reporting
-    S2S headers, `X-Correlation-Id`, and failed-delivery retry retention. Type: E2E + Integration.
+    S2S headers, `X-Correlation-Id`, and failed-delivery retry retention; G12 systematic
+    `TestOutboxDispatcherDeliversReportingProjectionAndRetries` in account/commercial proves
+    those two producer dispatchers also send signed reporting projection requests and retain
+    unpublished rows on reporting failure. Type: E2E + Integration.
 13. **Manual verification:** As manager, open overview; as Sales → denied.
 14. **Traceability:** CIM-043/CIM-PROC-015 → PIM-024/PIM-BEH-031 → PSM-010 → CONTRACT-015/016 →
     ACC-018 → TEST-TEAM-OVERVIEW-001..004.
@@ -1362,7 +1365,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     projection delivery omitted `X-Correlation-Id`, then passed after all producer
     reporting dispatchers set it. G12 fourth micro-rework fail-first evidence: lead
     dispatcher test initially failed before lead had the same audit/reporting dispatcher
-    contract, then passed with real PostgreSQL testcontainers.
+    contract, then passed with real PostgreSQL testcontainers. G12 systematic rework
+    evidence: account/commercial previously had reporting delivery logic but no dispatcher
+    tests with `ReportingServiceURL`; new real PostgreSQL dispatcher tests now verify S2S
+    reporting headers, `X-Correlation-Id`, projection payloads, and retry retention.
 16. **No-downgrade items:** Read model from events/contracts, NOT source DB (ARCH-ACC-006);
     real authz-before-aggregate; no static numbers.
 17. **Blocker:** None.
@@ -1393,14 +1399,17 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     groupings; Sales denied.
 12. **Automated tests:** `TEST-BASIC-REPORT-001..006`; G12 rework
     `TEST-REPORTING-PROJECTION-INGEST-006` covers real S2S-populated reporting
-    read model used by report queries. Type: Integration + E2E.
+    read model used by report queries; G12 systematic account/commercial dispatcher tests
+    cover producer projection delivery into the reporting ingest contract. Type:
+    Integration + E2E.
 13. **Manual verification:** Create records, open reports, confirm counts/sums match; as Sales
     → denied.
 14. **Traceability:** CIM-044/CIM-PROC-019 → PIM-025/PIM-BEH-032 → PSM-010 → CONTRACT-015/016 →
     ACC-023 → TEST-BASIC-REPORT-001..006.
 15. **TDD:** Write grouping-traceability + empty + Sales-deny + archived-excluded tests first (fail).
     G12 second rework added `TEST-BASIC-REPORT-006` for Administrator all-scope
-    report query over active records across teams.
+    report query over active records across teams. G12 systematic rework added account and
+    commercial reporting-dispatcher coverage for signed projection delivery and failure retry.
 16. **No-downgrade items:** Numbers derived from real persisted records via read model; no
     hardcoded metrics; archived excluded.
 17. **Blocker:** None.

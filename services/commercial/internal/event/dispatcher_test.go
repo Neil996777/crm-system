@@ -95,6 +95,72 @@ func TestOutboxDispatcherDeliversRetriesAndDedupesAuditHistoryEvents(t *testing.
 	}
 }
 
+func TestOutboxDispatcherDeliversReportingProjectionAndRetries(t *testing.T) {
+	db := newDispatcherTestDB(t)
+	outbox := NewOutbox(db)
+	ctx := context.Background()
+	if err := outbox.Append(ctx, PaymentRecorded, "payment_reporting_1", map[string]any{
+		"actorId":       "sales-1",
+		"actorRole":     "Sales",
+		"actorDisplay":  "Sales One",
+		"correlationId": "corr-commercial-reporting",
+		"ownerId":       "sales-1",
+		"teamId":        "team-a",
+		"paymentStatus": "Paid",
+		"amount":        "3500.00",
+	}); err != nil {
+		t.Fatalf("append outbox event: %v", err)
+	}
+	eventUID := readOutboxID(t, db, "payment_reporting_1")
+
+	auditServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requireAuditRequest(t, r, "commercial", "sales-1", "Sales", "corr-commercial-reporting")
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer auditServer.Close()
+
+	var reportingAttempts int
+	reportingFail := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reportingAttempts++
+		http.Error(w, "reporting unavailable", http.StatusServiceUnavailable)
+	}))
+	defer reportingFail.Close()
+	if err := outbox.DispatchOnce(ctx, DispatchConfig{
+		ServiceID:              "commercial",
+		ServiceTokenSecret:     []byte("dispatch-secret"),
+		AuditHistoryServiceURL: auditServer.URL,
+		ReportingServiceURL:    reportingFail.URL,
+	}); err == nil {
+		t.Fatal("TEST-REPORTING-DISPATCH-COMMERCIAL-001 expected reporting failure to keep commercial event unpublished")
+	}
+	if reportingAttempts != 1 {
+		t.Fatalf("expected one reporting failure attempt, got %d", reportingAttempts)
+	}
+	requirePublishedState(t, db, eventUID, false)
+
+	var projection map[string]any
+	reportingOK := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requireReportingRequest(t, r, "commercial", "corr-commercial-reporting")
+		if err := json.NewDecoder(r.Body).Decode(&projection); err != nil {
+			t.Fatalf("decode reporting projection: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer reportingOK.Close()
+	if err := outbox.DispatchOnce(ctx, DispatchConfig{
+		ServiceID:              "commercial",
+		ServiceTokenSecret:     []byte("dispatch-secret"),
+		AuditHistoryServiceURL: auditServer.URL,
+		ReportingServiceURL:    reportingOK.URL,
+	}); err != nil {
+		t.Fatalf("dispatch reporting retry: %v", err)
+	}
+	requirePublishedState(t, db, eventUID, true)
+	if projection["sourceService"] != "commercial" || projection["recordType"] != "payment" || projection["recordId"] != "payment_reporting_1" || projection["ownerId"] != "sales-1" || projection["teamId"] != "team-a" || projection["status"] != "Paid" || projection["amount"] != "3500.00" {
+		t.Fatalf("TEST-REPORTING-DISPATCH-COMMERCIAL-002 unexpected commercial projection: %#v", projection)
+	}
+}
+
 func requireAuditRequest(t *testing.T, r *http.Request, serviceID, actorID, actorRole, correlationID string) {
 	t.Helper()
 	if r.URL.Path != "/internal/events/append" {
@@ -124,6 +190,35 @@ func requireAuditRequest(t *testing.T, r *http.Request, serviceID, actorID, acto
 	}
 	if r.Header.Get("X-Correlation-Id") != correlationID {
 		t.Fatalf("missing correlation id: %q", r.Header.Get("X-Correlation-Id"))
+	}
+}
+
+func requireReportingRequest(t *testing.T, r *http.Request, serviceID, correlationID string) {
+	t.Helper()
+	if r.URL.Path != "/internal/projections" {
+		t.Fatalf("unexpected reporting path %s", r.URL.Path)
+	}
+	if r.Header.Get("X-Service-Id") != serviceID || r.Header.Get("X-Intent") != "reporting.projection_ingest" {
+		t.Fatalf("missing reporting S2S headers: service=%q intent=%q", r.Header.Get("X-Service-Id"), r.Header.Get("X-Intent"))
+	}
+	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if token == "" || token == r.Header.Get("Authorization") {
+		t.Fatalf("missing bearer service token")
+	}
+	payload := strings.Split(token, ".")[0]
+	decoded, err := base64.RawURLEncoding.DecodeString(payload)
+	if err != nil {
+		t.Fatalf("decode token payload: %v", err)
+	}
+	var claims map[string]any
+	if err := json.Unmarshal(decoded, &claims); err != nil {
+		t.Fatalf("decode token claims: %v", err)
+	}
+	if claims["iss"] != serviceID || claims["aud"] != "reporting" || claims["intent"] != "reporting.projection_ingest" {
+		t.Fatalf("unexpected reporting token claims: %#v", claims)
+	}
+	if r.Header.Get("X-Correlation-Id") != correlationID {
+		t.Fatalf("missing reporting correlation id: %q", r.Header.Get("X-Correlation-Id"))
 	}
 }
 
