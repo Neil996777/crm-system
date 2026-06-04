@@ -89,7 +89,8 @@ func TestWorkAcceptance(t *testing.T) {
 		}
 
 		done := postWorkJSON(app, "/tasks/"+taskID+"/status", map[string]any{
-			"toStatus": "Completed",
+			"toStatus":        "Completed",
+			"expectedVersion": 1,
 		}, actorHeaders("sales-1", "Sales"))
 		if done.Code != http.StatusOK {
 			t.Fatalf("expected complete 200, got %d body=%s", done.Code, done.Body.String())
@@ -103,6 +104,40 @@ func TestWorkAcceptance(t *testing.T) {
 			t.Fatalf("completed task must not be active reminder: %s", active.Body.String())
 		}
 		requireEvent(t, db, "TaskStatusChanged", taskID)
+	})
+
+	t.Run("TEST-TASK-LIFECYCLE-004 stale expectedVersion returns VERSION_CONFLICT without overwriting", func(t *testing.T) {
+		task := postWorkJSON(app, "/tasks", map[string]any{
+			"relatedType": "Opportunity",
+			"relatedId":   "opp_work_conflict",
+			"title":       "Concurrent follow up",
+			"dueDate":     "2027-03-01",
+			"ownerId":     "sales-1",
+		}, actorHeaders("sales-1", "Sales"))
+		if task.Code != http.StatusCreated {
+			t.Fatalf("expected task create 201, got %d body=%s", task.Code, task.Body.String())
+		}
+		taskID := decodeJSON(t, task)["id"].(string)
+		if _, err := db.Exec(`UPDATE work.tasks SET version = version + 1, updated_at = now() WHERE id = $1`, taskID); err != nil {
+			t.Fatalf("simulate concurrent edit: %v", err)
+		}
+
+		stale := postWorkJSON(app, "/tasks/"+taskID+"/status", map[string]any{
+			"toStatus":        "Completed",
+			"expectedVersion": 1,
+		}, actorHeaders("sales-1", "Sales"))
+		if stale.Code != http.StatusConflict {
+			t.Fatalf("expected stale version 409, got %d body=%s", stale.Code, stale.Body.String())
+		}
+		requireErrorCode(t, stale, "VERSION_CONFLICT")
+		var status string
+		var version int
+		if err := db.QueryRow(`SELECT status, version FROM work.tasks WHERE id = $1`, taskID).Scan(&status, &version); err != nil {
+			t.Fatalf("read task after stale update: %v", err)
+		}
+		if status != "Open" || version != 2 {
+			t.Fatalf("stale update overwrote concurrent edit: status=%s version=%d", status, version)
+		}
 	})
 
 	t.Run("TEST-ACTIVITY-NOTE-003 and TEST-ABUSE-MUTATE-001 denies Sales creating work for another owner", func(t *testing.T) {

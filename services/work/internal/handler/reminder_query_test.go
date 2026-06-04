@@ -81,7 +81,10 @@ func TestReminderQueryAcceptance(t *testing.T) {
 			t.Fatalf("expected done task create 201, got %d body=%s", done.Code, done.Body.String())
 		}
 		doneID := decodeJSON(t, done)["id"].(string)
-		complete := postWorkJSON(app, "/tasks/"+doneID+"/status", map[string]any{"toStatus": "Completed"}, actorHeaders("sales-1", "Sales"))
+		complete := postWorkJSON(app, "/tasks/"+doneID+"/status", map[string]any{
+			"toStatus":        "Completed",
+			"expectedVersion": 1,
+		}, actorHeaders("sales-1", "Sales"))
 		if complete.Code != http.StatusOK {
 			t.Fatalf("expected complete 200, got %d body=%s", complete.Code, complete.Body.String())
 		}

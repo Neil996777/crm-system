@@ -242,8 +242,13 @@ func (h *WorkHandler) changeTaskStatus(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		ToStatus           string `json:"toStatus"`
 		CancellationReason string `json:"cancellationReason"`
+		ExpectedVersion    int    `json:"expectedVersion"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The task status input is invalid.")
+		return
+	}
+	if request.ExpectedVersion <= 0 {
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The task status input is invalid.")
 		return
 	}
@@ -265,6 +270,7 @@ func (h *WorkHandler) changeTaskStatus(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "INVALID_TRANSITION", "business_rule", "The requested task status transition is not allowed.")
 		return
 	}
+	updated.Version = request.ExpectedVersion
 	var saved domain.Task
 	if err := h.inTransaction(r.Context(), func(txRepo *repo.WorkRepo, txOutbox *event.Outbox) error {
 		var err error
@@ -281,6 +287,10 @@ func (h *WorkHandler) changeTaskStatus(w http.ResponseWriter, r *http.Request) {
 			"toStatus":     saved.Status,
 		})
 	}); err != nil {
+		if errors.Is(err, repo.ErrVersionConflict) {
+			writeError(w, http.StatusConflict, "VERSION_CONFLICT", "conflict", "The record changed after it was opened.")
+			return
+		}
 		writeOutboxFailure(w)
 		return
 	}

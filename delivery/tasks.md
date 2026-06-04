@@ -979,7 +979,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 12. **Automated tests:** `TEST-ACTIVITY-NOTE-001..003`, `TEST-TASK-LIFECYCLE-001..004`,
     `TEST-INV-TASKREMINDER-001`, `TEST-OWNER-TRANSFER-004` (EDGE-024 open-work
     cascade: on parent record owner change, open tasks/follow-ups transfer to the new owner
-    unless explicitly reassigned — PIM-INV-030/033; this is the test home for the cascade).
+    unless explicitly reassigned — PIM-INV-030/033; this is the test home for the cascade);
+    G12 systematic rework `TEST-TASK-LIFECYCLE-004` additionally verifies stale
+    `expectedVersion` returns `VERSION_CONFLICT` without overwriting task status.
     Type: Integration + E2E.
 13. **Manual verification:** Add note to a lead; create task with due date; complete it →
     no longer a reminder.
@@ -987,6 +989,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     PSM-008 → CONTRACT-011/012 → ACC-012 → TEST-ACTIVITY-NOTE-001 / TEST-TASK-LIFECYCLE-001..004.
 15. **TDD:** Write activity/note/task create + missing-link reject + completed-not-reminder
     tests first (fail).
+    G12 systematic rework fail-first evidence: stale task status update first returned
+    200 and changed a version-2 task to Completed when called with `expectedVersion:1`;
+    after handler-level expectedVersion validation and repo conflict mapping, it returns
+    `409 VERSION_CONFLICT`, and `go test ./... -count=1` passed in services/work.
 16. **No-downgrade items:** Real related-record link; real persistence; real history events.
 17. **Blocker:** None.
 
