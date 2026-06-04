@@ -30,7 +30,6 @@ type LeadHandler struct {
 	duplicates *repo.DuplicateRepo
 	outbox     *event.Outbox
 	conversion *client.ConversionClient
-	audit      *client.AuditClient
 }
 
 func NewLeadServer(db *sql.DB, config Config) http.Handler {
@@ -42,12 +41,6 @@ func NewLeadServer(db *sql.DB, config Config) http.Handler {
 		conversion: client.NewConversionClient(client.Config{
 			AccountServiceURL:      config.AccountServiceURL,
 			OpportunityServiceURL:  config.OpportunityServiceURL,
-			AuditHistoryServiceURL: config.AuditHistoryServiceURL,
-			ServiceID:              config.ServiceID,
-			ServiceTokenSecret:     config.ServiceTokenSecret,
-			HTTPClient:             config.HTTPClient,
-		}),
-		audit: client.NewAuditClient(client.Config{
 			AuditHistoryServiceURL: config.AuditHistoryServiceURL,
 			ServiceID:              config.ServiceID,
 			ServiceTokenSecret:     config.ServiceTokenSecret,

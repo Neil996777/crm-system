@@ -212,7 +212,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     account, commercial, and work covering successful audit-history delivery,
     failed-delivery retry retention, and duplicate event UID idempotency; G12 third
     rework lead transactional outbox rollback coverage (`TEST-HISTORY-TX-001`) proves
-    lead create rolls back when the local outbox append fails. Type:
+    lead create rolls back when the local outbox append fails; G12 fourth micro-rework
+    lead dispatcher tests prove lead audit-history S2S delivery, retry retention, and
+    distinct `EVT-LEAD-QUALIFIED` / `EVT-LEAD-DISQUALIFIED` event IDs. Type:
     Integration.
 13. **Manual verification:** Append an event via S2S; query as record owner → visible;
     query as non-owner → denied; attempt to edit an event → unavailable.
@@ -228,7 +230,11 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     passed. G12 third rework fail-first evidence: lead create rollback test initially
     returned 201 because `_ = h.outbox.Append` discarded a forced outbox failure; after
     transactional coupling it returned an error and left no lead row, and `go test ./...`
-    passed in services/lead.
+    passed in services/lead. G12 fourth micro-rework fail-first evidence: lead dispatcher
+    test did not compile before `AuditHistoryServiceURL`/audit mapping existed; after routing
+    lead audit delivery through the transactional outbox and removing the post-commit
+    `audit.AppendRecordHistory` call, `go test ./internal/event -run TestLeadOutboxDispatcher`
+    and `go test ./... -count=1` passed in services/lead.
 16. **No-downgrade items:** Real append-only persistence (no in-memory log); real
     hash chain; real record-permission gate on history query (ABUSE-013); actor identity
     is the authenticated principal, never a client-supplied field (ABUSE-019, AUTHZ-009).
@@ -390,7 +396,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     transitions rejected without mutation; conversion preserves history.
 12. **Automated tests:** `TEST-LEAD-QUALIFY-001..007`, `TEST-ABUSE-BRBYPASS-001` (subset);
     G12 third rework regression in services/lead covers the same transactional outbox
-    helper used by qualification and conversion mutations.
+    helper used by qualification and conversion mutations. G12 fourth micro-rework adds
+    distinct disqualify event coverage (`LeadDisqualified` → `EVT-LEAD-DISQUALIFIED`) and
+    dispatcher audit retry coverage for qualification events.
     Type: Integration + E2E.
 13. **Manual verification:** Mark Valid → convert → opportunity created, lead history
     intact; mark Invalid then convert → rejected; restore as Sales → denied.
@@ -1285,7 +1293,8 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     and no-mutation denial; `TEST-REPORTING-PROJECTION-INGEST-001/006` for
     producer dispatcher projection delivery and manager aggregate query; G12 second
     rework `TEST-REPORTING-CORRELATION-001` for projection ingest correlation-id
-    propagation. Type: E2E + Integration.
+    propagation; G12 fourth micro-rework lead dispatcher test proves lead outbox→reporting
+    S2S headers, `X-Correlation-Id`, and failed-delivery retry retention. Type: E2E + Integration.
 13. **Manual verification:** As manager, open overview; as Sales → denied.
 14. **Traceability:** CIM-043/CIM-PROC-015 → PIM-024/PIM-BEH-031 → PSM-010 → CONTRACT-015/016 →
     ACC-018 → TEST-TEAM-OVERVIEW-001..004.
@@ -1297,7 +1306,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     after producer outbox dispatchers called reporting ingest. G12 second rework
     fail-first evidence: opportunity dispatcher test failed because reporting
     projection delivery omitted `X-Correlation-Id`, then passed after all producer
-    reporting dispatchers set it.
+    reporting dispatchers set it. G12 fourth micro-rework fail-first evidence: lead
+    dispatcher test initially failed before lead had the same audit/reporting dispatcher
+    contract, then passed with real PostgreSQL testcontainers.
 16. **No-downgrade items:** Read model from events/contracts, NOT source DB (ARCH-ACC-006);
     real authz-before-aggregate; no static numbers.
 17. **Blocker:** None.

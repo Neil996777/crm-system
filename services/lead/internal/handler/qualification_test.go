@@ -75,7 +75,7 @@ func TestLeadQualificationAndConversionAcceptance(t *testing.T) {
 		body := decodeJSON(t, rec)
 		requireJSONValue(t, body, "status", "Invalid")
 		requireJSONValue(t, body, "invalidReason", "No fit")
-		requireEvent(t, db, "LeadQualified", leadID)
+		requireEvent(t, db, "LeadDisqualified", leadID)
 	})
 
 	t.Run("TEST-LEAD-QUALIFY-003 Valid converts through S2S and preserves lead history", func(t *testing.T) {

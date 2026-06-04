@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 
-	"crm-system/services/lead/internal/client"
 	"crm-system/services/lead/internal/domain"
 	"crm-system/services/lead/internal/event"
 	"crm-system/services/lead/internal/repo"
@@ -66,16 +65,21 @@ func (h *LeadHandler) updateQualification(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The qualification input is invalid.")
 		return
 	}
+	eventType := leadQualificationEventType(updated)
 	err = h.inTransaction(r.Context(), func(txLeads *repo.LeadRepo, _ *repo.DuplicateRepo, txOutbox *event.Outbox) error {
 		var err error
 		updated, err = txLeads.UpdateQualification(r.Context(), current.ID, request.ExpectedVersion, updated)
 		if err != nil {
 			return err
 		}
-		return appendLeadOutbox(r.Context(), txOutbox, event.LeadQualified, updated.ID, map[string]any{
+		return appendLeadOutbox(r.Context(), txOutbox, eventType, updated.ID, map[string]any{
 			"traceability":  "TASK-008 ACC-004 PIM-SM-001 PIM-BEH-006 CONTRACT-004",
 			"actorId":       actor.ID,
+			"actorRole":     actor.Role,
+			"actorDisplay":  actor.DisplayName,
+			"correlationId": r.Header.Get("X-Correlation-Id"),
 			"leadId":        updated.ID,
+			"beforeStatus":  current.Status,
 			"status":        updated.Status,
 			"invalidReason": updated.InvalidReason,
 		})
@@ -92,23 +96,12 @@ func (h *LeadHandler) updateQualification(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The qualification input is invalid.")
 		return
 	}
-	// TASK-027 / ACC-014 / PSM-009 / CONTRACT-013: the record-local timeline reads
-	// this safe, persisted history event through audit-history.
-	if err := h.audit.AppendRecordHistory(r.Context(), client.Actor{ID: actor.ID, Role: actor.Role, DisplayName: actor.DisplayName}, client.AuditEventInput{
-		EventID:            "EVT-LEAD-QUALIFIED",
-		Action:             event.LeadQualified,
-		ResourceType:       "Lead",
-		ResourceID:         updated.ID,
-		Result:             "success",
-		BeforeSummary:      map[string]any{"status": current.Status},
-		AfterSummary:       map[string]any{"status": updated.Status, "invalidReason": updated.InvalidReason},
-		DiffClassification: "Restricted",
-		SafeSummary:        "Lead qualified as " + string(updated.Status),
-		CorrelationID:      r.Header.Get("X-Correlation-Id"),
-		AcceptanceIDs:      []string{"ACC-014", "TEST-HISTORY-001", "TEST-HISTORY-004"},
-	}); err != nil {
-		writeError(w, http.StatusBadGateway, "DEPENDENCY_UNAVAILABLE", "dependency", "A required service is unavailable.")
-		return
-	}
 	writeJSON(w, http.StatusOK, leadDTO(updated))
+}
+
+func leadQualificationEventType(updated domain.Lead) string {
+	if updated.Status == domain.StatusInvalid {
+		return event.LeadDisqualified
+	}
+	return event.LeadQualified
 }

@@ -54,7 +54,7 @@ func main() {
 		ServiceID:              envOrDefault("SERVICE_ID", "lead"),
 		ServiceTokenSecret:     []byte(os.Getenv("SERVICE_TOKEN_SECRET")),
 	})
-	startReportingDispatcher(db)
+	startOutboxDispatcher(db)
 	mux.Handle("/leads", leadServer)
 	mux.Handle("/leads/", leadServer)
 	mux.Handle("/duplicate-checks", leadServer)
@@ -63,17 +63,19 @@ func main() {
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
-func startReportingDispatcher(db *sql.DB) {
+func startOutboxDispatcher(db *sql.DB) {
+	auditHistoryURL := os.Getenv("AUDIT_HISTORY_SERVICE_URL")
 	reportingURL := os.Getenv("REPORTING_SERVICE_URL")
 	secret := []byte(os.Getenv("SERVICE_TOKEN_SECRET"))
-	if reportingURL == "" || len(secret) == 0 {
+	if auditHistoryURL == "" || len(secret) == 0 {
 		return
 	}
 	outbox := event.NewOutbox(db)
 	config := event.DispatchConfig{
-		ServiceID:           envOrDefault("SERVICE_ID", "lead"),
-		ServiceTokenSecret:  secret,
-		ReportingServiceURL: reportingURL,
+		ServiceID:              envOrDefault("SERVICE_ID", "lead"),
+		ServiceTokenSecret:     secret,
+		AuditHistoryServiceURL: auditHistoryURL,
+		ReportingServiceURL:    reportingURL,
 	}
 	go func() {
 		ticker := time.NewTicker(2 * time.Second)
@@ -81,7 +83,7 @@ func startReportingDispatcher(db *sql.DB) {
 		for {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			if err := outbox.DispatchOnce(ctx, config); err != nil {
-				log.Printf("reporting outbox dispatch: %v", err)
+				log.Printf("outbox dispatch: %v", err)
 			}
 			cancel()
 			<-ticker.C
