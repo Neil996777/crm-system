@@ -62,6 +62,15 @@ restore rehearsal, HTTPS/TLS endpoint, security-group, and monitoring evidence. 
 TASK-040; G12 still performs independent audit before any release decision. Refs:
 OQ-001, RISK-002, `docs/architecture/deployment-notes.md`.
 
+## Go-Live Execution Blockers
+
+These are production go-live execution blockers surfaced after G12 PASS. They block the
+release runbook until resolved, but do not change the audited application design or code.
+
+| ID | Blocker | Owner | Blocks | Touches | Status | Opened |
+|---|---|---|---|---|---|---|
+| BLK-GOLIVE-001 | Production go-live cannot proceed because `crm-deploy@118.196.44.193` SSH fails before the pre-flight checks can run. TCP 22 is reachable (`nc -zv 118.196.44.193 22` succeeded), but SSH closes during key exchange before authentication (`kex_exchange_identification: Connection closed by remote host`). The source-address bind documented for prior VPN routing also failed locally (`bind 192.168.0.107: Can't assign requested address`). No deployment step, checkout, backup, migration, compose change, or rollback action was executed. Ops must restore/verify SSH access for `crm-deploy` from the executor host, then rerun `deploy/ops/go-live-runbook.md` from pre-flight. | Infrastructure Ops | Production go-live; ACC-017 evidence capture | ACC-017 (P0), deploy/ops/go-live-runbook.md | Open | 2026-06-05 |
+
 ## G12 Audit Findings — Rework before release (2026-06-03)
 
 Surfaced by the first G12 independent audit (`archive/reviews/g12-audit/g12-audit-decision-2026-06-03.md`),
