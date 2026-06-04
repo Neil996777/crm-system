@@ -98,7 +98,7 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		writeError(w, http.StatusUnauthorized, safeAuthMessage)
+		writeErrorCode(w, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "authentication", safeAuthMessage)
 		return
 	}
 	ctx := r.Context()
@@ -106,16 +106,16 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 	if errors.Is(err, repo.ErrNotFound) {
 		_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte(request.Password))
 		h.appendAccessDenied(ctx, "", "login_failed")
-		writeError(w, http.StatusUnauthorized, safeAuthMessage)
+		writeErrorCode(w, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "authentication", safeAuthMessage)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, safeAuthMessage)
+		writeErrorCode(w, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "authentication", safeAuthMessage)
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password)) != nil || !user.Active() {
 		h.appendAccessDenied(ctx, user.ID, "login_failed")
-		writeError(w, http.StatusUnauthorized, safeAuthMessage)
+		writeErrorCode(w, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "authentication", safeAuthMessage)
 		return
 	}
 
@@ -140,7 +140,7 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 	if err := txSessions.Create(ctx, session); err != nil {
 		_ = tx.Rollback()
 		log.Printf("create session: %v", err)
-		writeError(w, http.StatusUnauthorized, safeAuthMessage)
+		writeErrorCode(w, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "authentication", safeAuthMessage)
 		return
 	}
 	if err := txOutbox.Append(ctx, event.UserSignedIn, user.ID, map[string]any{
@@ -283,10 +283,6 @@ func userDTO(user domain.User) map[string]any {
 		"role":        string(user.Role),
 		"status":      string(user.Status),
 	}
-}
-
-func writeError(w http.ResponseWriter, status int, safeMessage string) {
-	writeErrorCode(w, status, "AUTHENTICATION_FAILED", "authentication", safeMessage)
 }
 
 func writeErrorCode(w http.ResponseWriter, status int, code, category, safeMessage string) {

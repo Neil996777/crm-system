@@ -114,6 +114,17 @@ Response:
 }
 ```
 
+### Internal Session Check
+
+```text
+GET /internal/sessions/check
+```
+
+Cookie-only: the endpoint validates the browser session cookie (`crm_session`) and
+does not accept bearer/service tokens as an alternate session credential. It is
+used by the gateway/BFF to derive the current authenticated actor from the same
+cookie-backed browser session as `/auth/current`.
+
 ### Lead Conversion
 
 ```text

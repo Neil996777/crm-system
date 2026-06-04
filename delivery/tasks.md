@@ -102,13 +102,19 @@ TASK-007..038; deployment/release evidence TASK-039..040.
 12. **Automated tests:** `TEST-AUTH-LOGIN-001..006` (valid login binds role; invalid
     creds unified message; disabled denied; unauthenticated route/API denied; session
     persists across refresh/re-login; stale session re-evaluated after disable/role
-    change), `TEST-ABUSE-UNAUTH-001`, `TEST-ABUSE-ENUM-001`. Type: Integration + E2E.
+    change), `TEST-ABUSE-UNAUTH-001`, `TEST-ABUSE-ENUM-001`; G12 systematic
+    `TEST-DENIAL-CONTRACT-001/003` covers explicit auth error code/category and
+    documented cookie-only internal session check. Type: Integration + E2E.
 13. **Manual verification:** Sign in as seeded admin → reach workspace; sign in with
     wrong password → generic error; disable a user then attempt login → same generic
     error; refresh → still signed in.
 14. **Traceability:** CIM-001/CIM-PROC-001 → PIM-001/PIM-SM-011/PIM-BEH-001 →
     PSM-001 → CONTRACT-001/002 → ACC-001 → TEST-AUTH-LOGIN-001..006.
 15. **TDD:** Write TEST-AUTH-LOGIN + abuse tests first (fail), then implement.
+    G12 systematic fail-first evidence: `python3 scripts/test_denial_contract.py`
+    first failed on the two-argument auth error helper and undocumented
+    `/internal/sessions/check`; after explicit error-code calls and api-spec
+    documentation it passed.
 16. **No-downgrade items:** Real session persistence in PostgreSQL; real disabled-user
     check server-side; unified failure message (no account-state disclosure).
 17. **Blocker:** None.
@@ -156,13 +162,19 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     unavailable). Note: `TEST-AUTHZ-SCOPE-001/002/003` subsume the positive three-role
     CRUD-scope cases (admin=all / manager=team / sales=owned-assigned), i.e. they cover the
     `TEST-PERM-CRUD-ADMIN-001 / -MGR-001 / -SALES-001` positive mappings.
-    Type: Integration (backend/API negative), E2E where user-visible.
+    G12 systematic `TEST-SVC-TOKEN-FAILCLOSED-001` covers audit-history S2S verifier
+    fail-closed behavior for empty audience/intent, and `TEST-DENIAL-CONTRACT-002`
+    covers identity-authz UTC verifier default. Type: Integration (backend/API negative),
+    E2E where user-visible.
 13. **Manual verification:** As Sales call another user's lead by id → denied, no
     leakage; attempt to disable the only admin → blocked state; call an internal
     endpoint without S2S token → `SERVICE_AUTH_FAILED`.
 14. **Traceability:** CIM-PROC-002/024 → PIM-002/003/PIM-INV-046/PIM-BEH-002/003 →
     PSM-001 → CONTRACT-001/019 → ACC-002 → TEST-AUTHZ-SCOPE-001..006 / TEST-INV-LASTADMIN-001.
 15. **TDD:** Write scope/last-admin/S2S negative tests first (fail), then implement.
+    G12 systematic fail-first evidence: audit-history empty audience/intent verification
+    first accepted a signed token, and the static denial-contract script first found
+    identity-authz using local `time.Now()`; after fail-closed and UTC fixes both pass.
 16. **No-downgrade items:** Real server-side permission check (not UI-only,
     ARCH-ACC-002); real S2S signed-token verification (not network trust); real
     last-admin guard; no hard-delete endpoint.
@@ -1226,13 +1238,18 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     active views by default.
 11. **Acceptance method:** ACC-015 — happy/empty/invalid-filter/permission-hidden/permission-
     denied across all P0 entities.
-12. **Automated tests:** `TEST-NAV-RETRIEVE-001..006`, `TEST-ABUSE-ARCHIVED-001`. Type:
+12. **Automated tests:** `TEST-NAV-RETRIEVE-001..006`, `TEST-ABUSE-ARCHIVED-001`;
+    G12 systematic record-read denial tests cover account/lead/opportunity non-owned
+    detail reads returning safe `NOT_FOUND` without restricted data. Type:
     E2E + Integration.
 13. **Manual verification:** List each entity; apply a valid then invalid filter; confirm
     unauthorized records hidden.
 14. **Traceability:** CIM-047/CIM-PROC-023 → PIM-026/PIM-BEH-030 → PSM-011 → CONTRACT-001 →
     ACC-015 → TEST-NAV-RETRIEVE-001..006.
 15. **TDD:** Write list/detail/empty/invalid-filter/permission-hidden tests first (fail).
+    G12 systematic fail-first evidence: account, lead, and opportunity non-owned detail
+    tests first returned `403 PERMISSION_DENIED`; after applying the denial contract they
+    return safe `404 NOT_FOUND` and leak no record fields.
 16. **No-downgrade items:** Real permission filtering at backend (not UI-only); real data;
     archived excluded from active views.
 17. **Blocker:** None.

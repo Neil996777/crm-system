@@ -38,10 +38,10 @@ func TestLeadQueryScopeAndIDOR(t *testing.T) {
 
 	t.Run("TEST-ABUSE-IDOR-001 Sales non-owned detail denied without leakage", func(t *testing.T) {
 		rec := getLead(app, "/leads/"+otherID, actorHeaders("sales-1", "Sales"))
-		if rec.Code != http.StatusForbidden {
-			t.Fatalf("expected 403, got %d body=%s", rec.Code, rec.Body.String())
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("expected safe 404, got %d body=%s", rec.Code, rec.Body.String())
 		}
-		requireErrorCode(t, rec, "PERMISSION_DENIED")
+		requireErrorCode(t, rec, "NOT_FOUND")
 		if contains(rec.Body.String(), "Restricted lead") || contains(rec.Body.String(), otherID) {
 			t.Fatalf("denial leaked restricted lead detail: %s", rec.Body.String())
 		}

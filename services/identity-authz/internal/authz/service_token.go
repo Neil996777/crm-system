@@ -61,7 +61,7 @@ func VerifyServiceToken(token string, options VerifyOptions) (ServiceTokenClaims
 	}
 	now := options.Now
 	if now.IsZero() {
-		now = time.Now()
+		now = time.Now().UTC()
 	}
 	if claims.Audience != options.Audience || claims.Intent != options.Intent || !claims.Expires.After(now) {
 		return ServiceTokenClaims{}, ErrServiceAuthFailed

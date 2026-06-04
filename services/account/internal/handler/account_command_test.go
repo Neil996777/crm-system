@@ -102,10 +102,10 @@ func TestAccountCRUDAcceptance(t *testing.T) {
 		accountID := decodeJSON(t, create)["id"].(string)
 
 		fetch := getAccountJSON(app, "/accounts/"+accountID, actorHeaders("sales-1", "Sales"))
-		if fetch.Code != http.StatusForbidden {
-			t.Fatalf("expected 403, got %d body=%s", fetch.Code, fetch.Body.String())
+		if fetch.Code != http.StatusNotFound {
+			t.Fatalf("expected safe 404, got %d body=%s", fetch.Code, fetch.Body.String())
 		}
-		requireErrorCode(t, fetch, "PERMISSION_DENIED")
+		requireErrorCode(t, fetch, "NOT_FOUND")
 		if contains(fetch.Body.String(), "Restricted Customer") {
 			t.Fatalf("unauthorized response leaked company name: %s", fetch.Body.String())
 		}

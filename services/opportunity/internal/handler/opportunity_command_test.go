@@ -112,6 +112,14 @@ func TestOpportunityCreateAcceptance(t *testing.T) {
 		if contains(edit.Body.String(), "Restricted deal") {
 			t.Fatalf("unauthorized response leaked opportunity data: %s", edit.Body.String())
 		}
+		detail := getOpportunityJSON(app, "/opportunities/"+opportunityID, actorHeaders("sales-1", "Sales"))
+		if detail.Code != http.StatusNotFound {
+			t.Fatalf("expected safe 404 for non-owned detail, got %d body=%s", detail.Code, detail.Body.String())
+		}
+		requireErrorCode(t, detail, "NOT_FOUND")
+		if contains(detail.Body.String(), "Restricted deal") || contains(detail.Body.String(), opportunityID) {
+			t.Fatalf("detail denial leaked opportunity data: %s", detail.Body.String())
+		}
 
 		del := deleteOpportunityJSON(app, "/opportunities/"+opportunityID, actorHeaders("mgr-1", "Sales Manager"))
 		if del.Code != http.StatusMethodNotAllowed && del.Code != http.StatusNotFound {

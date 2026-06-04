@@ -36,8 +36,11 @@ func SignServiceToken(claims ServiceTokenClaims, secret []byte) (string, error) 
 }
 
 func VerifyServiceToken(token string, options VerifyOptions) (ServiceTokenClaims, error) {
+	if len(options.Secret) == 0 || options.Audience == "" || options.Intent == "" {
+		return ServiceTokenClaims{}, ErrServiceAuthFailed
+	}
 	parts := strings.Split(token, ".")
-	if len(parts) != 2 || len(options.Secret) == 0 {
+	if len(parts) != 2 {
 		return ServiceTokenClaims{}, ErrServiceAuthFailed
 	}
 	expected := sign(parts[0], options.Secret)

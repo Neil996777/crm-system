@@ -63,6 +63,9 @@ func TestAuthSessionAcceptance(t *testing.T) {
 		if invalid != authFailureMessage || missing != authFailureMessage || invalid != missing {
 			t.Fatalf("expected unified safe failure message, invalid=%q missing=%q", invalid, missing)
 		}
+		invalidBody := postJSON(app, "/auth/sign-in", map[string]string{"email": email, "password": "wrong-password"}, nil)
+		requireErrorCode(t, invalidBody, "AUTHENTICATION_FAILED")
+		requireErrorCategory(t, invalidBody, "authentication")
 		requireEvent(t, db, "UserAccessDenied", "")
 	})
 
@@ -337,6 +340,22 @@ func requireErrorCode(t *testing.T, rec *httptest.ResponseRecorder, expected str
 	}
 	if code != expected {
 		t.Fatalf("expected error code %q, got %q body=%s", expected, code, rec.Body.String())
+	}
+}
+
+func requireErrorCategory(t *testing.T, rec *httptest.ResponseRecorder, expected string) {
+	t.Helper()
+	body := decodeJSON(t, rec)
+	errBody, ok := body["error"].(map[string]any)
+	if !ok {
+		t.Fatalf("missing error body: %#v", body)
+	}
+	category, ok := errBody["category"].(string)
+	if !ok {
+		t.Fatalf("missing error category: %#v", errBody)
+	}
+	if category != expected {
+		t.Fatalf("expected error category %q, got %q body=%s", expected, category, rec.Body.String())
 	}
 }
 

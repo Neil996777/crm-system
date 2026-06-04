@@ -35,7 +35,7 @@ func (h *LeadHandler) getLead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !domain.CanReadLead(actor.ID, actor.Role, lead) {
-		writeError(w, http.StatusForbidden, "PERMISSION_DENIED", "permission", "Permission denied.")
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
 		return
 	}
 	writeJSON(w, http.StatusOK, leadDTO(lead))

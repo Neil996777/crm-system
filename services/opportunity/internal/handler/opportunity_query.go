@@ -40,7 +40,7 @@ func (h *OpportunityHandler) getOpportunity(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if !domain.CanReadOpportunity(actor.ID, actor.Role, opportunity) {
-		writeError(w, http.StatusForbidden, "PERMISSION_DENIED", "permission", "Permission denied.")
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
 		return
 	}
 	writeJSON(w, http.StatusOK, opportunityDTO(opportunity))
