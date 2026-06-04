@@ -5,6 +5,10 @@ import "net/http"
 func (h *ReportingHandler) salesOverview(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromRequest(r)
 	if actor.Role == "Sales" || actor.Role == "" {
+		if err := h.appendReportAccessDenied(r, "sales-overview", actor); err != nil {
+			writeError(w, http.StatusServiceUnavailable, "AUDIT_LOG_FAILED", "system", "Audit log failed.")
+			return
+		}
 		writeError(w, http.StatusForbidden, "PERMISSION_DENIED", "permission", "Permission denied.")
 		return
 	}

@@ -214,8 +214,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     rework lead transactional outbox rollback coverage (`TEST-HISTORY-TX-001`) proves
     lead create rolls back when the local outbox append fails; G12 fourth micro-rework
     lead dispatcher tests prove lead audit-history S2S delivery, retry retention, and
-    distinct `EVT-LEAD-QUALIFIED` / `EVT-LEAD-DISQUALIFIED` event IDs. Type:
-    Integration.
+    distinct `EVT-LEAD-QUALIFIED` / `EVT-LEAD-DISQUALIFIED` event IDs; G12 systematic
+    rework catalog tests prove identity-authz login/access/user-admin events, commercial
+    contract termination, and reporting access-denied events emit the required
+    audit-log-spec `EVT-*` IDs. Type: Integration.
 13. **Manual verification:** Append an event via S2S; query as record owner → visible;
     query as non-owner → denied; attempt to edit an event → unavailable.
 14. **Traceability:** CIM-035/036 → PIM-018/019/PIM-BEH-028/029 → PSM-009 →
@@ -233,8 +235,12 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     passed in services/lead. G12 fourth micro-rework fail-first evidence: lead dispatcher
     test did not compile before `AuditHistoryServiceURL`/audit mapping existed; after routing
     lead audit delivery through the transactional outbox and removing the post-commit
-    `audit.AppendRecordHistory` call, `go test ./internal/event -run TestLeadOutboxDispatcher`
-    and `go test ./... -count=1` passed in services/lead.
+    audit call, target tests and `go test ./... -count=1` passed in services/lead.
+    G12 systematic rework fail-first evidence: identity catalog tests first saw legacy
+    `EVT-USER-AUTHENTICATED`/`EVT-USER-ADMIN-CHANGED` IDs, commercial terminated first
+    mapped to generic status-change, and reporting access-denied first had no outbox/event
+    package; after catalog mapping and reporting outbox dispatcher, target tests and full
+    service tests passed in services/identity-authz, services/commercial, and services/reporting.
 16. **No-downgrade items:** Real append-only persistence (no in-memory log); real
     hash chain; real record-permission gate on history query (ABUSE-013); actor identity
     is the authenticated principal, never a client-supplied field (ABUSE-019, AUTHZ-009).
@@ -1140,7 +1146,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     `TestUserAdminAuditOutboxFailureRollsBackMutation` covers transactional
     identity-authz user-admin outbox rollback, and
     `TestOutboxDispatcherDeliversAuditHistoryAndRetries` covers identity-authz
-    outbox S2S audit-history delivery plus retry retention. Type: Integration + Manual.
+    outbox S2S audit-history delivery plus retry retention; `TestIdentityAuditCatalogEventIDs`,
+    `TestCommercialAuditCatalogEventIDs`, `TestReportAccessDeniedCreatesCatalogEvent`, and
+    `TestReportingAccessDeniedDispatchesAuditCatalogEventAndRetries` cover the G12 catalog
+    ID gaps for operation-log events. Type: Integration + Manual.
 13. **Manual verification:** As admin, query logs after performing actions; as manager/sales
     → denied.
 14. **Traceability:** CIM-036/CIM-PROC-018 → PIM-019/PIM-BEH-029 → PSM-009 → CONTRACT-013/014 →
@@ -1150,7 +1159,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     returned 201 and persisted a created user; dispatcher test first failed to compile
     because `identity_authz.outbox_events` had no dispatcher. After transactional
     user-admin outbox and dispatcher implementation, both target tests and
-    `go test ./... -count=1` passed in services/identity-authz.
+    `go test ./... -count=1` passed in services/identity-authz. BLK-G12-021 fail-first
+    evidence: catalog ID tests first failed on collapsed identity/commercial IDs and missing
+    reporting access-denied outbox; after fix the target tests plus `go test ./... -count=1`
+    passed in services/identity-authz, services/commercial, and services/reporting.
 16. **No-downgrade items:** Real admin-only gate; real append-only logs; no editing path.
 17. **Blocker:** None.
 

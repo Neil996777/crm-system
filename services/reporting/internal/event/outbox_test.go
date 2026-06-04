@@ -12,45 +12,41 @@ import (
 	"testing"
 	"time"
 
-	"crm-system/services/identity-authz/internal/authz"
+	"crm-system/services/reporting/internal/authz"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func TestOutboxDispatcherDeliversAuditHistoryAndRetries(t *testing.T) {
+func TestReportingAccessDeniedDispatchesAuditCatalogEventAndRetries(t *testing.T) {
 	db := newEventTestDB(t)
 	outbox := NewOutbox(db)
-	if err := outbox.Append(context.Background(), UserRoleStatusChanged, "usr_target", map[string]any{
-		"actorId":       "usr_admin",
-		"actorRole":     "Administrator",
-		"actorDisplay":  "Admin User",
-		"targetId":      "usr_target",
-		"action":        "change_role",
-		"before":        "Sales",
-		"after":         "Sales Manager",
-		"result":        "success",
-		"correlationId": "corr-identity-1",
+	if err := outbox.AppendReportAccessDenied(context.Background(), ReportAccessDeniedInput{
+		ActorID:       "sales-denied",
+		ActorRole:     "Sales",
+		ActorDisplay:  "sales-denied",
+		ReportType:    "team-overview",
+		CorrelationID: "corr-report-denied",
 	}); err != nil {
-		t.Fatalf("append event: %v", err)
+		t.Fatalf("append access denied: %v", err)
 	}
 
 	var attempts int
 	var delivered map[string]any
 	audit := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		attempts++
-		if r.URL.Path != "/internal/events/append" {
-			http.NotFound(w, r)
-			return
-		}
 		if attempts == 1 {
 			http.Error(w, "temporary outage", http.StatusServiceUnavailable)
 			return
 		}
-		if r.Header.Get("X-Service-Id") != "identity-authz" || r.Header.Get("X-Intent") != "audit.append" {
+		if r.URL.Path != "/internal/events/append" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Header.Get("X-Service-Id") != "reporting" || r.Header.Get("X-Intent") != "audit.append" {
 			t.Fatalf("missing S2S headers: %#v", r.Header)
 		}
-		if r.Header.Get("X-Correlation-Id") != "corr-identity-1" {
+		if r.Header.Get("X-Correlation-Id") != "corr-report-denied" {
 			t.Fatalf("missing correlation id: %#v", r.Header)
 		}
 		if _, err := authz.VerifyServiceToken(
@@ -67,18 +63,18 @@ func TestOutboxDispatcherDeliversAuditHistoryAndRetries(t *testing.T) {
 	t.Cleanup(audit.Close)
 
 	err := outbox.DispatchOnce(context.Background(), DispatchConfig{
-		ServiceID:              "identity-authz",
+		ServiceID:              "reporting",
 		ServiceTokenSecret:     []byte("secret"),
 		AuditHistoryServiceURL: audit.URL,
 		BatchSize:              10,
 	})
 	if err == nil {
-		t.Fatal("expected first dispatch to report audit failure")
+		t.Fatal("expected first dispatch failure")
 	}
 	requireUnpublishedCount(t, db, 1)
 
 	if err := outbox.DispatchOnce(context.Background(), DispatchConfig{
-		ServiceID:              "identity-authz",
+		ServiceID:              "reporting",
 		ServiceTokenSecret:     []byte("secret"),
 		AuditHistoryServiceURL: audit.URL,
 		BatchSize:              10,
@@ -86,67 +82,8 @@ func TestOutboxDispatcherDeliversAuditHistoryAndRetries(t *testing.T) {
 		t.Fatalf("dispatch retry: %v", err)
 	}
 	requireUnpublishedCount(t, db, 0)
-	if delivered["eventUid"] == "" || delivered["eventId"] != "EVT-USER-ROLE-CHANGED" || delivered["correlationId"] != "corr-identity-1" {
+	if delivered["eventId"] != "EVT-REPORT-ACCESS-DENIED" || delivered["resourceType"] != "Report" || delivered["resourceId"] != "team-overview" {
 		t.Fatalf("unexpected delivered body: %#v", delivered)
-	}
-}
-
-func TestIdentityAuditCatalogEventIDs(t *testing.T) {
-	cases := []struct {
-		name      string
-		eventType string
-		payload   map[string]any
-		expected  string
-	}{
-		{
-			name:      "TEST-EVT-CATALOG-IDENTITY-001 login succeeded",
-			eventType: UserSignedIn,
-			payload:   map[string]any{"result": "success"},
-			expected:  "EVT-AUTH-LOGIN-SUCCEEDED",
-		},
-		{
-			name:      "TEST-EVT-CATALOG-IDENTITY-002 login failed",
-			eventType: UserAccessDenied,
-			payload:   map[string]any{"reason": "login_failed", "result": "failed"},
-			expected:  "EVT-AUTH-LOGIN-FAILED",
-		},
-		{
-			name:      "TEST-EVT-CATALOG-IDENTITY-003 access denied",
-			eventType: UserAccessDenied,
-			payload:   map[string]any{"reason": "permission_denied", "result": "denied"},
-			expected:  "EVT-AUTH-ACCESS-DENIED",
-		},
-		{
-			name:      "TEST-EVT-CATALOG-IDENTITY-004 role changed",
-			eventType: UserRoleStatusChanged,
-			payload:   map[string]any{"action": "change_role", "result": "success"},
-			expected:  "EVT-USER-ROLE-CHANGED",
-		},
-		{
-			name:      "TEST-EVT-CATALOG-IDENTITY-005 status changed",
-			eventType: UserRoleStatusChanged,
-			payload:   map[string]any{"action": "change_status", "result": "success"},
-			expected:  "EVT-USER-STATUS-CHANGED",
-		},
-		{
-			name:      "TEST-EVT-CATALOG-IDENTITY-006 last admin blocked",
-			eventType: LastAdministratorBlocked,
-			payload:   map[string]any{"reason": "last_admin", "result": "blocked"},
-			expected:  "EVT-LAST-ADMIN-BLOCKED",
-		},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			body := auditAppendBody(outboxEvent{
-				ID:          "evt_catalog_identity",
-				EventType:   tc.eventType,
-				AggregateID: "usr_target",
-				Payload:     tc.payload,
-			})
-			if body["eventId"] != tc.expected {
-				t.Fatalf("expected %s, got %#v body=%#v", tc.expected, body["eventId"], body)
-			}
-		})
 	}
 }
 
@@ -187,7 +124,7 @@ func newEventTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("open db: %v", err)
 	}
 	t.Cleanup(func() { db.Close() })
-	for _, migration := range []string{"0001_init_schema.up.sql", "0002_users_sessions.up.sql", "0003_permission_policy.up.sql"} {
+	for _, migration := range []string{"0001_init_schema.up.sql", "0002_reporting_projections.up.sql", "0003_reporting_outbox.up.sql"} {
 		sqlBytes, err := os.ReadFile(filepath.Join("..", "..", "migrations", migration))
 		if err != nil {
 			t.Fatalf("read migration %s: %v", migration, err)
@@ -202,7 +139,7 @@ func newEventTestDB(t *testing.T) *sql.DB {
 func requireUnpublishedCount(t *testing.T, db *sql.DB, expected int) {
 	t.Helper()
 	var count int
-	if err := db.QueryRow(`SELECT count(*) FROM identity_authz.outbox_events WHERE published_at IS NULL`).Scan(&count); err != nil {
+	if err := db.QueryRow(`SELECT count(*) FROM reporting.outbox_events WHERE published_at IS NULL`).Scan(&count); err != nil {
 		t.Fatalf("count unpublished: %v", err)
 	}
 	if count != expected {

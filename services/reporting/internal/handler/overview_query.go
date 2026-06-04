@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"crm-system/services/reporting/internal/authz"
+	"crm-system/services/reporting/internal/event"
 	"crm-system/services/reporting/internal/projection"
 	"crm-system/services/reporting/internal/repo"
 )
@@ -23,6 +24,7 @@ type Config struct {
 type ReportingHandler struct {
 	repo     *repo.ProjectionRepo
 	consumer *projection.Consumer
+	outbox   *event.Outbox
 	config   Config
 }
 
@@ -33,6 +35,7 @@ func NewReportingServer(db *sql.DB, config Config) http.Handler {
 	handler := &ReportingHandler{
 		repo:     repo.NewProjectionRepo(db),
 		consumer: projection.NewConsumer(db),
+		outbox:   event.NewOutbox(db),
 		config:   config,
 	}
 	mux := http.NewServeMux()
@@ -45,6 +48,10 @@ func NewReportingServer(db *sql.DB, config Config) http.Handler {
 func (h *ReportingHandler) teamOverview(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromRequest(r)
 	if actor.Role == "Sales" || actor.Role == "" {
+		if err := h.appendReportAccessDenied(r, "team-overview", actor); err != nil {
+			writeError(w, http.StatusServiceUnavailable, "AUDIT_LOG_FAILED", "system", "Audit log failed.")
+			return
+		}
 		writeError(w, http.StatusForbidden, "PERMISSION_DENIED", "permission", "Permission denied.")
 		return
 	}
@@ -103,6 +110,16 @@ func (h *ReportingHandler) verifyServiceToken(r *http.Request, intent string) bo
 		return false
 	}
 	return r.Header.Get("X-Service-Id") == claims.Issuer && r.Header.Get("X-Intent") == intent
+}
+
+func (h *ReportingHandler) appendReportAccessDenied(r *http.Request, reportType string, actor actorContext) error {
+	return h.outbox.AppendReportAccessDenied(r.Context(), event.ReportAccessDeniedInput{
+		ActorID:       actor.ID,
+		ActorRole:     actor.Role,
+		ActorDisplay:  actor.ID,
+		ReportType:    reportType,
+		CorrelationID: r.Header.Get("X-Correlation-Id"),
+	})
 }
 
 type actorContext struct {

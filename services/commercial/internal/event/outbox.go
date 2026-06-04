@@ -244,6 +244,9 @@ func auditEventContract(item outboxEvent) (string, string) {
 		if payloadString(item.Payload, "toStatus", "") == "Signed" {
 			return "EVT-CONTRACT-SIGNED", "Contract signed"
 		}
+		if payloadString(item.Payload, "toStatus", "") == "Terminated" {
+			return "EVT-CONTRACT-TERMINATED", "Contract terminated"
+		}
 		return "EVT-CONTRACT-STATUS-CHANGED", "Contract status changed"
 	case PaymentRecorded:
 		return "EVT-PAYMENT-RECORDED", "Payment recorded"

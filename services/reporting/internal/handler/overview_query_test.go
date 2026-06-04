@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"crm-system/services/reporting/internal/event"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -127,6 +128,29 @@ func TestProjectionIngestRequiresS2SToken(t *testing.T) {
 	requireErrorCode(t, denied, "PERMISSION_DENIED")
 }
 
+func TestReportAccessDeniedCreatesCatalogEvent(t *testing.T) {
+	db := newReportingTestDB(t)
+	app := NewReportingServer(db, Config{ServiceID: "reporting", ServiceTokenSecret: []byte("reporting-secret")})
+	rec := getReportingJSON(app, "/reports/team-overview", actorHeaders("sales-denied", "Sales", "single-team"))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected sales denied 403, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var eventID, payload string
+	err := db.QueryRow(`
+		SELECT event_type, payload::text
+		FROM reporting.outbox_events
+		WHERE aggregate_id = 'team-overview'
+		ORDER BY occurred_at DESC
+		LIMIT 1
+	`).Scan(&eventID, &payload)
+	if err != nil {
+		t.Fatalf("TEST-EVT-CATALOG-REPORTING-001 expected reporting access denied outbox event: %v", err)
+	}
+	if eventID != event.ReportAccessDenied || !contains(payload, "sales-denied") {
+		t.Fatalf("expected report access denied event with actor, got event=%s payload=%s", eventID, payload)
+	}
+}
+
 func newReportingTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	ctx := context.Background()
@@ -160,7 +184,7 @@ func newReportingTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("container port: %v", err)
 	}
 	db := openReportingDB(t, fmt.Sprintf("postgres://crm_admin:crm_admin_dev_password@%s:%s/crm_system?sslmode=disable", host, port.Port()))
-	for _, migration := range []string{"0001_init_schema.up.sql", "0002_reporting_projections.up.sql"} {
+	for _, migration := range []string{"0001_init_schema.up.sql", "0002_reporting_projections.up.sql", "0003_reporting_outbox.up.sql"} {
 		sqlBytes, err := os.ReadFile(filepath.Join("..", "..", "migrations", migration))
 		if err != nil {
 			t.Fatalf("read migration %s: %v", migration, err)

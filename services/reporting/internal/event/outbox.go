@@ -3,8 +3,11 @@ package event
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -12,17 +15,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"crm-system/services/identity-authz/internal/authz"
 )
 
-const (
-	UserSignedIn             = "UserSignedIn"
-	UserSignedOut            = "UserSignedOut"
-	UserAccessDenied         = "UserAccessDenied"
-	UserRoleStatusChanged    = "UserRoleStatusChanged"
-	LastAdministratorBlocked = "LastAdministratorBlocked"
-)
+const ReportAccessDenied = "ReportAccessDenied"
 
 type Outbox struct {
 	q sqlExecer
@@ -33,20 +28,20 @@ type sqlExecer interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
 
-func NewOutbox(db *sql.DB) *Outbox {
-	return &Outbox{q: db}
-}
-
-func NewOutboxTx(tx *sql.Tx) *Outbox {
-	return &Outbox{q: tx}
-}
-
 type DispatchConfig struct {
 	ServiceID              string
 	ServiceTokenSecret     []byte
 	AuditHistoryServiceURL string
 	HTTPClient             *http.Client
 	BatchSize              int
+}
+
+type ReportAccessDeniedInput struct {
+	ActorID       string
+	ActorRole     string
+	ActorDisplay  string
+	ReportType    string
+	CorrelationID string
 }
 
 type outboxEvent struct {
@@ -56,15 +51,32 @@ type outboxEvent struct {
 	Payload     map[string]any
 }
 
-func (o *Outbox) Append(ctx context.Context, eventType, aggregateID string, payload map[string]any) error {
+func NewOutbox(db *sql.DB) *Outbox {
+	return &Outbox{q: db}
+}
+
+func (o *Outbox) AppendReportAccessDenied(ctx context.Context, input ReportAccessDeniedInput) error {
+	reportType := strings.TrimSpace(input.ReportType)
+	if reportType == "" {
+		reportType = "report"
+	}
+	payload := map[string]any{
+		"actorId":       fallback(input.ActorID, "anonymous"),
+		"actorRole":     fallback(input.ActorRole, "Unauthenticated"),
+		"actorDisplay":  fallback(input.ActorDisplay, fallback(input.ActorID, "anonymous")),
+		"reportType":    reportType,
+		"result":        "denied",
+		"reason":        "permission_denied",
+		"correlationId": input.CorrelationID,
+	}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 	_, err = o.q.ExecContext(ctx, `
-		INSERT INTO identity_authz.outbox_events (id, event_type, aggregate_type, aggregate_id, payload, occurred_at)
+		INSERT INTO reporting.outbox_events (id, event_type, aggregate_type, aggregate_id, payload, occurred_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
-	`, "evt_"+randomHex(16), eventType, "User", aggregateID, payloadBytes, time.Now().UTC())
+	`, "evt_"+randomHex(16), ReportAccessDenied, "Report", reportType, payloadBytes, time.Now().UTC())
 	return err
 }
 
@@ -74,7 +86,7 @@ func (o *Outbox) DispatchOnce(ctx context.Context, config DispatchConfig) error 
 	}
 	serviceID := config.ServiceID
 	if serviceID == "" {
-		serviceID = "identity-authz"
+		serviceID = "reporting"
 	}
 	batchSize := config.BatchSize
 	if batchSize <= 0 {
@@ -82,7 +94,7 @@ func (o *Outbox) DispatchOnce(ctx context.Context, config DispatchConfig) error 
 	}
 	rows, err := o.q.QueryContext(ctx, `
 		SELECT id, event_type, aggregate_id, payload
-		FROM identity_authz.outbox_events
+		FROM reporting.outbox_events
 		WHERE published_at IS NULL
 		ORDER BY occurred_at ASC, id ASC
 		LIMIT $1
@@ -115,7 +127,7 @@ func (o *Outbox) DispatchOnce(ctx context.Context, config DispatchConfig) error 
 			continue
 		}
 		if _, err := o.q.ExecContext(ctx, `
-			UPDATE identity_authz.outbox_events
+			UPDATE reporting.outbox_events
 			SET published_at = now()
 			WHERE id = $1 AND published_at IS NULL
 		`, item.ID); err != nil && firstErr == nil {
@@ -130,12 +142,7 @@ func deliverAuditEvent(ctx context.Context, config DispatchConfig, serviceID str
 	if err != nil {
 		return err
 	}
-	token, err := authz.SignServiceToken(authz.ServiceTokenClaims{
-		Issuer:   serviceID,
-		Audience: "audit-history",
-		Intent:   "audit.append",
-		Expires:  time.Now().UTC().Add(2 * time.Minute),
-	}, config.ServiceTokenSecret)
+	token, err := signServiceToken(serviceID, "audit-history", "audit.append", config.ServiceTokenSecret)
 	if err != nil {
 		return err
 	}
@@ -148,8 +155,8 @@ func deliverAuditEvent(ctx context.Context, config DispatchConfig, serviceID str
 	req.Header.Set("X-Service-Id", serviceID)
 	req.Header.Set("X-Intent", "audit.append")
 	req.Header.Set("X-Correlation-Id", payloadString(item.Payload, "correlationId", item.ID))
-	req.Header.Set("X-Actor-User-Id", payloadString(item.Payload, "actorId", "system"))
-	req.Header.Set("X-Actor-Role", payloadString(item.Payload, "actorRole", "System"))
+	req.Header.Set("X-Actor-User-Id", payloadString(item.Payload, "actorId", "anonymous"))
+	req.Header.Set("X-Actor-Role", payloadString(item.Payload, "actorRole", "Unauthenticated"))
 	req.Header.Set("X-Actor-Display", payloadString(item.Payload, "actorDisplay", req.Header.Get("X-Actor-User-Id")))
 	client := config.HTTPClient
 	if client == nil {
@@ -167,67 +174,53 @@ func deliverAuditEvent(ctx context.Context, config DispatchConfig, serviceID str
 }
 
 func auditAppendBody(item outboxEvent) map[string]any {
-	eventID, action := auditEventContract(item.EventType, item.Payload)
 	return map[string]any{
 		"eventUid":           item.ID,
-		"eventId":            eventID,
+		"eventId":            "EVT-REPORT-ACCESS-DENIED",
 		"eventVersion":       1,
 		"surfaces":           []string{"operation_log"},
-		"action":             action,
-		"resourceType":       "User",
+		"action":             "Report access denied",
+		"resourceType":       "Report",
 		"resourceId":         item.AggregateID,
-		"result":             payloadString(item.Payload, "result", "success"),
-		"beforeSummary":      map[string]any{"value": payloadString(item.Payload, "before", "")},
+		"result":             "denied",
+		"reasonCode":         payloadString(item.Payload, "reason", "permission_denied"),
 		"afterSummary":       item.Payload,
-		"diffClassification": "Security Critical",
+		"diffClassification": "Confidential",
 		"scopeSummary":       "administrator only",
-		"safeSummary":        safeSummary(action),
+		"safeSummary":        "Report access denied",
 		"correlationId":      payloadString(item.Payload, "correlationId", item.ID),
 		"causationId":        item.ID,
-		"acceptanceIds":      []string{"ACC-022", "TEST-OPLOG-001", "TEST-OPLOG-002", "TEST-OPLOG-005"},
+		"acceptanceIds":      []string{"ACC-018", "ACC-022", "ACC-023"},
 	}
 }
 
-func auditEventContract(eventType string, payload map[string]any) (string, string) {
-	switch eventType {
-	case UserRoleStatusChanged:
-		action := payloadString(payload, "action", "user_admin_changed")
-		switch action {
-		case "change_role":
-			return "EVT-USER-ROLE-CHANGED", action
-		case "change_status":
-			return "EVT-USER-STATUS-CHANGED", action
-		default:
-			return "EVT-USER-STATUS-CHANGED", action
-		}
-	case LastAdministratorBlocked:
-		return "EVT-LAST-ADMIN-BLOCKED", "last_admin_blocked"
-	case UserSignedIn:
-		return "EVT-AUTH-LOGIN-SUCCEEDED", "sign_in"
-	case UserSignedOut:
-		return "EVT-USER-SIGNED-OUT", "sign_out"
-	case UserAccessDenied:
-		if payloadString(payload, "reason", "") == "login_failed" {
-			return "EVT-AUTH-LOGIN-FAILED", "login_failed"
-		}
-		return "EVT-AUTH-ACCESS-DENIED", "access_denied"
-	default:
-		return "EVT-" + strings.ToUpper(strings.ReplaceAll(eventType, "_", "-")), eventType
-	}
-}
-
-func payloadString(payload map[string]any, key, fallback string) string {
+func payloadString(payload map[string]any, key, fallbackValue string) string {
 	if value, ok := payload[key].(string); ok && strings.TrimSpace(value) != "" {
 		return value
 	}
-	return fallback
+	return fallbackValue
 }
 
-func safeSummary(action string) string {
-	if action == "" {
-		return "Identity authorization event"
+func fallback(value, fallbackValue string) string {
+	if strings.TrimSpace(value) != "" {
+		return value
 	}
-	return "Identity authorization " + action
+	return fallbackValue
+}
+
+func signServiceToken(issuer, audience, intent string, secret []byte) (string, error) {
+	if len(secret) == 0 {
+		return "", errors.New("missing service token secret")
+	}
+	claims := map[string]any{"iss": issuer, "aud": audience, "intent": intent, "exp": time.Now().UTC().Add(2 * time.Minute)}
+	payload, err := json.Marshal(claims)
+	if err != nil {
+		return "", err
+	}
+	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
+	mac := hmac.New(sha256.New, secret)
+	mac.Write([]byte(encodedPayload))
+	return encodedPayload + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
 func randomHex(size int) string {
