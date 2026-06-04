@@ -117,6 +117,41 @@ func TestPermissionScopeAndS2SAcceptance(t *testing.T) {
 	})
 }
 
+func TestPermissionDeniedAuditOutboxFailureIsSurfaced(t *testing.T) {
+	db := newAuthTestDB(t)
+	secret := []byte("permission-test-secret")
+	app := NewAuthServer(db, Config{
+		CookieSecure:       true,
+		SessionTTL:         12 * time.Hour,
+		IdleSessionTTL:     30 * time.Minute,
+		ServiceID:          "identity-authz",
+		ServiceTokenSecret: secret,
+	})
+	salesID := insertUser(t, db, "perm-denial-audit-"+randomSuffix(t)+"@example.com", "pw", "Sales", "Active")
+	token := signTestServiceToken(t, secret, "lead", "identity-authz", "permission.check")
+	if _, err := db.Exec(`DROP TABLE identity_authz.outbox_events`); err != nil {
+		t.Fatalf("force outbox failure: %v", err)
+	}
+
+	rec := permissionCheck(app, token, map[string]any{
+		"actorId": salesID,
+		"action":  "lead.update",
+		"resource": map[string]any{
+			"type": "lead",
+			"id":   "restricted-lead",
+		},
+		"context": map[string]any{
+			"ownerId": "another-user",
+			"teamId":  "single-team",
+		},
+	})
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("TEST-AUDIT-DENIAL-DURABLE-002 expected audit persistence failure to surface as 503, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	requireErrorCode(t, rec, "DEPENDENCY_UNAVAILABLE")
+}
+
 func signTestServiceToken(t *testing.T, secret []byte, issuer, audience, intent string) string {
 	t.Helper()
 	token, err := authz.SignServiceToken(authz.ServiceTokenClaims{

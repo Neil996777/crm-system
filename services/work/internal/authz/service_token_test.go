@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 )
@@ -12,19 +13,19 @@ import (
 func TestVerifyServiceTokenRejectsLongLifetime(t *testing.T) {
 	now := time.Date(2026, 6, 3, 20, 45, 0, 0, time.UTC)
 	secret := []byte("test-secret")
-	token := signClaims(t, ServiceClaims{
+	token := signClaims(t, ServiceTokenClaims{
 		Issuer:   "identity-authz",
 		Audience: "work",
 		Intent:   "work.command",
 		Expires:  now.Add(10 * time.Minute),
 	}, secret)
 
-	if _, err := VerifyServiceToken(token, "work", "work.command", secret, now); err == nil {
-		t.Fatalf("TEST-SVC-TOKEN-LIFETIME-001 expected SERVICE_AUTH_FAILED-compatible rejection for token lifetime over 5 minutes")
+	if _, err := VerifyServiceToken(token, "work", "work.command", secret, now); !errors.Is(err, ErrServiceAuthFailed) {
+		t.Fatalf("TEST-SVC-TOKEN-LIFETIME-001 expected ErrServiceAuthFailed for token lifetime over 5 minutes, got %v", err)
 	}
 }
 
-func signClaims(t *testing.T, claims ServiceClaims, secret []byte) string {
+func signClaims(t *testing.T, claims ServiceTokenClaims, secret []byte) string {
 	t.Helper()
 	payload, err := json.Marshal(claims)
 	if err != nil {

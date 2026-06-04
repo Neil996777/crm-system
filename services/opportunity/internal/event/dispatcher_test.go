@@ -155,6 +155,31 @@ func TestOutboxDispatcherDeliversAndRetriesAuditHistoryEvents(t *testing.T) {
 	}
 }
 
+func TestOpportunityAuditCatalogEventIDs(t *testing.T) {
+	cases := []struct {
+		name      string
+		eventType string
+		expected  string
+	}{
+		{name: "TEST-EVT-CATALOG-OPPORTUNITY-001 closed won", eventType: OpportunityClosedWon, expected: "EVT-OPPORTUNITY-WON"},
+		{name: "TEST-EVT-CATALOG-OPPORTUNITY-002 closed lost", eventType: OpportunityClosedLost, expected: "EVT-OPPORTUNITY-LOST"},
+		{name: "TEST-EVT-CATALOG-OPPORTUNITY-003 archived", eventType: OpportunityArchived, expected: "EVT-RECORD-ARCHIVED"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			body := auditAppendBody(outboxEvent{
+				ID:          "evt_catalog_opportunity",
+				EventType:   tc.eventType,
+				AggregateID: "opp_catalog",
+				Payload:     map[string]any{"result": "success"},
+			})
+			if body["eventId"] != tc.expected {
+				t.Fatalf("expected %s, got %#v body=%#v", tc.expected, body["eventId"], body)
+			}
+		})
+	}
+}
+
 func requirePublishedState(t *testing.T, db *sql.DB, eventUID string, published bool) {
 	t.Helper()
 	var isPublished bool

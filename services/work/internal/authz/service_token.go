@@ -10,7 +10,9 @@ import (
 	"time"
 )
 
-type ServiceClaims struct {
+var ErrServiceAuthFailed = errors.New("SERVICE_AUTH_FAILED")
+
+type ServiceTokenClaims struct {
 	Issuer   string    `json:"iss"`
 	Audience string    `json:"aud"`
 	Intent   string    `json:"intent"`
@@ -18,7 +20,7 @@ type ServiceClaims struct {
 }
 
 func SignServiceToken(issuer, audience, intent string, secret []byte) string {
-	claims := ServiceClaims{Issuer: issuer, Audience: audience, Intent: intent, Expires: time.Now().UTC().Add(2 * time.Minute)}
+	claims := ServiceTokenClaims{Issuer: issuer, Audience: audience, Intent: intent, Expires: time.Now().UTC().Add(2 * time.Minute)}
 	payload, _ := json.Marshal(claims)
 	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
 	mac := hmac.New(sha256.New, secret)
@@ -27,31 +29,31 @@ func SignServiceToken(issuer, audience, intent string, secret []byte) string {
 	return encodedPayload + "." + signature
 }
 
-func VerifyServiceToken(token, audience, intent string, secret []byte, now time.Time) (ServiceClaims, error) {
+func VerifyServiceToken(token, audience, intent string, secret []byte, now time.Time) (ServiceTokenClaims, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 2 {
-		return ServiceClaims{}, errors.New("invalid token")
+		return ServiceTokenClaims{}, ErrServiceAuthFailed
 	}
 	mac := hmac.New(sha256.New, secret)
 	mac.Write([]byte(parts[0]))
 	expected := mac.Sum(nil)
 	actual, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil || !hmac.Equal(expected, actual) {
-		return ServiceClaims{}, errors.New("invalid signature")
+		return ServiceTokenClaims{}, ErrServiceAuthFailed
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return ServiceClaims{}, err
+		return ServiceTokenClaims{}, ErrServiceAuthFailed
 	}
-	var claims ServiceClaims
+	var claims ServiceTokenClaims
 	if err := json.Unmarshal(payload, &claims); err != nil {
-		return ServiceClaims{}, err
+		return ServiceTokenClaims{}, ErrServiceAuthFailed
 	}
 	if claims.Audience != audience || claims.Intent != intent || !claims.Expires.After(now) {
-		return ServiceClaims{}, errors.New("invalid claims")
+		return ServiceTokenClaims{}, ErrServiceAuthFailed
 	}
 	if claims.Expires.After(now.Add(5*time.Minute + time.Second)) {
-		return ServiceClaims{}, errors.New("invalid claims")
+		return ServiceTokenClaims{}, ErrServiceAuthFailed
 	}
 	return claims, nil
 }

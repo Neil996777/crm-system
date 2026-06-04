@@ -154,6 +154,7 @@ func TestLeadOutboxDispatcherDeliversAuditHistoryAndReportingWithRetry(t *testin
 func TestLeadOutboxDispatcherMapsQualificationAuditEvents(t *testing.T) {
 	qualified := auditAppendBody(outboxEvent{ID: "evt_q", EventType: LeadQualified, AggregateID: "lead_q", Payload: map[string]any{"status": "Valid"}})
 	disqualified := auditAppendBody(outboxEvent{ID: "evt_d", EventType: LeadDisqualified, AggregateID: "lead_d", Payload: map[string]any{"status": "Invalid", "invalidReason": "No fit"}})
+	converted := auditAppendBody(outboxEvent{ID: "evt_c", EventType: LeadConverted, AggregateID: "lead_c", Payload: map[string]any{"status": "Converted"}})
 
 	if qualified["eventId"] != "EVT-LEAD-QUALIFIED" {
 		t.Fatalf("expected qualified event id, got %#v", qualified["eventId"])
@@ -163,6 +164,9 @@ func TestLeadOutboxDispatcherMapsQualificationAuditEvents(t *testing.T) {
 	}
 	if qualified["eventId"] == disqualified["eventId"] {
 		t.Fatalf("TEST-HISTORY-LEAD-EVENT-ID-001 expected distinct lead qualify/disqualify event ids")
+	}
+	if converted["eventId"] != "EVT-LEAD-CONVERTED" {
+		t.Fatalf("TEST-EVT-CATALOG-LEAD-001 expected lead converted event id, got %#v", converted["eventId"])
 	}
 	if after, ok := disqualified["afterSummary"].(map[string]any); !ok || after["invalidReason"] != "No fit" {
 		t.Fatalf("expected disqualified afterSummary to include invalid reason, got %#v", disqualified["afterSummary"])

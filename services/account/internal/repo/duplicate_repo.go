@@ -15,11 +15,15 @@ var (
 )
 
 type DuplicateRepo struct {
-	db *sql.DB
+	q sqlRunner
 }
 
 func NewDuplicateRepo(db *sql.DB) *DuplicateRepo {
-	return &DuplicateRepo{db: db}
+	return &DuplicateRepo{q: db}
+}
+
+func NewDuplicateRepoTx(tx *sql.Tx) *DuplicateRepo {
+	return &DuplicateRepo{q: tx}
 }
 
 func (r *DuplicateRepo) Check(ctx context.Context, actorID, actorRole string, candidate domain.DuplicateCandidate) (domain.DuplicateCheckResult, error) {
@@ -39,7 +43,7 @@ func (r *DuplicateRepo) Check(ctx context.Context, actorID, actorRole string, ca
 	result.Matches = matches
 	result.Rules = rules
 	result.WarningToken = "dup_" + randomHex(16)
-	_, err = r.db.ExecContext(ctx, `
+	_, err = r.q.ExecContext(ctx, `
 		INSERT INTO account.duplicate_warning_tokens (token, target_type, normalized_signature, actor_user_id, expires_at)
 		VALUES ($1, $2, $3, $4, $5)
 	`, result.WarningToken, candidate.TargetType, signature, actorID, time.Now().UTC().Add(30*time.Minute))
@@ -49,7 +53,7 @@ func (r *DuplicateRepo) Check(ctx context.Context, actorID, actorRole string, ca
 func (r *DuplicateRepo) ConsumeToken(ctx context.Context, token, targetType, actorID, signature string) error {
 	var usedAt sql.NullTime
 	var expiresAt time.Time
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT used_at, expires_at
 		FROM account.duplicate_warning_tokens
 		WHERE token = $1 AND target_type = $2 AND actor_user_id = $3 AND normalized_signature = $4
@@ -66,7 +70,7 @@ func (r *DuplicateRepo) ConsumeToken(ctx context.Context, token, targetType, act
 	if time.Now().UTC().After(expiresAt) {
 		return ErrDuplicateTokenInvalid
 	}
-	result, err := r.db.ExecContext(ctx, `
+	result, err := r.q.ExecContext(ctx, `
 		UPDATE account.duplicate_warning_tokens
 		SET used_at = now()
 		WHERE token = $1 AND used_at IS NULL
@@ -126,7 +130,7 @@ func (r *DuplicateRepo) findMatches(ctx context.Context, actorID, actorRole stri
 
 func (r *DuplicateRepo) countAccountsByCompany(ctx context.Context, actorID, actorRole, normalizedCompany string) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT count(*)
 		FROM account.accounts
 		WHERE lower(regexp_replace(btrim(company_name), '\s+', ' ', 'g')) = $1
@@ -137,7 +141,7 @@ func (r *DuplicateRepo) countAccountsByCompany(ctx context.Context, actorID, act
 
 func (r *DuplicateRepo) countContactsByEmail(ctx context.Context, actorID, actorRole, normalizedEmail string) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT count(*)
 		FROM account.contacts c
 		JOIN account.accounts a ON a.id = c.account_id
@@ -149,7 +153,7 @@ func (r *DuplicateRepo) countContactsByEmail(ctx context.Context, actorID, actor
 
 func (r *DuplicateRepo) countContactsByPhone(ctx context.Context, actorID, actorRole, normalizedPhone string) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT count(*)
 		FROM account.contacts c
 		JOIN account.accounts a ON a.id = c.account_id

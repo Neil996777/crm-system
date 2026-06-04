@@ -167,6 +167,45 @@ func TestAccountLeadConversionCreateIdempotency(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("expected one account row for idempotent conversion create, got %d", count)
 	}
+
+	t.Run("TEST-LEAD-CONVERSION-IDEMPOTENCY-004 concurrent duplicate key returns existing account", func(t *testing.T) {
+		key := "lead-convert-account-race-key"
+		lockTx, err := db.BeginTx(context.Background(), nil)
+		if err != nil {
+			t.Fatalf("begin lock tx: %v", err)
+		}
+		defer lockTx.Rollback()
+		if _, err := lockTx.Exec(`LOCK TABLE account.accounts IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+			t.Fatalf("lock account table: %v", err)
+		}
+
+		done := make(chan *httptest.ResponseRecorder, 1)
+		go func() {
+			done <- postAccountJSON(app, "/internal/accounts", map[string]any{
+				"idempotencyKey": key,
+				"companyName":    "Concurrent Lead Converted Account",
+				"customerStatus": "Prospect",
+				"ownerId":        "sales-1",
+			}, headers)
+		}()
+		time.Sleep(250 * time.Millisecond)
+		if _, err := lockTx.Exec(`
+			INSERT INTO account.accounts (id, company_name, customer_status, owner_id, version, lead_conversion_idempotency_key)
+			VALUES ('acct_existing_race', 'Concurrent Existing Account', 'Prospect', 'sales-1', 1, $1)
+		`, key); err != nil {
+			t.Fatalf("insert competing account: %v", err)
+		}
+		if err := lockTx.Commit(); err != nil {
+			t.Fatalf("commit competing account: %v", err)
+		}
+		rec := <-done
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected duplicate-key conversion create to return existing 200, got %d body=%s", rec.Code, rec.Body.String())
+		}
+		if decodeJSON(t, rec)["id"] != "acct_existing_race" {
+			t.Fatalf("expected existing account from duplicate key, got %s", rec.Body.String())
+		}
+	})
 }
 
 func newAccountTestDB(t *testing.T) *sql.DB {

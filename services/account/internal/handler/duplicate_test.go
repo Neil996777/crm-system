@@ -95,4 +95,49 @@ func TestAccountDuplicateWarningsAcceptance(t *testing.T) {
 		}
 		requireJSONValue(t, decodeJSON(t, unique), "result", "NoDuplicate")
 	})
+
+	t.Run("TEST-DUPLICATE-WARN-TX-001 outbox failure rolls back warning token", func(t *testing.T) {
+		first := postAccountJSON(app, "/accounts", map[string]any{
+			"companyName":    "Transactional Duplicate",
+			"customerStatus": "Prospect",
+			"ownerId":        "sales-1",
+		}, actorHeaders("sales-1", "Sales"))
+		if first.Code != http.StatusCreated {
+			t.Fatalf("expected initial create 201, got %d body=%s", first.Code, first.Body.String())
+		}
+		if _, err := db.Exec(`
+			CREATE OR REPLACE FUNCTION account.fail_duplicate_outbox_insert() RETURNS trigger AS $$
+			BEGIN
+				RAISE EXCEPTION 'forced duplicate outbox failure';
+			END;
+			$$ LANGUAGE plpgsql;
+			CREATE TRIGGER fail_duplicate_outbox_insert
+			BEFORE INSERT ON account.outbox_events
+			FOR EACH ROW EXECUTE FUNCTION account.fail_duplicate_outbox_insert();
+		`); err != nil {
+			t.Fatalf("install failing outbox trigger: %v", err)
+		}
+		t.Cleanup(func() {
+			_, _ = db.Exec(`DROP TRIGGER IF EXISTS fail_duplicate_outbox_insert ON account.outbox_events; DROP FUNCTION IF EXISTS account.fail_duplicate_outbox_insert();`)
+		})
+		var beforeCount int
+		if err := db.QueryRow(`SELECT count(*) FROM account.duplicate_warning_tokens WHERE actor_user_id = $1`, "sales-1").Scan(&beforeCount); err != nil {
+			t.Fatalf("count duplicate warning tokens before failure: %v", err)
+		}
+
+		warning := postAccountJSON(app, "/duplicate-checks", map[string]any{
+			"targetType": "account",
+			"candidate":  map[string]any{"companyName": "Transactional Duplicate"},
+		}, actorHeaders("sales-1", "Sales"))
+		if warning.Code != http.StatusServiceUnavailable {
+			t.Fatalf("expected outbox failure 503, got %d body=%s", warning.Code, warning.Body.String())
+		}
+		var count int
+		if err := db.QueryRow(`SELECT count(*) FROM account.duplicate_warning_tokens WHERE actor_user_id = $1`, "sales-1").Scan(&count); err != nil {
+			t.Fatalf("count duplicate warning tokens: %v", err)
+		}
+		if count != beforeCount {
+			t.Fatalf("expected duplicate warning token insert rolled back with outbox failure, before=%d after=%d", beforeCount, count)
+		}
+	})
 }

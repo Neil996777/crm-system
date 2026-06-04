@@ -34,13 +34,21 @@ func (h *AccountHandler) duplicateCheck(w http.ResponseWriter, r *http.Request) 
 		Email:       request.Candidate.Email,
 		Phone:       request.Candidate.Phone,
 	}
-	result, err := h.duplicates.Check(r.Context(), actor.ID, actor.Role, candidate)
+	tx, err := h.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The duplicate check input is invalid.")
+		return
+	}
+	defer tx.Rollback()
+	txDuplicates := repo.NewDuplicateRepoTx(tx)
+	txOutbox := event.NewOutboxTx(tx)
+	result, err := txDuplicates.Check(r.Context(), actor.ID, actor.Role, candidate)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The duplicate check input is invalid.")
 		return
 	}
 	if result.Result == "PossibleDuplicate" {
-		if err := h.outbox.Append(r.Context(), event.DuplicateWarningRaised, result.WarningToken, map[string]any{
+		if err := txOutbox.Append(r.Context(), event.DuplicateWarningRaised, result.WarningToken, map[string]any{
 			"traceability":     "TASK-031 ACC-019 CIM-040 CIM-PROC-005 PIM-021 PIM-BEH-025 PSM-003 CONTRACT-005 FLOW-012 TEST-DUPLICATE-WARN",
 			"actorId":          actor.ID,
 			"actorRole":        actor.Role,
@@ -52,6 +60,10 @@ func (h *AccountHandler) duplicateCheck(w http.ResponseWriter, r *http.Request) 
 			writeOutboxFailure(w)
 			return
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		writeOutboxFailure(w)
+		return
 	}
 	writeJSON(w, http.StatusOK, duplicateDTO(result))
 }

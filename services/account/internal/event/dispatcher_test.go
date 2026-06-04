@@ -158,6 +158,18 @@ func TestOutboxDispatcherDeliversReportingProjectionAndRetries(t *testing.T) {
 	}
 }
 
+func TestAccountAuditCatalogEventIDs(t *testing.T) {
+	body := auditAppendBody(outboxEvent{
+		ID:          "evt_catalog_account_archived",
+		EventType:   AccountArchived,
+		AggregateID: "acct_catalog",
+		Payload:     map[string]any{"result": "success"},
+	})
+	if body["eventId"] != "EVT-RECORD-ARCHIVED" {
+		t.Fatalf("TEST-EVT-CATALOG-ACCOUNT-001 expected EVT-RECORD-ARCHIVED, got %#v body=%#v", body["eventId"], body)
+	}
+}
+
 func requireAuditRequest(t *testing.T, r *http.Request, serviceID, actorID, actorRole, correlationID string) {
 	t.Helper()
 	if r.URL.Path != "/internal/events/append" {

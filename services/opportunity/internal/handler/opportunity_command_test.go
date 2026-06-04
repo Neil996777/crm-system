@@ -200,6 +200,49 @@ func TestOpportunityLeadConversionCreateIdempotency(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("expected one opportunity row for idempotent conversion create, got %d", count)
 	}
+
+	t.Run("TEST-LEAD-CONVERSION-IDEMPOTENCY-005 concurrent duplicate key returns existing opportunity", func(t *testing.T) {
+		key := "lead-convert-opportunity-race-key"
+		lockTx, err := db.BeginTx(context.Background(), nil)
+		if err != nil {
+			t.Fatalf("begin lock tx: %v", err)
+		}
+		defer lockTx.Rollback()
+		if _, err := lockTx.Exec(`LOCK TABLE opportunity.opportunities IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+			t.Fatalf("lock opportunity table: %v", err)
+		}
+
+		done := make(chan *httptest.ResponseRecorder, 1)
+		go func() {
+			done <- postOpportunityJSON(app, "/internal/opportunities", map[string]any{
+				"idempotencyKey":    key,
+				"customerId":        "acct_from_conversion_race",
+				"ownerId":           "sales-1",
+				"stage":             "New Opportunity",
+				"expectedAmount":    "75000.00",
+				"expectedCloseDate": "2026-10-15",
+				"title":             "Concurrent lead converted opportunity",
+			}, headers)
+		}()
+		time.Sleep(250 * time.Millisecond)
+		if _, err := lockTx.Exec(`
+			INSERT INTO opportunity.opportunities
+				(id, customer_id, owner_id, stage, expected_amount, expected_close_date, title, version, lead_conversion_idempotency_key)
+			VALUES ('opp_existing_race', 'acct_from_conversion_race', 'sales-1', 'New Opportunity', 75000.00, '2026-10-15', 'Concurrent existing opportunity', 1, $1)
+		`, key); err != nil {
+			t.Fatalf("insert competing opportunity: %v", err)
+		}
+		if err := lockTx.Commit(); err != nil {
+			t.Fatalf("commit competing opportunity: %v", err)
+		}
+		rec := <-done
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected duplicate-key conversion create to return existing 200, got %d body=%s", rec.Code, rec.Body.String())
+		}
+		if decodeJSON(t, rec)["id"] != "opp_existing_race" {
+			t.Fatalf("expected existing opportunity from duplicate key, got %s", rec.Body.String())
+		}
+	})
 }
 
 func newOpportunityTestDB(t *testing.T) *sql.DB {

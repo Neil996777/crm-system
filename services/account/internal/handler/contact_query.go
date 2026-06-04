@@ -20,7 +20,7 @@ func (h *AccountHandler) listContactsForAccount(w http.ResponseWriter, r *http.R
 		return
 	}
 	if !domain.CanReadAccount(actor.ID, actor.Role, account) {
-		writeError(w, http.StatusForbidden, "PERMISSION_DENIED", "permission", "Permission denied.")
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "not_found", "The requested resource was not found.")
 		return
 	}
 	contacts, err := h.contacts.ListByAccount(r.Context(), account.ID)

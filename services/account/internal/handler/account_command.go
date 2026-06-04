@@ -13,6 +13,7 @@ import (
 	"crm-system/services/account/internal/domain"
 	"crm-system/services/account/internal/event"
 	"crm-system/services/account/internal/repo"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const intentCreateAccountForLeadConversion = "account.create_for_lead_conversion"
@@ -151,10 +152,22 @@ func (h *AccountHandler) createAccountCommand(w http.ResponseWriter, r *http.Req
 			"customerStatus": created.CustomerStatus,
 		})
 	}); err != nil {
+		if requireIDempotency && isLeadConversionIDempotencyConflict(err) {
+			existing, findErr := h.repo.FindByLeadConversionIDempotencyKey(r.Context(), request.IDempotencyKey)
+			if findErr == nil {
+				writeJSON(w, http.StatusOK, accountDTO(existing))
+				return
+			}
+		}
 		writeError(w, http.StatusBadRequest, "VALIDATION_FAILED", "validation", "The account input is invalid.")
 		return
 	}
 	writeJSON(w, http.StatusCreated, accountDTO(created))
+}
+
+func isLeadConversionIDempotencyConflict(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505" && strings.Contains(pgErr.ConstraintName, "lead_conversion_idempotency_key")
 }
 
 func (h *AccountHandler) updateAccount(w http.ResponseWriter, r *http.Request) {

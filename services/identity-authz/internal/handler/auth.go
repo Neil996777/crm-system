@@ -105,7 +105,10 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 	user, err := h.users.FindByEmail(ctx, strings.TrimSpace(request.Email))
 	if errors.Is(err, repo.ErrNotFound) {
 		_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte(request.Password))
-		h.appendAccessDenied(ctx, "", "login_failed")
+		if err := h.appendAccessDenied(ctx, "", "login_failed"); err != nil {
+			writeDependencyUnavailable(w)
+			return
+		}
 		writeErrorCode(w, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "authentication", safeAuthMessage)
 		return
 	}
@@ -114,7 +117,10 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password)) != nil || !user.Active() {
-		h.appendAccessDenied(ctx, user.ID, "login_failed")
+		if err := h.appendAccessDenied(ctx, user.ID, "login_failed"); err != nil {
+			writeDependencyUnavailable(w)
+			return
+		}
 		writeErrorCode(w, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "authentication", safeAuthMessage)
 		return
 	}
@@ -201,6 +207,10 @@ func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) currentUser(w http.ResponseWriter, r *http.Request) {
 	user, sessionID, errorCode, ok := h.authenticate(r.Context(), r)
 	if !ok {
+		if errorCode == "DEPENDENCY_UNAVAILABLE" {
+			writeDependencyUnavailable(w)
+			return
+		}
 		if errorCode == "" {
 			errorCode = "AUTHENTICATION_FAILED"
 		}
@@ -217,38 +227,59 @@ func (h *AuthHandler) currentUser(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) authenticate(ctx context.Context, r *http.Request) (domain.User, string, string, bool) {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil || cookie.Value == "" {
-		h.appendAccessDenied(ctx, "", "unauthenticated")
+		if err := h.appendAccessDenied(ctx, "", "unauthenticated"); err != nil {
+			return domain.User{}, "", "DEPENDENCY_UNAVAILABLE", false
+		}
 		return domain.User{}, "", "AUTHENTICATION_FAILED", false
 	}
 	session, err := h.sessions.FindByID(ctx, cookie.Value)
 	if err != nil || !session.Active(time.Now().UTC()) {
-		h.appendAccessDenied(ctx, "", "invalid_session")
+		if err := h.appendAccessDenied(ctx, "", "invalid_session"); err != nil {
+			return domain.User{}, "", "DEPENDENCY_UNAVAILABLE", false
+		}
 		return domain.User{}, "", "AUTHENTICATION_FAILED", false
 	}
 	user, err := h.users.FindByID(ctx, session.UserID)
 	if err != nil || !user.Active() {
 		now := time.Now().UTC()
 		_, _ = h.sessions.Revoke(ctx, session.ID, now)
-		h.appendAccessDenied(ctx, session.UserID, "inactive_user")
+		if err := h.appendAccessDenied(ctx, session.UserID, "inactive_user"); err != nil {
+			return domain.User{}, "", "DEPENDENCY_UNAVAILABLE", false
+		}
 		return domain.User{}, "", "AUTHENTICATION_FAILED", false
 	}
 	if user.AuthzVersion != session.AuthzVersionAtIssue {
 		now := time.Now().UTC()
 		_, _ = h.sessions.Revoke(ctx, session.ID, now)
-		h.appendAccessDenied(ctx, session.UserID, "authz_version_stale")
+		if err := h.appendAccessDenied(ctx, session.UserID, "authz_version_stale"); err != nil {
+			return domain.User{}, "", "DEPENDENCY_UNAVAILABLE", false
+		}
 		return domain.User{}, "", "AUTHZ_VERSION_STALE", false
 	}
 	return user, session.ID, "", true
 }
 
-func (h *AuthHandler) appendAccessDenied(ctx context.Context, userID, reason string) {
-	if err := h.outbox.Append(ctx, event.UserAccessDenied, userID, map[string]any{
+func (h *AuthHandler) appendAccessDenied(ctx context.Context, userID, reason string) error {
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("begin access-denied audit tx: %v", err)
+		return err
+	}
+	txOutbox := event.NewOutboxTx(tx)
+	if err := txOutbox.Append(ctx, event.UserAccessDenied, userID, map[string]any{
 		"actorId": userID,
 		"reason":  reason,
 		"result":  "denied",
 	}); err != nil {
+		_ = tx.Rollback()
 		log.Printf("append access-denied event: %v", err)
+		return err
 	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("commit access-denied audit tx: %v", err)
+		return err
+	}
+	return nil
 }
 
 func (h *AuthHandler) setSessionCookie(w http.ResponseWriter, value string, maxAge int) {

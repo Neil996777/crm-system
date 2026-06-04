@@ -242,7 +242,10 @@ func (h *AuthHandler) requireAdministrator(w http.ResponseWriter, r *http.Reques
 		return domain.User{}, "", false
 	}
 	if actor.Role != domain.RoleAdministrator {
-		h.appendAccessDenied(r.Context(), actor.ID, "user_admin_denied")
+		if err := h.appendAccessDenied(r.Context(), actor.ID, "user_admin_denied"); err != nil {
+			writeDependencyUnavailable(w)
+			return domain.User{}, "", false
+		}
 		writeErrorCode(w, http.StatusForbidden, "PERMISSION_DENIED", "permission", "Permission denied.")
 		return domain.User{}, "", false
 	}

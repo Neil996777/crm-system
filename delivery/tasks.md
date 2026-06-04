@@ -430,7 +430,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     dispatcher audit retry coverage for qualification events. G12 systematic rework adds
     `TestLeadConversionRetriesUseDownstreamIdempotencyKeys`,
     `TestAccountLeadConversionCreateIdempotency`, and
-    `TestOpportunityLeadConversionCreateIdempotency` for partial-failure retry safety.
+    `TestOpportunityLeadConversionCreateIdempotency` for partial-failure retry safety,
+    with G12 rework #6 `TEST-LEAD-CONVERSION-IDEMPOTENCY-004/005` covering the
+    concurrent unique-key race returning the existing downstream row.
     Type: Integration + E2E.
 13. **Manual verification:** Mark Valid → convert → opportunity created, lead history
     intact; mark Invalid then convert → rejected; restore as Sales → denied.
@@ -442,6 +444,10 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     twice and inserted duplicates for the same conversion key. After downstream
     idempotency-key persistence and lead key propagation, all three target tests and
     `go test ./... -count=1` passed in services/lead, services/account, and services/opportunity.
+    G12 rework #6 fail-first evidence: concurrent duplicate-key internal account/opportunity
+    create tests first mapped the race to `400 VALIDATION_FAILED`; after unique-constraint
+    conflict handling, they return `200` with the existing row and `go test ./... -count=1`
+    passed in services/account and services/opportunity.
 16. **No-downgrade items:** Real conversion-once guard in aggregate; real cross-service
     create via S2S (not a stub); preserved history is a real event.
 17. **Blocker:** None.
@@ -540,12 +546,19 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     method or role note; save without company blocked; multiple contacts visible in the
     company context; unauthorized denied.
 11. **Acceptance method:** ACC-006 — multiple contacts per company, visible in context.
-12. **Automated tests:** `TEST-CONTACT-LINK-001..004`. Type: Integration + E2E.
+12. **Automated tests:** `TEST-CONTACT-LINK-001..004`;
+    G12 rework #6 `TEST-DENIAL-CONTACTS-001` covers safe `404 NOT_FOUND` for
+    existing-but-unreadable account contacts. Type: Integration + E2E.
 13. **Manual verification:** Add 2 contacts to a company → both listed; add contact with
     no method/note → blocked.
 14. **Traceability:** CIM-013 → PIM-006/PIM-BEH-008 → PSM-003 → CONTRACT-005 → ACC-006
     → TEST-CONTACT-LINK-001..004.
 15. **TDD:** Write contact-link tests first (fail).
+    G12 rework #6 fail-first evidence: list contacts for an existing non-owned account
+    first returned `403 PERMISSION_DENIED`; after the denial-contract fix it returns
+    `404 NOT_FOUND` without contact data, and `go test ./internal/handler -run
+    'TestContactLinkAcceptance|TestAccountLeadConversionCreateIdempotency|TestAccountDuplicateWarningsAcceptance'
+    -count=1` passed in services/account.
 16. **No-downgrade items:** Real FK link to company; real persistence.
 17. **Blocker:** None.
 
@@ -1022,7 +1035,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     cascade: on parent record owner change, open tasks/follow-ups transfer to the new owner
     unless explicitly reassigned — PIM-INV-030/033; this is the test home for the cascade);
     G12 systematic rework `TEST-WORK-VERSION-CONFLICT-001` additionally verifies stale
-    `expectedVersion` returns `VERSION_CONFLICT` without overwriting task status.
+    `expectedVersion` returns `VERSION_CONFLICT` without overwriting task status;
+    G12 rework #6 `TEST-SVC-TOKEN-LIFETIME-001` now asserts the work service S2S verifier
+    returns `ErrServiceAuthFailed` with the aligned `ServiceTokenClaims` shape.
     Type: Integration + E2E.
 13. **Manual verification:** Add note to a lead; create task with due date; complete it →
     no longer a reminder.
@@ -1036,6 +1051,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     completed/cancelled not active reminders and stale writes use `TEST-WORK-VERSION-CONFLICT-001`.
     after handler-level expectedVersion validation and repo conflict mapping, it returns
     `409 VERSION_CONFLICT`, and `go test ./... -count=1` passed in services/work.
+    G12 rework #6 evidence: work `ServiceClaims` / ad hoc invalid-claims errors were aligned
+    in-place to `ServiceTokenClaims` / `ErrServiceAuthFailed`; `go test ./... -count=1`
+    passed in services/work.
 16. **No-downgrade items:** Real related-record link; real persistence; real history events.
 17. **Blocker:** None.
 
@@ -1171,7 +1189,11 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     outbox S2S audit-history delivery plus retry retention; `TestIdentityAuditCatalogEventIDs`,
     `TestCommercialAuditCatalogEventIDs`, `TestReportAccessDeniedCreatesCatalogEvent`, and
     `TestReportingAccessDeniedDispatchesAuditCatalogEventAndRetries` cover the G12 catalog
-    ID gaps for operation-log events. Type: Integration + Manual.
+    ID gaps for operation-log events; G12 rework #6 adds
+    `TEST-AUDIT-DENIAL-DURABLE-001/002`, `TEST-EVT-CATALOG-LEAD-001`,
+    `TEST-EVT-CATALOG-OPPORTUNITY-001..003`, `TEST-EVT-CATALOG-COMMERCIAL-002..004`,
+    `TEST-EVT-CATALOG-ACCOUNT-001`, and `TEST-EVT-CATALOG-IMPORTEXPORT-001`.
+    Type: Integration + Manual.
 13. **Manual verification:** As admin, query logs after performing actions; as manager/sales
     → denied.
 14. **Traceability:** CIM-036/CIM-PROC-018 → PIM-019/PIM-BEH-029 → PSM-009 → CONTRACT-013/014 →
@@ -1185,6 +1207,14 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     evidence: catalog ID tests first failed on collapsed identity/commercial IDs and missing
     reporting access-denied outbox; after fix the target tests plus `go test ./... -count=1`
     passed in services/identity-authz, services/commercial, and services/reporting.
+    G12 rework #6 fail-first evidence: failed-login and permission-denied audit append
+    failures first returned normal denial responses while losing the event; after routing
+    denial events through durable identity-authz outbox transactions, append failure surfaces
+    `503 DEPENDENCY_UNAVAILABLE`. The dead identity-authz `audit_client.go` carrying
+    `EVT-USER-ADMIN-CHANGED` was removed after `rg` verified no production call sites, and
+    `scripts/test_cleanup_contract.py` guards its absence. The remaining 8 catalog event
+    IDs are pinned by service tests. `go test ./... -count=1` passed in services/identity-authz,
+    lead, account, opportunity, commercial, import-export, and work.
 16. **No-downgrade items:** Real admin-only gate; real append-only logs; no editing path.
 17. **Blocker:** None.
 
@@ -1246,7 +1276,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     denied across all P0 entities.
 12. **Automated tests:** `TEST-NAV-RETRIEVE-001..006`, `TEST-ABUSE-ARCHIVED-001`;
     G12 systematic record-read denial tests cover account/lead/opportunity non-owned
-    detail reads returning safe `NOT_FOUND` without restricted data. Type:
+    detail reads returning safe `NOT_FOUND` without restricted data; G12 rework #6
+    `TEST-DENIAL-CONTACTS-001` covers the account contacts sub-resource safe 404.
+    Type:
     E2E + Integration.
 13. **Manual verification:** List each entity; apply a valid then invalid filter; confirm
     unauthorized records hidden.
@@ -1256,6 +1288,9 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     G12 systematic fail-first evidence: account, lead, and opportunity non-owned detail
     tests first returned `403 PERMISSION_DENIED`; after applying the denial contract they
     return safe `404 NOT_FOUND` and leak no record fields.
+    G12 rework #6 fail-first evidence: account contacts sub-resource first leaked existence
+    through `403 PERMISSION_DENIED`; after the fix it returns safe `404 NOT_FOUND`, and
+    services/account full `go test ./... -count=1` passed.
 16. **No-downgrade items:** Real permission filtering at backend (not UI-only); real data;
     archived excluded from active views.
 17. **Blocker:** None.
@@ -1290,13 +1325,19 @@ TASK-007..038; deployment/release evidence TASK-039..040.
     unique data.
 12. **Automated tests:** `TEST-DUPLICATE-WARN-001..006`, `TEST-ABUSE-DUPENUM-001`;
     G12 third rework regression in services/lead covers the same transactional outbox
-    helper used by lead duplicate-warning token + event persistence. Type:
+    helper used by lead duplicate-warning token + event persistence; G12 rework #6
+    `TEST-DUPLICATE-WARN-TX-001` covers account duplicate token + outbox atomicity.
+    Type:
     Integration + E2E.
 13. **Manual verification:** Create a company; create another with same name differing case →
     warning; proceed → second record created, first untouched.
 14. **Traceability:** CIM-040/CIM-PROC-005 → PIM-021/PIM-BEH-025 → PSM-002/003 →
     CONTRACT-003/005 + FLOW-012 → ACC-019 → TEST-DUPLICATE-WARN-001..006.
 15. **TDD:** Write match + proceed-no-merge + unique-no-warning + enum-safety tests first (fail).
+    G12 rework #6 fail-first evidence: forced account duplicate-warning outbox failure first
+    left a persisted warning token; after moving token persistence and
+    `DuplicateWarningRaised` outbox append into one DB transaction, the failure rolls back
+    the token and `go test ./... -count=1` passed in services/account.
 16. **No-downgrade items:** Real normalized matching against persisted records; no silent
     merge/overwrite; no unauthorized matched-detail leakage.
 17. **Blocker:** None.

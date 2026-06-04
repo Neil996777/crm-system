@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"crm-system/services/identity-authz/internal/domain"
@@ -34,7 +33,10 @@ func (h *AuthHandler) permissionCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	actor, err := h.users.FindByID(r.Context(), request.ActorID)
 	if err != nil {
-		h.appendAccessDenied(r.Context(), request.ActorID, "actor_not_found")
+		if err := h.appendAccessDenied(r.Context(), request.ActorID, "actor_not_found"); err != nil {
+			writeDependencyUnavailable(w)
+			return
+		}
 		writeJSON(w, http.StatusOK, permissionResponse(domain.PermissionDecision{DenialCategory: "permission_denied"}))
 		return
 	}
@@ -52,16 +54,27 @@ func (h *AuthHandler) permissionCheck(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if !decision.Allowed {
-		if err := h.outbox.Append(r.Context(), event.UserAccessDenied, actor.ID, map[string]any{
-			"actorId": request.ActorID,
-			"action":  request.Action,
-			"resource": map[string]any{
-				"type": request.Resource.Type,
-			},
-			"result": "denied",
-			"reason": decision.DenialCategory,
+		tx, err := h.db.BeginTx(r.Context(), nil)
+		if err != nil {
+			writeDependencyUnavailable(w)
+			return
+		}
+		txOutbox := event.NewOutboxTx(tx)
+		if err := txOutbox.Append(r.Context(), event.UserAccessDenied, actor.ID, map[string]any{
+			"actorId":       request.ActorID,
+			"action":        request.Action,
+			"resource":      map[string]any{"type": request.Resource.Type},
+			"result":        "denied",
+			"reason":        decision.DenialCategory,
+			"correlationId": request.CorrelationID,
 		}); err != nil {
-			log.Printf("append permission denied event: %v", err)
+			_ = tx.Rollback()
+			writeDependencyUnavailable(w)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			writeDependencyUnavailable(w)
+			return
 		}
 	}
 	writeJSON(w, http.StatusOK, permissionResponse(decision))

@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,11 +10,17 @@ import (
 
 func TestAuditClientPropagatesCorrelationHeader(t *testing.T) {
 	var calls int
+	var eventIDs []string
 	audit := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
 		if r.Header.Get("X-Correlation-Id") != "corr-import-export" {
 			t.Fatalf("missing audit correlation id: %q", r.Header.Get("X-Correlation-Id"))
 		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode audit body: %v", err)
+		}
+		eventIDs = append(eventIDs, body["eventId"].(string))
 		w.WriteHeader(http.StatusCreated)
 	}))
 	t.Cleanup(audit.Close)
@@ -43,5 +50,8 @@ func TestAuditClientPropagatesCorrelationHeader(t *testing.T) {
 	}
 	if calls != 2 {
 		t.Fatalf("expected two audit calls, got %d", calls)
+	}
+	if len(eventIDs) != 2 || eventIDs[0] != "EVT-IMPORT-RUN" || eventIDs[1] != "EVT-EXPORT-RUN" {
+		t.Fatalf("TEST-EVT-CATALOG-IMPORTEXPORT-001 expected import/export catalog event ids, got %#v", eventIDs)
 	}
 }

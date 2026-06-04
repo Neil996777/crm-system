@@ -159,6 +159,30 @@ func TestAuthSessionAcceptance(t *testing.T) {
 	})
 }
 
+func TestDenialAuditOutboxFailureIsSurfaced(t *testing.T) {
+	db := newAuthTestDB(t)
+	app := NewAuthServer(db, Config{
+		CookieSecure:   true,
+		SessionTTL:     12 * time.Hour,
+		IdleSessionTTL: 30 * time.Minute,
+	})
+	email := "denial-audit-" + randomSuffix(t) + "@example.com"
+	insertUser(t, db, email, "correct-password", "Sales", "Active")
+	if _, err := db.Exec(`DROP TABLE identity_authz.outbox_events`); err != nil {
+		t.Fatalf("force outbox failure: %v", err)
+	}
+
+	rec := postJSON(app, "/auth/sign-in", map[string]string{
+		"email":    email,
+		"password": "wrong-password",
+	}, nil)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("TEST-AUDIT-DENIAL-DURABLE-001 expected audit persistence failure to surface as 503, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	requireErrorCode(t, rec, "DEPENDENCY_UNAVAILABLE")
+}
+
 func newAuthTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	ctx := context.Background()

@@ -22,6 +22,9 @@ def main() -> int:
     if Path("services/lead/internal/client/audit_client.go").exists():
         fail("TEST-CLEANUP-DEADCODE-001 lead audit_client.go must be removed after transactional outbox audit delivery")
         failures += 1
+    if Path("services/identity-authz/internal/authz/audit_client.go").exists():
+        fail("TEST-CLEANUP-DEADCODE-003 identity-authz audit_client.go must be removed after dispatcher outbox delivery")
+        failures += 1
     for path, needle in FORBIDDEN_DEFINITIONS.items():
         file_path = Path(path)
         if file_path.exists() and needle in file_path.read_text():
