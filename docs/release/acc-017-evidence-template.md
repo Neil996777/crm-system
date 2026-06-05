@@ -1,5 +1,22 @@
 # ACC-017 Release Evidence
 
+## Production Go-Live Rework #1 Evidence — 2026-06-05
+
+| Field | Evidence |
+|---|---|
+| Release commit | `da9d63c Add production go-live runbook` |
+| Rework driver | `BLK-GOLIVE-004` / `delivery/go-live-rework-1.md` |
+| Fresh backup before migration | `/opt/crm-system/backups/postgres/crm-postgres-20260605T041343Z.sql.gz.enc` |
+| Fresh backup checksum | `6733f9e570882a8412f3db52584fcd01dca7e7422f7d207b6b0d5cb4af0a48a2` |
+| Build/deploy proof | Full `frontend npm ci && npm run build`, `docker compose -f docker-compose.prod.yml up -d --build`, and `bash scripts/migrate.sh up` output captured in `docs/release/evidence/go-live-rework-1-2026-06-05-transcript.txt` |
+| Migration proof | Transcript shows `account/0006_lead_conversion_idempotency`, `opportunity/0004_lead_conversion_idempotency`, and `reporting/0003_reporting_outbox` applied/checked |
+| Image proof | All 10 CRM Go service images have `2026-06-05` image Created dates and new image IDs; all 10 service containers were recreated at `2026-06-05 12:14:00 +0800` |
+| Runtime health | Final `docker compose ps` shows all 11 production containers healthy; gateway remains `127.0.0.1:8080->8080/tcp` |
+| Rework behavior proof | BLK-G12-015 proof: non-owner Sales by-id quote read returned safe `HTTP/1.1 404 Not Found`; temporary quote deleted with `CLEANUP_COUNT=0` |
+| Smoke result | `TEST-DEPLOY-SMOKE-001` and `TEST-DEPLOY-SMOKE-002` passed after rebuild/migration |
+| TLS renewal | `crm-certbot-renew.timer` active/enabled; `certbot renew --dry-run` succeeded for the certificate expiring `2026-06-09 21:46:04+00:00` |
+| Evidence transcript | `docs/release/evidence/go-live-rework-1-2026-06-05-transcript.txt` |
+
 ## Production Go-Live Evidence — 2026-06-05
 
 | Field | Evidence |

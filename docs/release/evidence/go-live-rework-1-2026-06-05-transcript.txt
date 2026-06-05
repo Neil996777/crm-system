@@ -1,0 +1,969 @@
+CRM Go-Live Rework #1 Final Evidence Transcript - 2026-06-05
+Operator: crm-deploy
+Target: srv-volcengine-sh-01 / 118.196.44.193
+
+$ date
+Fri Jun  5 12:13:41 CST 2026
+
+$ Step 1 image Created check
+HEAD=da9d63c Add production go-live runbook
+gateway-bff 2026-06-05T12:02:01.832537847+08:00
+identity-authz 2026-06-05T01:15:44.865555577+08:00
+lead 2026-06-05T01:15:53.980369199+08:00
+account 2026-06-05T01:06:25.782622734+08:00
+opportunity 2026-06-05T01:05:56.679917049+08:00
+commercial 2026-06-05T01:15:15.31920141+08:00
+work 2026-06-05T01:05:46.742248492+08:00
+reporting 2026-06-05T01:15:32.916378636+08:00
+audit-history 2026-06-05T01:14:53.993471624+08:00
+import-export 2026-06-05T01:15:34.887091307+08:00
+
+$ fresh pre-migration backup + offsite copy
+BACKUP_FILE=/opt/crm-system/backups/postgres/crm-postgres-20260605T041343Z.sql.gz.enc
+/opt/crm-system/backups/postgres/crm-postgres-20260605T041343Z.sql.gz.enc: OK
+/opt/crm-system/backups/postgres/crm-postgres-20260605T041343Z.sql.gz.enc: OK
+6733f9e570882a8412f3db52584fcd01dca7e7422f7d207b6b0d5cb4af0a48a2  /opt/crm-system/backups/postgres/crm-postgres-20260605T041343Z.sql.gz.enc
+
+$ frontend npm ci && npm run build
+
+added 75 packages, and audited 76 packages in 2s
+
+9 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> crm-system-frontend@0.1.0 build
+> tsc -b && vite build
+
+vite v7.3.5 building client environment for production...
+transforming...
+✓ 1630 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.27 kB
+dist/assets/index-DSXxdSbt.css    8.31 kB │ gzip:  2.14 kB
+dist/assets/index-B_mRIU_K.js   273.97 kB │ gzip: 76.53 kB
+✓ built in 2.32s
+
+$ docker compose -f docker-compose.prod.yml up -d --build
+time="2026-06-05T12:13:59+08:00" level=warning msg="Docker Compose is configured to build using Bake, but buildx isn't installed"
+#0 building with "default" instance using docker driver
+
+#1 [audit-history internal] load build definition from go-service.Dockerfile
+#1 transferring dockerfile: 431B done
+#1 DONE 0.0s
+
+#2 [import-export internal] load build definition from go-service.Dockerfile
+#2 transferring dockerfile: 431B done
+#2 DONE 0.0s
+
+#3 [opportunity internal] load build definition from go-service.Dockerfile
+#3 transferring dockerfile: 431B done
+#3 DONE 0.0s
+
+#4 [identity-authz internal] load build definition from go-service.Dockerfile
+#4 transferring dockerfile: 431B done
+#4 DONE 0.0s
+
+#5 [account internal] load build definition from go-service.Dockerfile
+#5 transferring dockerfile: 431B done
+#5 DONE 0.0s
+
+#6 [gateway-bff internal] load build definition from go-service.Dockerfile
+#6 transferring dockerfile: 431B done
+#6 DONE 0.0s
+
+#7 [lead internal] load build definition from go-service.Dockerfile
+#7 transferring dockerfile: 431B done
+#7 DONE 0.0s
+
+#8 [reporting internal] load build definition from go-service.Dockerfile
+#8 transferring dockerfile: 431B done
+#8 DONE 0.0s
+
+#9 [work internal] load build definition from go-service.Dockerfile
+#9 transferring dockerfile: 431B done
+#9 DONE 0.0s
+
+#10 [commercial internal] load build definition from go-service.Dockerfile
+#10 transferring dockerfile: 431B done
+#10 DONE 0.0s
+
+#11 [opportunity internal] load metadata for docker.io/library/golang:1.26-alpine
+#11 DONE 0.0s
+
+#12 [reporting internal] load metadata for docker.io/library/alpine:3.21
+#12 DONE 0.1s
+
+#13 [account internal] load .dockerignore
+#13 transferring context: 2B done
+#13 DONE 0.0s
+
+#14 [reporting internal] load .dockerignore
+#14 transferring context: 2B done
+#14 DONE 0.0s
+
+#15 [import-export internal] load .dockerignore
+#15 transferring context: 2B done
+#15 DONE 0.0s
+
+#16 [gateway-bff internal] load .dockerignore
+#16 transferring context: 2B done
+#16 DONE 0.0s
+
+#17 [lead internal] load .dockerignore
+#17 transferring context: 2B done
+#17 DONE 0.0s
+
+#18 [work internal] load .dockerignore
+#18 transferring context: 2B done
+#18 DONE 0.0s
+
+#19 [audit-history internal] load .dockerignore
+#19 transferring context: 2B done
+#19 DONE 0.0s
+
+#20 [opportunity internal] load .dockerignore
+#20 transferring context: 2B done
+#20 DONE 0.0s
+
+#21 [commercial internal] load .dockerignore
+#21 transferring context: 2B done
+#21 DONE 0.0s
+
+#22 [identity-authz internal] load .dockerignore
+#22 transferring context: 2B done
+#22 DONE 0.0s
+
+#23 [commercial build 1/5] FROM docker.io/library/golang:1.26-alpine@sha256:f23e8b227fb4493eabe03bede4d5a32d04092da71962f1fb79b5f7d1e6c2a17f
+#23 resolve docker.io/library/golang:1.26-alpine@sha256:f23e8b227fb4493eabe03bede4d5a32d04092da71962f1fb79b5f7d1e6c2a17f 0.0s done
+#23 DONE 0.0s
+
+#24 [commercial stage-1 1/4] FROM docker.io/library/alpine:3.21@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d
+#24 resolve docker.io/library/alpine:3.21@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d 0.0s done
+#24 DONE 0.0s
+
+#25 [account internal] load build context
+#25 transferring context: 2.19kB done
+#25 DONE 0.0s
+
+#26 [work internal] load build context
+#26 transferring context: 1.38kB done
+#26 DONE 0.0s
+
+#27 [identity-authz internal] load build context
+#27 transferring context: 1.70kB done
+#27 DONE 0.0s
+
+#28 [audit-history internal] load build context
+#28 transferring context: 1.24kB done
+#28 DONE 0.0s
+
+#29 [reporting internal] load build context
+#29 transferring context: 1.25kB done
+#29 DONE 0.0s
+
+#30 [import-export internal] load build context
+#30 transferring context: 1.54kB done
+#30 DONE 0.0s
+
+#31 [gateway-bff internal] load build context
+#31 transferring context: 865B done
+#31 DONE 0.0s
+
+#32 [commercial internal] load build context
+#32 transferring context: 2.62kB done
+#32 DONE 0.0s
+
+#33 [lead internal] load build context
+#33 transferring context: 2.19kB done
+#33 DONE 0.0s
+
+#34 [opportunity internal] load build context
+#34 transferring context: 2.12kB done
+#34 DONE 0.0s
+
+#35 [account build 2/5] WORKDIR /src
+#35 CACHED
+
+#36 [account build 4/5] RUN go mod download
+#36 CACHED
+
+#37 [account build 3/5] COPY . .
+#37 CACHED
+
+#38 [account stage-1 2/4] RUN addgroup -S crm && adduser -S -G crm crm
+#38 CACHED
+
+#39 [account stage-1 3/4] WORKDIR /app
+#39 CACHED
+
+#40 [account build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#40 CACHED
+
+#41 [account stage-1 4/4] COPY --from=build /out/server /app/server
+#41 CACHED
+
+#42 [account] exporting to image
+#42 ...
+
+#43 [import-export build 3/5] COPY . .
+#43 CACHED
+
+#44 [import-export build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#44 CACHED
+
+#45 [import-export build 4/5] RUN go mod download
+#45 CACHED
+
+#46 [reporting build 3/5] COPY . .
+#46 CACHED
+
+#47 [reporting build 4/5] RUN go mod download
+#47 CACHED
+
+#48 [reporting build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#48 CACHED
+
+#49 [import-export stage-1 4/4] COPY --from=build /out/server /app/server
+#49 CACHED
+
+#50 [identity-authz build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#50 CACHED
+
+#51 [identity-authz build 3/5] COPY . .
+#51 CACHED
+
+#52 [identity-authz build 4/5] RUN go mod download
+#52 CACHED
+
+#53 [reporting stage-1 4/4] COPY --from=build /out/server /app/server
+#53 CACHED
+
+#54 [commercial build 4/5] RUN go mod download
+#54 CACHED
+
+#55 [commercial build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#55 CACHED
+
+#56 [commercial build 3/5] COPY . .
+#56 CACHED
+
+#57 [commercial stage-1 4/4] COPY --from=build /out/server /app/server
+#57 CACHED
+
+#58 [identity-authz stage-1 4/4] COPY --from=build /out/server /app/server
+#58 CACHED
+
+#59 [audit-history build 4/5] RUN go mod download
+#59 CACHED
+
+#60 [audit-history build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#60 CACHED
+
+#61 [audit-history build 3/5] COPY . .
+#61 CACHED
+
+#62 [opportunity build 3/5] COPY . .
+#62 CACHED
+
+#63 [opportunity build 4/5] RUN go mod download
+#63 CACHED
+
+#64 [opportunity build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#64 CACHED
+
+#65 [work build 3/5] COPY . .
+#65 CACHED
+
+#66 [work build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#66 CACHED
+
+#67 [work build 4/5] RUN go mod download
+#67 CACHED
+
+#68 [opportunity stage-1 4/4] COPY --from=build /out/server /app/server
+#68 CACHED
+
+#69 [audit-history stage-1 4/4] COPY --from=build /out/server /app/server
+#69 CACHED
+
+#70 [lead build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#70 CACHED
+
+#71 [lead build 4/5] RUN go mod download
+#71 CACHED
+
+#72 [lead build 3/5] COPY . .
+#72 CACHED
+
+#73 [work stage-1 4/4] COPY --from=build /out/server /app/server
+#73 CACHED
+
+#74 [gateway-bff build 4/5] RUN go mod download
+#74 CACHED
+
+#75 [gateway-bff build 3/5] COPY . .
+#75 CACHED
+
+#39 [commercial stage-1 3/4] WORKDIR /app
+#39 CACHED
+
+#35 [commercial build 2/5] WORKDIR /src
+#35 CACHED
+
+#38 [commercial stage-1 2/4] RUN addgroup -S crm && adduser -S -G crm crm
+#38 CACHED
+
+#76 [gateway-bff build 5/5] RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+#76 CACHED
+
+#77 [lead stage-1 4/4] COPY --from=build /out/server /app/server
+#77 CACHED
+
+#78 [gateway-bff stage-1 4/4] COPY --from=build /out/server /app/server
+#78 CACHED
+
+#42 [account] exporting to image
+#42 exporting layers done
+#42 exporting manifest sha256:e36aefef1b342536e1453ea34d5124a9e3bd3a5171067036b74bd7a34d3451b5 done
+#42 exporting config sha256:9ae2e7df9a6060869b45e948db0f93929e215b11da8f123bf58f8e8ae52e41b1 done
+#42 exporting attestation manifest sha256:56f6da16247eeb1b210839e5ca10de7837725156b01a1dcf477c5bc84caaac36 0.1s done
+#42 exporting manifest list sha256:33b30c57961eb5eef2e4746b4d07235809d8a62f4f1e428745d985d75187d9bd
+#42 exporting manifest list sha256:33b30c57961eb5eef2e4746b4d07235809d8a62f4f1e428745d985d75187d9bd 0.0s done
+#42 naming to docker.io/crm-system/account:prod-20260603 0.0s done
+#42 unpacking to docker.io/crm-system/account:prod-20260603 0.0s done
+#42 DONE 0.2s
+
+#79 [import-export] exporting to image
+#79 exporting layers done
+#79 exporting manifest sha256:d9942083dd2f3916df1670be17640a30d6c29eb1e89337008af0a7837155fe84 done
+#79 exporting config sha256:f9acebf230e9adf193f6c2d71d1a539cd07dff2009b23c64d218565a8d5c88dd done
+#79 exporting attestation manifest sha256:c15874e15a5df7cfc68c5d6faec9b90f008556cf7b8d9da49da050f716bac196 0.1s done
+#79 exporting manifest list sha256:adf22220a26041e8ccec42c3b233c7966a64f21a504eaabf1777d849eaad67a6 0.0s done
+#79 naming to docker.io/crm-system/import-export:prod-20260603 0.0s done
+#79 unpacking to docker.io/crm-system/import-export:prod-20260603 0.0s done
+#79 DONE 0.2s
+
+#80 [commercial] exporting to image
+#80 exporting layers done
+#80 exporting manifest sha256:c4daa0704ac41cbb22ad6ddfe563aae90dbb20a11075fe25259d17e9be9d3195 done
+#80 exporting config sha256:cbf3d5680e26ccf1c9c46c71dcfa7e8a0b2094342fb132109a7ae3276004f2fd done
+#80 exporting attestation manifest sha256:01bc81dd98d44add45e0c1e55d91248b35c80a757568410ac6f527e6f6492161 0.1s done
+#80 exporting manifest list sha256:598d7398c80f6f7b7ab90b11ffe0e8ff25a331baf773df2dc15daf34208064c0 0.0s done
+#80 naming to docker.io/crm-system/commercial:prod-20260603 0.0s done
+#80 unpacking to docker.io/crm-system/commercial:prod-20260603 done
+#80 DONE 0.2s
+
+#81 [gateway-bff] exporting to image
+#81 exporting layers done
+#81 exporting manifest sha256:7546971046beb18903546d21d64b1a6a240a0e291fff0a58427c723272860e5b done
+#81 exporting config sha256:2443b34c038c6bc8c59485ec06dfeab565c744873554f485dc7241fa27683671 done
+#81 exporting attestation manifest sha256:49af73f19f548a71c2d798e768805adcd4f0b17582b869f0e3bc2eabfb8dbb8d 0.1s done
+#81 exporting manifest list sha256:9cb13476112726bd6c7c10a935ef138849fd51b3fae710c3548d91e66884408a 0.0s done
+#81 naming to docker.io/crm-system/gateway-bff:prod-20260603 0.0s done
+#81 unpacking to docker.io/crm-system/gateway-bff:prod-20260603 done
+#81 DONE 0.2s
+
+#82 [reporting] exporting to image
+#82 exporting layers done
+#82 exporting manifest sha256:98e154ac49830a3aa110a1e55b56adc3fe3a00831fac3f72376b34494f7ad3ec done
+#82 exporting config sha256:085cb7bd1c0acd0f174e8f82fe45531074a53c46435032270580f28c821697d6 done
+#82 exporting attestation manifest sha256:df806c20a48730896ba8ec495d4b9bfa479ed7be941a8ce230b8cd4bfd93a16c 0.1s done
+#82 exporting manifest list sha256:20429ead95409cd265f22f8cf726f27fc2e17be12c6f2cbd72821080d367bc63 0.0s done
+#82 naming to docker.io/crm-system/reporting:prod-20260603 0.0s done
+#82 unpacking to docker.io/crm-system/reporting:prod-20260603 done
+#82 DONE 0.2s
+
+#83 [opportunity] exporting to image
+#83 exporting layers done
+#83 exporting manifest sha256:25408c45f950fafef62344ffa0f3521860f434d025fbb9dbc57148013bfef884 done
+#83 exporting config sha256:3b7d565de22382f63a07833fab3e0de0446a897a35b6bc28ad330221e6facb7e done
+#83 exporting attestation manifest sha256:344ed0561a5035d4317bddd3d134135ef69d9c5ad88f7b5e7f183ffecc2f61c8 0.1s done
+#83 exporting manifest list sha256:12e590fa7c501867c68cb1316ba3dc6c4083577b4b59b91872f6bf7f78dfdda7 0.0s done
+#83 naming to docker.io/crm-system/opportunity:prod-20260603 done
+#83 unpacking to docker.io/crm-system/opportunity:prod-20260603 0.0s done
+#83 DONE 0.2s
+
+#84 [identity-authz] exporting to image
+#84 exporting layers done
+#84 exporting manifest sha256:859e415d5086f63eeb8d84266ab7d1aec2873248fd0101726d298d9aa4b3181c done
+#84 exporting config sha256:8ec8bc03caae7f0415358473cf50fa349db9703315c9d211953db54daa2bcf2d done
+#84 exporting attestation manifest sha256:87a8a826030cfacddee13a76c92b7750584749bd5531dd270d994f9937392013 0.1s done
+#84 exporting manifest list sha256:633940ccf1d746b9d71735eff5955502736a7d81a120d676d9c47275a7bdafd1 0.0s done
+#84 naming to docker.io/crm-system/identity-authz:prod-20260603 done
+#84 unpacking to docker.io/crm-system/identity-authz:prod-20260603 0.0s done
+#84 DONE 0.2s
+
+#85 [audit-history] exporting to image
+#85 exporting layers done
+#85 exporting manifest sha256:5f39292dde8f9b9b6c5914edcdfbce99fd55a71e51fd4e645f17d019168c9d83 done
+#85 exporting config sha256:1b8e18253ca7177f0d4239611af2e97103b2a110505ba6c9a680b2982c3ca49b done
+#85 exporting attestation manifest sha256:0b27b6461b50df3ac4e03de9828afa48d58207fdb1007985ea50d195b84e1617 0.1s done
+#85 exporting manifest list sha256:17b183050ed0f2587b87fd0d993b0de7c10b32ab991e93aae077977f90d87351 0.0s done
+#85 naming to docker.io/crm-system/audit-history:prod-20260603 0.0s done
+#85 unpacking to docker.io/crm-system/audit-history:prod-20260603 0.0s done
+#85 DONE 0.2s
+
+#86 [work] exporting to image
+#86 exporting layers done
+#86 exporting manifest sha256:9887d1d083b991fed7b761b53d7f368f2d7dc0257749b2e7766358f117b7af35 done
+#86 exporting config sha256:a8d730e925f266f9e8e13f7e6890ae52a8bd62388b040d28ce82d1e5e74d6de9 done
+#86 exporting attestation manifest sha256:947012167bbf40b472d05c8a17fbd7e0a3431ec2668a44e5afb0ef193c3f842e 0.1s done
+#86 exporting manifest list sha256:e57e8debc13069ce4f19a9ef206dbaf6e86920e40778a7b1b60b2e083a2b855c 0.0s done
+#86 naming to docker.io/crm-system/work:prod-20260603 done
+#86 unpacking to docker.io/crm-system/work:prod-20260603 0.0s done
+#86 DONE 0.2s
+
+#87 [lead] exporting to image
+#87 exporting layers done
+#87 exporting manifest sha256:25aa9206514adac95d484c855390bf366db6af5df2436452ade1584527eee152 done
+#87 exporting config sha256:7b90059006978f1164c7c07b27b81752e1f4b9f335e7d233a72c47c9c1b80474 0.0s done
+#87 exporting attestation manifest sha256:2aef2ca50de7882e098f815c8c407c10af52022116255963f71771b2669baada 0.1s done
+#87 exporting manifest list sha256:59e674d833e3af663e54f9102b12470c89070513b818ef50dac1558b8156f9dc 0.0s done
+#87 naming to docker.io/crm-system/lead:prod-20260603 done
+#87 unpacking to docker.io/crm-system/lead:prod-20260603 0.0s done
+#87 DONE 0.3s
+
+#88 [account] resolving provenance for metadata file
+#88 DONE 0.6s
+
+#89 [identity-authz] resolving provenance for metadata file
+#89 DONE 0.4s
+
+#90 [import-export] resolving provenance for metadata file
+#90 DONE 0.6s
+
+#91 [commercial] resolving provenance for metadata file
+#91 DONE 0.5s
+
+#92 [reporting] resolving provenance for metadata file
+#92 DONE 0.3s
+
+#93 [audit-history] resolving provenance for metadata file
+#93 DONE 0.1s
+
+#94 [opportunity] resolving provenance for metadata file
+#94 DONE 0.4s
+
+#95 [lead] resolving provenance for metadata file
+#95 DONE 0.2s
+
+#96 [gateway-bff] resolving provenance for metadata file
+#96 DONE 0.1s
+
+#97 [work] resolving provenance for metadata file
+#97 DONE 0.0s
+ account  Built
+ audit-history  Built
+ commercial  Built
+ gateway-bff  Built
+ identity-authz  Built
+ import-export  Built
+ lead  Built
+ opportunity  Built
+ reporting  Built
+ work  Built
+ Container current-postgres-1  Running
+ Container current-identity-authz-1  Recreate
+ Container current-opportunity-1  Recreate
+ Container current-audit-history-1  Recreate
+ Container current-account-1  Recreate
+ Container current-gateway-bff-1  Recreate
+ Container current-import-export-1  Recreate
+ Container current-reporting-1  Recreate
+ Container current-lead-1  Recreate
+ Container current-work-1  Recreate
+ Container current-commercial-1  Recreate
+ Container current-account-1  Recreated
+ Container current-identity-authz-1  Recreated
+ Container current-import-export-1  Recreated
+ Container current-commercial-1  Recreated
+ Container current-work-1  Recreated
+ Container current-audit-history-1  Recreated
+ Container current-lead-1  Recreated
+ Container current-reporting-1  Recreated
+ Container current-opportunity-1  Recreated
+ Container current-gateway-bff-1  Recreated
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Waiting
+ Container current-postgres-1  Healthy
+ Container current-audit-history-1  Starting
+ Container current-postgres-1  Healthy
+ Container current-identity-authz-1  Starting
+ Container current-postgres-1  Healthy
+ Container current-lead-1  Starting
+ Container current-postgres-1  Healthy
+ Container current-opportunity-1  Starting
+ Container current-postgres-1  Healthy
+ Container current-gateway-bff-1  Starting
+ Container current-postgres-1  Healthy
+ Container current-commercial-1  Starting
+ Container current-postgres-1  Healthy
+ Container current-reporting-1  Starting
+ Container current-postgres-1  Healthy
+ Container current-import-export-1  Starting
+ Container current-postgres-1  Healthy
+ Container current-account-1  Starting
+ Container current-postgres-1  Healthy
+ Container current-work-1  Starting
+ Container current-opportunity-1  Started
+ Container current-account-1  Started
+ Container current-commercial-1  Started
+ Container current-lead-1  Started
+ Container current-import-export-1  Started
+ Container current-work-1  Started
+ Container current-identity-authz-1  Started
+ Container current-reporting-1  Started
+ Container current-audit-history-1  Started
+ Container current-gateway-bff-1  Started
+
+$ docker compose -f docker-compose.prod.yml ps before migrate
+NAME                       IMAGE                                     COMMAND                  SERVICE          CREATED         STATUS                           PORTS
+current-account-1          crm-system/account:prod-20260603          "/app/server"            account          5 seconds ago   Up 1 second (health: starting)   8080/tcp
+current-audit-history-1    crm-system/audit-history:prod-20260603    "/app/server"            audit-history    5 seconds ago   Up 1 second (health: starting)   8080/tcp
+current-commercial-1       crm-system/commercial:prod-20260603       "/app/server"            commercial       5 seconds ago   Up 1 second (health: starting)   8080/tcp
+current-gateway-bff-1      crm-system/gateway-bff:prod-20260603      "/app/server"            gateway-bff      5 seconds ago   Up 1 second (health: starting)   127.0.0.1:8080->8080/tcp
+current-identity-authz-1   crm-system/identity-authz:prod-20260603   "/app/server"            identity-authz   5 seconds ago   Up 1 second (health: starting)   8080/tcp
+current-import-export-1    crm-system/import-export:prod-20260603    "/app/server"            import-export    5 seconds ago   Up 1 second (health: starting)   8080/tcp
+current-lead-1             crm-system/lead:prod-20260603             "/app/server"            lead             5 seconds ago   Up 1 second (health: starting)   8080/tcp
+current-opportunity-1      crm-system/opportunity:prod-20260603      "/app/server"            opportunity      5 seconds ago   Up 1 second (health: starting)   8080/tcp
+current-postgres-1         postgres:16-alpine                        "docker-entrypoint.s…"   postgres         45 hours ago    Up 45 hours (healthy)            5432/tcp
+current-reporting-1        crm-system/reporting:prod-20260603        "/app/server"            reporting        5 seconds ago   Up 1 second (health: starting)   8080/tcp
+current-work-1             crm-system/work:prod-20260603             "/app/server"            work             5 seconds ago   Up 1 second (health: starting)   8080/tcp
+
+$ bash scripts/migrate.sh up
+applying services/account/migrations/0001_init_schema.up.sql
+CREATE SCHEMA
+NOTICE:  schema "account" already exists, skipping
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+applying services/account/migrations/0002_accounts.up.sql
+CREATE TABLE
+NOTICE:  relation "accounts" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "accounts_owner_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "accounts_company_search_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "accounts_customer_status_idx" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "outbox_events" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "account_outbox_unpublished_idx" already exists, skipping
+GRANT
+REVOKE
+GRANT
+GRANT
+applying services/account/migrations/0003_contacts.up.sql
+CREATE TABLE
+NOTICE:  relation "contacts" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "contacts_account_idx" already exists, skipping
+GRANT
+REVOKE
+GRANT
+applying services/account/migrations/0004_duplicate_warnings.up.sql
+CREATE TABLE
+NOTICE:  relation "duplicate_warning_tokens" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "account_duplicate_warning_actor_idx" already exists, skipping
+GRANT
+REVOKE
+GRANT
+applying services/account/migrations/0005_archive.up.sql
+NOTICE:  column "archived_at" of relation "accounts" already exists, skipping
+NOTICE:  column "archived_by" of relation "accounts" already exists, skipping
+NOTICE:  column "archive_reason" of relation "accounts" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+GRANT
+NOTICE:  relation "accounts_archived_idx" already exists, skipping
+applying services/account/migrations/0006_lead_conversion_idempotency.up.sql
+NOTICE:  column "lead_conversion_idempotency_key" of relation "accounts" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+NOTICE:  relation "accounts_lead_conversion_idempotency_key_idx" already exists, skipping
+applying services/audit-history/migrations/0001_init_schema.up.sql
+CREATE SCHEMA
+NOTICE:  schema "audit_history" already exists, skipping
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+applying services/audit-history/migrations/0002_history_oplog.up.sql
+CREATE TABLE
+NOTICE:  relation "events" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "events_record_history_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "events_operation_log_idx" already exists, skipping
+GRANT
+GRANT
+REVOKE
+applying services/audit-history/migrations/0003_retention_metadata.up.sql
+NOTICE:  column "retention_policy" of relation "events" already exists, skipping
+NOTICE:  column "retain_until" of relation "events" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+GRANT
+NOTICE:  relation "events_retention_idx" already exists, skipping
+REVOKE
+applying services/commercial/migrations/0001_init_schema.up.sql
+CREATE SCHEMA
+NOTICE:  schema "commercial" already exists, skipping
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+applying services/commercial/migrations/0002_quotes.up.sql
+CREATE TABLE
+NOTICE:  relation "quotes" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "quotes_opportunity_unique" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "quotes_owner_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "quotes_status_idx" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "outbox_events" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "commercial_outbox_unpublished_idx" already exists, skipping
+GRANT
+REVOKE
+GRANT
+GRANT
+applying services/commercial/migrations/0003_contracts.up.sql
+CREATE TABLE
+NOTICE:  relation "contracts" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "contracts_quote_unique" already exists, skipping
+NOTICE:  relation "contracts_owner_idx" already exists, skipping
+GRANT
+REVOKE
+applying services/commercial/migrations/0004_payments.up.sql
+NOTICE:  relation "contracts_status_idx" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "payment_plans" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "actual_payments" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "actual_payments_idempotency_unique" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "payment_plans_contract_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "actual_payments_contract_idx" already exists, skipping
+GRANT
+GRANT
+REVOKE
+REVOKE
+applying services/commercial/migrations/0005_archive.up.sql
+NOTICE:  column "archived_at" of relation "contracts" already exists, skipping
+NOTICE:  column "archived_by" of relation "contracts" already exists, skipping
+NOTICE:  column "archive_reason" of relation "contracts" already exists, skipping
+ALTER TABLE
+NOTICE:  column "archived_at" of relation "payment_plans" already exists, skipping
+NOTICE:  column "archived_by" of relation "payment_plans" already exists, skipping
+NOTICE:  column "archive_reason" of relation "payment_plans" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+NOTICE:  relation "contracts_archived_idx" already exists, skipping
+CREATE INDEX
+GRANT
+NOTICE:  relation "payment_plans_archived_idx" already exists, skipping
+GRANT
+applying services/identity-authz/migrations/0001_init_schema.up.sql
+CREATE SCHEMA
+NOTICE:  schema "identity_authz" already exists, skipping
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+applying services/identity-authz/migrations/0002_users_sessions.up.sql
+CREATE TABLE
+NOTICE:  relation "roles" already exists, skipping
+INSERT 0 0
+CREATE TABLE
+CREATE TABLE
+NOTICE:  relation "users" already exists, skipping
+NOTICE:  relation "sessions" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "sessions_user_active_idx" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "outbox_events" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "outbox_events_unpublished_idx" already exists, skipping
+INSERT 0 0
+GRANT
+GRANT
+applying services/identity-authz/migrations/0003_permission_policy.up.sql
+ALTER TABLE
+NOTICE:  column "team_id" of relation "users" already exists, skipping
+CREATE TABLE
+INSERT 0 0
+NOTICE:  relation "permission_policy" already exists, skipping
+GRANT
+applying services/import-export/migrations/0001_init_schema.up.sql
+CREATE SCHEMA
+NOTICE:  schema "import_export" already exists, skipping
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+applying services/import-export/migrations/0002_import_export_runs.up.sql
+CREATE TABLE
+NOTICE:  relation "import_runs" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "import_row_results" already exists, skipping
+CREATE INDEX
+GRANT
+NOTICE:  relation "import_row_results_run_idx" already exists, skipping
+GRANT
+GRANT
+applying services/import-export/migrations/0003_export_runs.up.sql
+CREATE TABLE
+NOTICE:  relation "export_runs" already exists, skipping
+GRANT
+applying services/lead/migrations/0001_init_schema.up.sql
+CREATE SCHEMA
+NOTICE:  schema "lead" already exists, skipping
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+applying services/lead/migrations/0002_leads.up.sql
+CREATE TABLE
+NOTICE:  relation "leads" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "leads_owner_idx" already exists, skipping
+CREATE INDEX
+CREATE TABLE
+NOTICE:  relation "leads_search_idx" already exists, skipping
+NOTICE:  relation "outbox_events" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "lead_outbox_unpublished_idx" already exists, skipping
+GRANT
+GRANT
+applying services/lead/migrations/0003_lead_qualification.up.sql
+ALTER TABLE
+NOTICE:  column "invalid_reason" of relation "leads" already exists, skipping
+NOTICE:  column "converted_account_id" of relation "leads" already exists, skipping
+NOTICE:  column "converted_opportunity_id" of relation "leads" already exists, skipping
+NOTICE:  column "conversion_idempotency_key" of relation "leads" already exists, skipping
+DO
+CREATE INDEX
+NOTICE:  relation "leads_conversion_idempotency_key_idx" already exists, skipping
+GRANT
+REVOKE
+applying services/lead/migrations/0004_duplicate_warnings.up.sql
+NOTICE:  column "email" of relation "leads" already exists, skipping
+NOTICE:  column "phone" of relation "leads" already exists, skipping
+ALTER TABLE
+CREATE TABLE
+NOTICE:  relation "duplicate_warning_tokens" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "lead_duplicate_warning_actor_idx" already exists, skipping
+GRANT
+GRANT
+GRANT
+applying services/lead/migrations/0005_archive.up.sql
+NOTICE:  column "archived_at" of relation "leads" already exists, skipping
+NOTICE:  column "archived_by" of relation "leads" already exists, skipping
+NOTICE:  column "archive_reason" of relation "leads" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+NOTICE:  relation "leads_archived_idx" already exists, skipping
+GRANT
+applying services/opportunity/migrations/0001_init_schema.up.sql
+CREATE SCHEMA
+NOTICE:  schema "opportunity" already exists, skipping
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+applying services/opportunity/migrations/0002_opportunities.up.sql
+CREATE TABLE
+NOTICE:  relation "opportunities" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "opportunities_owner_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "opportunities_customer_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "opportunities_stage_idx" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "outbox_events" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "opportunity_outbox_unpublished_idx" already exists, skipping
+GRANT
+REVOKE
+GRANT
+GRANT
+applying services/opportunity/migrations/0003_archive.up.sql
+NOTICE:  column "archived_at" of relation "opportunities" already exists, skipping
+NOTICE:  column "archived_by" of relation "opportunities" already exists, skipping
+NOTICE:  column "archive_reason" of relation "opportunities" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+NOTICE:  relation "opportunities_archived_idx" already exists, skipping
+GRANT
+applying services/opportunity/migrations/0004_lead_conversion_idempotency.up.sql
+NOTICE:  column "lead_conversion_idempotency_key" of relation "opportunities" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+NOTICE:  relation "opportunities_lead_conversion_idempotency_key_idx" already exists, skipping
+applying services/reporting/migrations/0001_init_schema.up.sql
+CREATE SCHEMA
+NOTICE:  schema "reporting" already exists, skipping
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+applying services/reporting/migrations/0002_reporting_projections.up.sql
+CREATE TABLE
+NOTICE:  relation "record_projections" already exists, skipping
+CREATE INDEX
+GRANT
+NOTICE:  relation "record_projections_team_type_idx" already exists, skipping
+GRANT
+applying services/reporting/migrations/0003_reporting_outbox.up.sql
+CREATE TABLE
+NOTICE:  relation "outbox_events" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_reporting_outbox_unpublished" already exists, skipping
+applying services/work/migrations/0001_init_schema.up.sql
+CREATE SCHEMA
+NOTICE:  schema "work" already exists, skipping
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+applying services/work/migrations/0002_work.up.sql
+CREATE TABLE
+NOTICE:  relation "activities" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+NOTICE:  relation "notes" already exists, skipping
+NOTICE:  relation "tasks" already exists, skipping
+NOTICE:  relation "activities_related_idx" already exists, skipping
+NOTICE:  relation "notes_related_idx" already exists, skipping
+NOTICE:  relation "tasks_related_idx" already exists, skipping
+NOTICE:  relation "tasks_owner_status_idx" already exists, skipping
+NOTICE:  relation "outbox_events" already exists, skipping
+
+$ sudo nginx -t && sudo systemctl reload nginx
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+$ post-rebuild image Created timestamps and IDs
+gateway-bff id=sha256:9cb13476112726bd6c7c10a935ef138849fd51b3fae710c3548d91e66884408a created=2026-06-05T12:02:01.832537847+08:00
+identity-authz id=sha256:633940ccf1d746b9d71735eff5955502736a7d81a120d676d9c47275a7bdafd1 created=2026-06-05T01:15:44.865555577+08:00
+lead id=sha256:59e674d833e3af663e54f9102b12470c89070513b818ef50dac1558b8156f9dc created=2026-06-05T01:15:53.980369199+08:00
+account id=sha256:33b30c57961eb5eef2e4746b4d07235809d8a62f4f1e428745d985d75187d9bd created=2026-06-05T01:06:25.782622734+08:00
+opportunity id=sha256:12e590fa7c501867c68cb1316ba3dc6c4083577b4b59b91872f6bf7f78dfdda7 created=2026-06-05T01:05:56.679917049+08:00
+commercial id=sha256:598d7398c80f6f7b7ab90b11ffe0e8ff25a331baf773df2dc15daf34208064c0 created=2026-06-05T01:15:15.31920141+08:00
+work id=sha256:e57e8debc13069ce4f19a9ef206dbaf6e86920e40778a7b1b60b2e083a2b855c created=2026-06-05T01:05:46.742248492+08:00
+reporting id=sha256:20429ead95409cd265f22f8cf726f27fc2e17be12c6f2cbd72821080d367bc63 created=2026-06-05T01:15:32.916378636+08:00
+audit-history id=sha256:17b183050ed0f2587b87fd0d993b0de7c10b32ab991e93aae077977f90d87351 created=2026-06-05T01:14:53.993471624+08:00
+import-export id=sha256:adf22220a26041e8ccec42c3b233c7966a64f21a504eaabf1777d849eaad67a6 created=2026-06-05T01:15:34.887091307+08:00
+
+$ post-rebuild docker compose ps with container CreatedAt
+NAME                       IMAGE                                     COMMAND                  SERVICE          CREATED          STATUS                             PORTS
+current-account-1          crm-system/account:prod-20260603          "/app/server"            account          13 seconds ago   Up 10 seconds (health: starting)   8080/tcp
+current-audit-history-1    crm-system/audit-history:prod-20260603    "/app/server"            audit-history    13 seconds ago   Up 10 seconds (health: starting)   8080/tcp
+current-commercial-1       crm-system/commercial:prod-20260603       "/app/server"            commercial       13 seconds ago   Up 10 seconds (health: starting)   8080/tcp
+current-gateway-bff-1      crm-system/gateway-bff:prod-20260603      "/app/server"            gateway-bff      13 seconds ago   Up 10 seconds (health: starting)   127.0.0.1:8080->8080/tcp
+current-identity-authz-1   crm-system/identity-authz:prod-20260603   "/app/server"            identity-authz   13 seconds ago   Up 10 seconds (health: starting)   8080/tcp
+current-import-export-1    crm-system/import-export:prod-20260603    "/app/server"            import-export    13 seconds ago   Up 10 seconds (health: starting)   8080/tcp
+current-lead-1             crm-system/lead:prod-20260603             "/app/server"            lead             13 seconds ago   Up 10 seconds (health: starting)   8080/tcp
+current-opportunity-1      crm-system/opportunity:prod-20260603      "/app/server"            opportunity      13 seconds ago   Up 10 seconds (health: starting)   8080/tcp
+current-postgres-1         postgres:16-alpine                        "docker-entrypoint.s…"   postgres         45 hours ago     Up 45 hours (healthy)              5432/tcp
+current-reporting-1        crm-system/reporting:prod-20260603        "/app/server"            reporting        13 seconds ago   Up 10 seconds (health: starting)   8080/tcp
+current-work-1             crm-system/work:prod-20260603             "/app/server"            work             13 seconds ago   Up 10 seconds (health: starting)   8080/tcp
+current-account-1 image=crm-system/account:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (healthy)
+current-audit-history-1 image=crm-system/audit-history:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (health: starting)
+current-commercial-1 image=crm-system/commercial:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (health: starting)
+current-gateway-bff-1 image=crm-system/gateway-bff:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (health: starting)
+current-identity-authz-1 image=crm-system/identity-authz:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (health: starting)
+current-import-export-1 image=crm-system/import-export:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (health: starting)
+current-lead-1 image=crm-system/lead:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (health: starting)
+current-opportunity-1 image=crm-system/opportunity:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (healthy)
+current-postgres-1 image=postgres:16-alpine created=2026-06-03 15:19:59 +0800 CST status=Up 45 hours (healthy)
+current-reporting-1 image=crm-system/reporting:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (health: starting)
+current-work-1 image=crm-system/work:prod-20260603 created=2026-06-05 12:14:00 +0800 CST status=Up 10 seconds (health: starting)
+
+$ BLK-G12-015 behavior proof: non-owner Sales by-id quote read returns safe 404
+INSERT 0 1
+REQUEST GET /quotes/golive_quote_scope_20260605_002 as X-Actor-User-Id=golive-other X-Actor-Role=Sales
+  HTTP/1.1 404 Not Found
+wget: server returned error: HTTP/1.1 404 Not Found
+DELETE 1
+CLEANUP_COUNT=0
+
+$ deploy/healthcheck/check_endpoint.sh
+TEST-DEPLOY-SMOKE-001 checking HTTPS endpoint https://118.196.44.193
+TEST-DEPLOY-SMOKE-001 passed
+TEST-DEPLOY-SMOKE-002 checking HTTP redirects to HTTPS
+TEST-DEPLOY-SMOKE-002 passed
+
+$ cert renewal timer and dry-run
+NEXT                           LEFT LAST                        PASSED UNIT                    ACTIVATES
+Fri 2026-06-05 15:20:32 CST 3h 6min Fri 2026-06-05 03:21:33 CST 8h ago crm-certbot-renew.timer crm-certbot-renew.service
+
+1 timers listed.
+active
+enabled
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Found the following certs:
+  Certificate Name: 118.196.44.193
+    Serial Number: 5188a5ce29b19e4e37916e6294c78794ab9
+    Key Type: ECDSA
+    Identifiers: 118.196.44.193
+    Expiry Date: 2026-06-09 21:46:04+00:00 (VALID: 4 days)
+    Certificate Path: /etc/letsencrypt/live/118.196.44.193/fullchain.pem
+    Private Key Path: /etc/letsencrypt/live/118.196.44.193/privkey.pem
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Processing /etc/letsencrypt/renewal/118.196.44.193.conf
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Simulating renewal of an existing certificate for 118.196.44.193
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Congratulations, all simulated renewals succeeded: 
+  /etc/letsencrypt/live/118.196.44.193/fullchain.pem (success)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+$ final docker compose ps after healthchecks settled
+NAME                       IMAGE                                     COMMAND                  SERVICE          CREATED         STATUS                   PORTS
+current-account-1          crm-system/account:prod-20260603          "/app/server"            account          6 minutes ago   Up 6 minutes (healthy)   8080/tcp
+current-audit-history-1    crm-system/audit-history:prod-20260603    "/app/server"            audit-history    6 minutes ago   Up 6 minutes (healthy)   8080/tcp
+current-commercial-1       crm-system/commercial:prod-20260603       "/app/server"            commercial       6 minutes ago   Up 6 minutes (healthy)   8080/tcp
+current-gateway-bff-1      crm-system/gateway-bff:prod-20260603      "/app/server"            gateway-bff      6 minutes ago   Up 6 minutes (healthy)   127.0.0.1:8080->8080/tcp
+current-identity-authz-1   crm-system/identity-authz:prod-20260603   "/app/server"            identity-authz   6 minutes ago   Up 6 minutes (healthy)   8080/tcp
+current-import-export-1    crm-system/import-export:prod-20260603    "/app/server"            import-export    6 minutes ago   Up 6 minutes (healthy)   8080/tcp
+current-lead-1             crm-system/lead:prod-20260603             "/app/server"            lead             6 minutes ago   Up 6 minutes (healthy)   8080/tcp
+current-opportunity-1      crm-system/opportunity:prod-20260603      "/app/server"            opportunity      6 minutes ago   Up 6 minutes (healthy)   8080/tcp
+current-postgres-1         postgres:16-alpine                        "docker-entrypoint.s…"   postgres         45 hours ago    Up 45 hours (healthy)    5432/tcp
+current-reporting-1        crm-system/reporting:prod-20260603        "/app/server"            reporting        6 minutes ago   Up 6 minutes (healthy)   8080/tcp
+current-work-1             crm-system/work:prod-20260603             "/app/server"            work             6 minutes ago   Up 6 minutes (healthy)   8080/tcp
