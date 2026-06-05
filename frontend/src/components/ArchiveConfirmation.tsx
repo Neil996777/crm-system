@@ -13,7 +13,7 @@ export function ArchiveConfirmation({ eligibility, reason, onReasonChange, onCon
   if (!eligibility.canArchive) {
     return (
       <div role="alert" className="archivePanel">
-        <strong>Active obligations block archive</strong>
+        <strong>仍有未完成事项，不能归档</strong>
         <ul>
           {eligibility.obligations.map((obligation) => (
             <li key={`${obligation.service}-${obligation.id}`}>{obligation.safeMessage || obligation.type}</li>
@@ -25,12 +25,12 @@ export function ArchiveConfirmation({ eligibility, reason, onReasonChange, onCon
   return (
     <div className="archivePanel">
       <label>
-        Archive reason
+        归档原因
         <input value={reason} onChange={(event) => onReasonChange(event.target.value)} />
       </label>
       <div className="warningActions">
-        <button className="primaryButton" type="button" onClick={onConfirm}>Confirm archive</button>
-        <button className="secondaryButton" type="button" onClick={onCancel}>Cancel</button>
+        <button className="primaryButton" type="button" onClick={onConfirm}>确认归档</button>
+        <button className="secondaryButton" type="button" onClick={onCancel}>取消</button>
       </div>
     </div>
   );

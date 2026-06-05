@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client';
 import { AddContactDialog } from '../../components/AddContactDialog';
 import { ArchiveConfirmation } from '../../components/ArchiveConfirmation';
 import { ContactTable } from '../../components/ContactTable';
+import { accountStatusLabel, archiveStatusLabel, labelFor } from '../../i18n/labels';
 
 type Props = {
   account: Account;
@@ -34,10 +35,10 @@ export function AccountDetail({ account, onArchived, onError }: Props) {
     try {
       const next = await getAccountArchiveEligibility(account.id);
       setEligibility(next);
-      setReason('Archive inactive customer record');
+      setReason('归档非活跃客户记录');
     } catch (caught) {
       const error = caught as ApiError;
-      onError(error.safeMessage || 'Request failed.');
+      onError(error.safeMessage || '请求失败。');
     }
   }
 
@@ -49,20 +50,20 @@ export function AccountDetail({ account, onArchived, onError }: Props) {
       onArchived();
     } catch (caught) {
       const error = caught as ApiError;
-      onError(error.safeMessage || 'Request failed.');
+      onError(error.safeMessage || '请求失败。');
     }
   }
 
   return (
-    <section className="detailPane" aria-label="Customer detail">
+    <section className="detailPane" aria-label="客户详情">
       <div className="detailHeader">
         <div>
           <h2>{account.companyName}</h2>
           <p>{account.ownerId}</p>
         </div>
         <div className="headerActions">
-          <span className="statusPill">{account.archived ? 'Archived' : account.customerStatus}</span>
-          {!account.archived && <button className="secondaryButton" type="button" onClick={() => void startArchive()}>Archive</button>}
+          <span className="statusPill">{account.archived ? labelFor(archiveStatusLabel, 'Archived') : labelFor(accountStatusLabel, account.customerStatus)}</span>
+          {!account.archived && <button className="secondaryButton" type="button" onClick={() => void startArchive()}>归档</button>}
         </div>
       </div>
       <ArchiveConfirmation
@@ -74,24 +75,24 @@ export function AccountDetail({ account, onArchived, onError }: Props) {
       />
       <dl className="detailGrid">
         <div>
-          <dt>Owner</dt>
+          <dt>负责人</dt>
           <dd>{account.ownerId}</dd>
         </div>
         <div>
-          <dt>Version</dt>
+          <dt>版本</dt>
           <dd>{account.version}</dd>
         </div>
       </dl>
       <section className="relatedSection">
         <div className="sectionTitle">
-          <h3>Contacts</h3>
+          <h3>联系人</h3>
           <AddContactDialog accountId={account.id} onCreated={created} onError={onError} />
         </div>
         <ContactTable contacts={contacts} />
       </section>
       <section className="relatedSection">
-        <h3>Related records</h3>
-        <p className="emptyState">No related opportunities, contracts, payments, or history loaded yet.</p>
+        <h3>关联记录</h3>
+        <p className="emptyState">尚未加载关联商机、合同、回款或历史。</p>
       </section>
     </section>
   );

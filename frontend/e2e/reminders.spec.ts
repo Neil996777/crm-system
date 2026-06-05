@@ -8,48 +8,48 @@ type Contract = { id: string; version: number };
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Email').fill(adminEmail);
-  await page.getByLabel('Password').fill(adminPassword);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'Work Overview' })).toBeVisible();
+  await page.getByLabel('邮箱').fill(adminEmail);
+  await page.getByLabel('密码').fill(adminPassword);
+  await page.getByRole('button', { name: '登录' }).click();
+  await expect(page.getByRole('heading', { name: '工作台' })).toBeVisible();
 });
 
 test('TEST-REMINDER-001/002/003 groups task contract and payment reminders by business date', async ({ page }) => {
   const key = `reminder_${Date.now()}`;
   await createReminderData(page, key);
 
-  await page.getByRole('button', { name: 'Reminder Center' }).click();
-  await expect(page.getByRole('heading', { name: 'Reminder Center' })).toBeVisible();
-  await page.getByLabel('Business date').fill('2026-06-02');
-  await page.getByRole('button', { name: 'Refresh reminders', exact: true }).click();
+  await page.getByRole('button', { name: '提醒中心' }).click();
+  await expect(page.getByRole('heading', { name: '提醒中心' })).toBeVisible();
+  await page.getByLabel('业务日期').fill('2026-06-02');
+  await page.getByRole('button', { name: '刷新提醒', exact: true }).click();
 
-  await expect(page.getByText('Task Reminders')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '任务提醒' })).toBeVisible();
   await expect(page.getByText(`Reminder task ${key}`)).toBeVisible();
-  await expect(page.getByText('Contract Reminders')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '合同提醒' })).toBeVisible();
   await expect(page.getByText(`opp_contract_${key}`)).toBeVisible();
-  await expect(page.getByText('Payment Reminders')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '回款提醒' })).toBeVisible();
   await expect(page.getByText(`opp_payment_${key}`)).toBeVisible();
 });
 
 test('TEST-REMINDER-004 suppresses completed task reminders after refresh', async ({ page }) => {
   const task = await createTask(page, `suppress_${Date.now()}`);
 
-  await page.getByRole('button', { name: 'Reminder Center' }).click();
-  await page.getByLabel('Business date').fill('2026-06-02');
-  await page.getByRole('button', { name: 'Refresh reminders', exact: true }).click();
+  await page.getByRole('button', { name: '提醒中心' }).click();
+  await page.getByLabel('业务日期').fill('2026-06-02');
+  await page.getByRole('button', { name: '刷新提醒', exact: true }).click();
   await expect(page.getByText(task.title)).toBeVisible();
 
-  await page.evaluate(async ({ id }) => {
+  await page.evaluate(async ({ id, version }) => {
     const response = await fetch(`/api/tasks/${id}/status`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ toStatus: 'Completed' })
+      body: JSON.stringify({ toStatus: 'Completed', expectedVersion: version })
     });
     if (!response.ok) throw new Error('complete task failed');
-  }, { id: task.id });
+  }, { id: task.id, version: task.version });
 
-  await page.getByRole('button', { name: 'Refresh reminders', exact: true }).click();
+  await page.getByRole('button', { name: '刷新提醒', exact: true }).click();
   await expect(page.getByText(task.title)).toHaveCount(0);
 });
 
@@ -64,7 +64,7 @@ async function createReminderData(page: import('@playwright/test').Page, key: st
 }
 
 async function createTask(page: import('@playwright/test').Page, key: string) {
-  return request<{ id: string; title: string }>(page, '/api/tasks', {
+  return request<{ id: string; title: string; version: number }>(page, '/api/tasks', {
     method: 'POST',
     body: JSON.stringify({
       relatedType: 'Opportunity',

@@ -21,68 +21,68 @@ type Contract = {
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Email').fill(adminEmail);
-  await page.getByLabel('Password').fill(adminPassword);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'Work Overview' })).toBeVisible();
+  await page.getByLabel('邮箱').fill(adminEmail);
+  await page.getByLabel('密码').fill(adminPassword);
+  await page.getByRole('button', { name: '登录' }).click();
+  await expect(page.getByRole('heading', { name: '工作台' })).toBeVisible();
 });
 
 test('TEST-PAYMENT-RECORD-002 creates overdue plan and records partial payment with remaining amount', async ({ page }) => {
   const contract = await createContract(page, `payment_record_${Date.now()}`, '10000.00');
 
   await openPayments(page);
-  await page.getByLabel('Search').fill(contract.opportunityId);
-  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByLabel('搜索').fill(contract.opportunityId);
+  await page.getByRole('button', { name: '搜索', exact: true }).click();
   await page.getByRole('button', { name: contract.opportunityId }).click();
 
-  await page.getByLabel('Plan amount').fill('10000.00');
-  await page.getByLabel('Plan due date').fill('2026-01-01');
-  await page.getByRole('button', { name: 'Save payment plan', exact: true }).click();
-  await expect(page.getByText('Plan status: Unpaid')).toBeVisible();
-  await expect(page.getByRole('alert')).toContainText('Payment plan is overdue.');
+  await page.getByLabel('计划金额').fill('10000.00');
+  await page.getByLabel('计划到期日').fill('2026-01-01');
+  await page.getByRole('button', { name: '保存回款计划', exact: true }).click();
+  await expect(page.getByText('计划状态：未回款')).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('回款计划已逾期。');
 
-  await page.getByLabel('Payment amount').fill('4000.00');
-  await page.getByLabel('Payment date').fill('2026-06-02');
-  await page.getByLabel('Idempotency key').fill(`pay_${Date.now()}`);
-  await page.getByLabel('Payment note').fill('Partial payment collected');
-  await page.getByRole('button', { name: 'Record payment', exact: true }).click();
+  await page.getByLabel('回款金额').fill('4000.00');
+  await page.getByLabel('回款日期').fill('2026-06-02');
+  await page.getByLabel('幂等键').fill(`pay_${Date.now()}`);
+  await page.getByLabel('回款备注').fill('Partial payment collected');
+  await page.getByRole('button', { name: '登记回款', exact: true }).click();
 
-  await expect(page.getByText('Payment status: PartiallyPaid')).toBeVisible();
-  await expect(page.getByText('Remaining amount: 6000.00')).toBeVisible();
+  await expect(page.getByText('回款状态：部分回款')).toBeVisible();
+  await expect(page.getByText('剩余金额：6000.00')).toBeVisible();
 });
 
 test('TEST-PAYMENT-GUARD-003 blocks zero amount and contract overpayment', async ({ page }) => {
   const contract = await createContract(page, `payment_guard_${Date.now()}`, '10000.00');
 
   await openPayments(page);
-  await page.getByLabel('Search').fill(contract.opportunityId);
-  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByLabel('搜索').fill(contract.opportunityId);
+  await page.getByRole('button', { name: '搜索', exact: true }).click();
   await page.getByRole('button', { name: contract.opportunityId }).click();
 
-  await page.getByLabel('Plan amount').fill('10000.00');
-  await page.getByLabel('Plan due date').fill('2027-08-01');
-  await page.getByRole('button', { name: 'Save payment plan', exact: true }).click();
+  await page.getByLabel('计划金额').fill('10000.00');
+  await page.getByLabel('计划到期日').fill('2027-08-01');
+  await page.getByRole('button', { name: '保存回款计划', exact: true }).click();
 
-  await page.getByLabel('Payment amount').fill('0.00');
-  await page.getByLabel('Payment date').fill('2027-08-05');
-  await page.getByLabel('Idempotency key').fill(`pay_zero_${Date.now()}`);
-  await page.getByRole('button', { name: 'Record payment', exact: true }).click();
+  await page.getByLabel('回款金额').fill('0.00');
+  await page.getByLabel('回款日期').fill('2027-08-05');
+  await page.getByLabel('幂等键').fill(`pay_zero_${Date.now()}`);
+  await page.getByRole('button', { name: '登记回款', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Payment amount must be greater than zero.');
 
-  await page.getByLabel('Payment amount').fill('9000.00');
-  await page.getByLabel('Idempotency key').fill(`pay_ok_${Date.now()}`);
-  await page.getByRole('button', { name: 'Record payment', exact: true }).click();
-  await expect(page.getByText('Remaining amount: 1000.00')).toBeVisible();
+  await page.getByLabel('回款金额').fill('9000.00');
+  await page.getByLabel('幂等键').fill(`pay_ok_${Date.now()}`);
+  await page.getByRole('button', { name: '登记回款', exact: true }).click();
+  await expect(page.getByText('剩余金额：1000.00')).toBeVisible();
 
-  await page.getByLabel('Payment amount').fill('1000.01');
-  await page.getByLabel('Idempotency key').fill(`pay_over_${Date.now()}`);
-  await page.getByRole('button', { name: 'Record payment', exact: true }).click();
+  await page.getByLabel('回款金额').fill('1000.01');
+  await page.getByLabel('幂等键').fill(`pay_over_${Date.now()}`);
+  await page.getByRole('button', { name: '登记回款', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Payment exceeds the remaining contract amount.');
 });
 
 async function openPayments(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: 'Payments' }).click();
-  await expect(page.getByRole('heading', { name: 'Payments' })).toBeVisible();
+  await page.getByRole('button', { name: '回款' }).click();
+  await expect(page.getByRole('heading', { name: '回款' })).toBeVisible();
 }
 
 async function createContract(page: import('@playwright/test').Page, key: string, amount: string): Promise<Contract> {

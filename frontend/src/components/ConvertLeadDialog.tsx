@@ -25,7 +25,7 @@ export function ConvertLeadDialog({ lead, onConverted, onError }: Props) {
       setOpen(false);
     } catch (caught) {
       const error = caught as ApiError;
-      onError(error.safeMessage || 'Request failed.');
+      onError(error.safeMessage || '请求失败。');
     } finally {
       setSubmitting(false);
     }
@@ -35,20 +35,20 @@ export function ConvertLeadDialog({ lead, onConverted, onError }: Props) {
     <section className="convertPanel">
       <button className="primaryButton iconButtonText" type="button" disabled={disabled} onClick={() => setOpen((value) => !value)}>
         <GitBranch size={16} />
-        Convert lead
+        转换线索
       </button>
       {open && (
         <form className="inlineForm convertForm" onSubmit={submit}>
           <label>
-            Expected amount
+            预计金额
             <input value={expectedAmount} onChange={(event) => setExpectedAmount(event.target.value)} />
           </label>
           <label>
-            Expected close date
+            预计关闭日期
             <input type="date" value={expectedCloseDate} onChange={(event) => setExpectedCloseDate(event.target.value)} />
           </label>
           <button className="primaryButton" type="submit" disabled={submitting || expectedAmount.trim() === '' || expectedCloseDate === ''}>
-            Convert
+            转换
           </button>
         </form>
       )}

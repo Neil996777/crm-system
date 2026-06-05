@@ -253,8 +253,11 @@ services:
     command: ["go", "run", "./cmd/server"]
     environment:
       SERVICE_NAME: reporting
+      SERVICE_ID: reporting
       PORT: "8080"
       DATABASE_URL: postgres://crm_reporting_user:crm_reporting_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=reporting
+      SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+      AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
     expose:
       - "8080"
     healthcheck: *go-healthcheck

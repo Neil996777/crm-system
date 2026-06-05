@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../api/client';
 import { WorkTask, changeTaskStatus, listTasks } from '../api/work';
+import { labelFor, objectTypeLabel, taskStatusLabel } from '../i18n/labels';
 
 export function TaskList() {
   const [tasks, setTasks] = useState<WorkTask[]>([]);
@@ -17,7 +18,7 @@ export function TaskList() {
       setTasks(response.items);
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -25,12 +26,12 @@ export function TaskList() {
     if (!selected) return;
     setError('');
     try {
-      const updated = await changeTaskStatus(selected.id, 'Completed');
+      const updated = await changeTaskStatus(selected.id, 'Completed', selected.version);
       setSelected(updated);
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -38,40 +39,40 @@ export function TaskList() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>Tasks</h1>
-          <p>Open and completed follow-up work.</p>
+          <h1>任务</h1>
+          <p>查看待处理和已完成的跟进工作。</p>
         </div>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
       <section className="leadLayout">
         <div className="listPane">
-          <div className="recordList" aria-label="Task records">
-            {tasks.length === 0 ? <p className="emptyState">No tasks found.</p> : tasks.map((task) => (
+          <div className="recordList" aria-label="任务记录">
+            {tasks.length === 0 ? <p className="emptyState">暂无任务。</p> : tasks.map((task) => (
               <button className="recordRow" type="button" key={task.id} onClick={() => setSelected(task)}>
                 <strong>{task.title}</strong>
-                <span>{task.status} · {task.dueDate}</span>
+                <span>{labelFor(taskStatusLabel, task.status)} · {task.dueDate}</span>
               </button>
             ))}
           </div>
         </div>
         <div className="detailShell">
           {selected ? (
-            <section className="detailPane" aria-label="Task detail">
+            <section className="detailPane" aria-label="任务详情">
               <h2>{selected.title}</h2>
-              <p>{selected.status}</p>
+              <p>{labelFor(taskStatusLabel, selected.status)}</p>
               <dl className="detailGrid">
                 <div>
-                  <dt>Related record</dt>
-                  <dd>{selected.relatedType} {selected.relatedId}</dd>
+                  <dt>关联记录</dt>
+                  <dd>{labelFor(objectTypeLabel, selected.relatedType)} {selected.relatedId}</dd>
                 </div>
                 <div>
-                  <dt>Due date</dt>
+                  <dt>到期日</dt>
                   <dd>{selected.dueDate}</dd>
                 </div>
               </dl>
-              <button className="primaryButton" type="button" disabled={selected.status === 'Completed' || selected.status === 'Cancelled'} onClick={() => void complete()}>Complete task</button>
+              <button className="primaryButton" type="button" disabled={selected.status === 'Completed' || selected.status === 'Cancelled'} onClick={() => void complete()}>完成任务</button>
             </section>
-          ) : <p className="emptyState">Select a task to update status.</p>}
+          ) : <p className="emptyState">选择任务以更新状态。</p>}
         </div>
       </section>
     </main>

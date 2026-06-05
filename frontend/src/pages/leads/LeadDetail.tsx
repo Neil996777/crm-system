@@ -2,6 +2,7 @@ import { Lead, ConversionResult } from '../../api/leads';
 import { ConvertLeadDialog } from '../../components/ConvertLeadDialog';
 import { HistoryTimeline } from '../../components/HistoryTimeline';
 import { QualificationActions } from '../../components/QualificationActions';
+import { labelFor, leadStatusLabel } from '../../i18n/labels';
 
 type Props = {
   lead: Lead;
@@ -12,43 +13,43 @@ type Props = {
 
 export function LeadDetail({ lead, onUpdated, onConverted, onError }: Props) {
   return (
-    <section className="detailPane" aria-label="Lead detail" data-record-id={lead.id}>
+    <section className="detailPane" aria-label="线索详情" data-record-id={lead.id}>
       <div className="detailHeader">
         <div>
           <h2>{lead.companyName || lead.leadName}</h2>
           <p>{lead.source}</p>
         </div>
-        <span className="statusPill">{lead.status}</span>
+        <span className="statusPill">{labelFor(leadStatusLabel, lead.status)}</span>
       </div>
       <dl className="detailGrid">
         <div>
-          <dt>Owner</dt>
-          <dd>{lead.ownerId || 'Unassigned'}</dd>
+          <dt>负责人</dt>
+          <dd>{lead.ownerId || labelFor(leadStatusLabel, 'Unassigned')}</dd>
         </div>
         <div>
-          <dt>Version</dt>
+          <dt>版本</dt>
           <dd>{lead.version}</dd>
         </div>
         {lead.invalidReason && (
           <div>
-            <dt>Invalid reason</dt>
+            <dt>无效原因</dt>
             <dd>{lead.invalidReason}</dd>
           </div>
         )}
         {lead.convertedOpportunityId && (
           <div>
-            <dt>Opportunity</dt>
-            <dd>Opportunity: {lead.convertedOpportunityId}</dd>
+            <dt>商机</dt>
+            <dd>商机：{lead.convertedOpportunityId}</dd>
           </div>
         )}
         {lead.convertedAccountId && (
           <div>
-            <dt>Account</dt>
-            <dd>Account: {lead.convertedAccountId}</dd>
+            <dt>客户</dt>
+            <dd>客户：{lead.convertedAccountId}</dd>
           </div>
         )}
       </dl>
-      {lead.status === 'Converted To Opportunity' ? <p className="inlineNotice">Converted leads are read-only for qualification.</p> : <QualificationActions lead={lead} onUpdated={onUpdated} onError={onError} />}
+      {lead.status === 'Converted To Opportunity' ? <p className="inlineNotice">已转换线索在确认环节为只读。</p> : <QualificationActions lead={lead} onUpdated={onUpdated} onError={onError} />}
       <ConvertLeadDialog lead={lead} onConverted={onConverted} onError={onError} />
       <HistoryTimeline resource="leads" recordId={lead.id} reloadKey={lead.version} />
     </section>

@@ -7,34 +7,42 @@ const salesPassword = 'SalesHistory-001!';
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await signIn(page, adminEmail, adminPassword);
-  await expect(page.getByRole('heading', { name: 'Work Overview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '工作台' })).toBeVisible();
 });
 
 test('TEST-HISTORY-001 and TEST-HISTORY-004 shows read-only record-local history after a business mutation', async ({ page }) => {
   const companyName = `E2E History ${Date.now()}`;
 
-  await page.getByRole('button', { name: 'Leads' }).click();
-  await page.getByRole('button', { name: 'New lead' }).click();
-  await page.getByLabel('Company name').fill(companyName);
-  await page.getByLabel('Source').fill('Website');
-  await page.getByLabel('Owner ID').fill('sales-1');
-  await page.getByRole('button', { name: 'Save lead' }).click();
+  await page.getByRole('button', { name: '线索', exact: true }).click();
+  await page.getByRole('button', { name: '新建线索' }).click();
+  await page.getByLabel('公司名称').fill(companyName);
+  await page.getByLabel('来源').fill('Website');
+  await page.getByLabel('负责人 ID').fill('sales-1');
+  await page.getByRole('button', { name: '保存线索' }).click();
 
   await page.getByRole('button', { name: companyName }).click();
-  await page.getByRole('button', { name: 'Qualify valid' }).click();
-  await expect(page.getByLabel('Lead detail').getByText('Valid', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '标记有效' }).click();
+  await expect(page.getByLabel('线索详情').getByText('有效', { exact: true })).toBeVisible();
+  const leadId = await selectedLeadId(page);
+  await expect.poll(async () => page.evaluate(async (id) => {
+    const response = await fetch(`/api/leads/${id}/history`, { credentials: 'include' });
+    const body = await response.json();
+    return (body.data?.events ?? []).map((event: { eventId: string }) => event.eventId).join(',');
+  }, leadId)).toContain('EVT-LEAD-QUALIFIED');
+  await reopenLead(page, companyName);
 
-  const history = page.getByLabel('Record history');
-  await expect(history.getByRole('heading', { name: 'History' })).toBeVisible();
+  const history = page.getByLabel('记录历史');
+  await expect(history.getByRole('heading', { name: '历史' })).toBeVisible();
   await expect(history).toContainText('EVT-LEAD-QUALIFIED');
-  await expect(history).toContainText('Lead qualified as Valid');
-  await expect(history).toContainText('Lead');
-  await expect(history.getByText(/Actor: usr_seed_admin/)).toBeVisible();
-  await expect(history.getByText(/Resource: Lead/)).toBeVisible();
-  await expect(history.getByText(/Occurred:/)).toBeVisible();
-  await expect(history.getByText(/Before:/)).toBeVisible();
-  await expect(history.getByText(/After:/)).toBeVisible();
-  await expect(history.getByRole('button', { name: /edit|delete|save/i })).toHaveCount(0);
+  await expect(history).toContainText('Lead qualified');
+  const qualifiedEvent = history.locator('.timelineItem', { hasText: 'EVT-LEAD-QUALIFIED' });
+  await expect(qualifiedEvent).toContainText('线索');
+  await expect(qualifiedEvent.getByText(/操作者：usr_seed_admin/)).toBeVisible();
+  await expect(qualifiedEvent.getByText(/资源：线索/)).toBeVisible();
+  await expect(qualifiedEvent.getByText(/发生时间：/)).toBeVisible();
+  await expect(qualifiedEvent.getByText(/变更前：/)).toBeVisible();
+  await expect(qualifiedEvent.getByText(/变更后：/)).toBeVisible();
+  await expect(qualifiedEvent.getByRole('button', { name: /编辑|删除|保存|edit|delete|save/i })).toHaveCount(0);
 });
 
 test('TEST-HISTORY-003 denies non-owned record-local history without leaking events', async ({ page }) => {
@@ -59,34 +67,34 @@ test('TEST-HISTORY-003 denies non-owned record-local history without leaking eve
     }
   }, { email: salesEmail, password: salesPassword });
 
-  await page.getByRole('button', { name: 'Leads' }).click();
-  await page.getByRole('button', { name: 'New lead' }).click();
-  await page.getByLabel('Company name').fill(companyName);
-  await page.getByLabel('Source').fill('Referral');
-  await page.getByLabel('Owner ID').fill('sales-1');
-  await page.getByRole('button', { name: 'Save lead' }).click();
+  await page.getByRole('button', { name: '线索', exact: true }).click();
+  await page.getByRole('button', { name: '新建线索' }).click();
+  await page.getByLabel('公司名称').fill(companyName);
+  await page.getByLabel('来源').fill('Referral');
+  await page.getByLabel('负责人 ID').fill('sales-1');
+  await page.getByRole('button', { name: '保存线索' }).click();
   await page.getByRole('button', { name: companyName }).click();
   const leadId = await selectedLeadId(page);
-  await page.getByRole('button', { name: 'Qualify valid' }).click();
-  await expect(page.getByLabel('Lead detail').getByText('Valid', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '标记有效' }).click();
+  await expect(page.getByLabel('线索详情').getByText('有效', { exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: '退出登录' }).click();
   await signIn(page, salesEmail, salesPassword);
   await expect(page.locator('.topbar').getByText('History Sales')).toBeVisible();
-  await expect(page.locator('.topbar').getByText('Sales', { exact: true })).toBeVisible();
+  await expect(page.locator('.topbar').getByText('销售', { exact: true })).toBeVisible();
 
   const denied = await page.evaluate(async (id) => {
     const response = await fetch(`/api/leads/${id}/history`, { credentials: 'include' });
     return { status: response.status, body: await response.text() };
   }, leadId);
-  expect(denied.status).toBe(403);
+  expect(denied.status).toBe(404);
   expect(denied.body).not.toContain('Lead qualified as Valid');
 });
 
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('邮箱').fill(email);
+  await page.getByLabel('密码').fill(password);
+  await page.getByRole('button', { name: '登录' }).click();
 }
 
 async function selectedLeadId(page: import('@playwright/test').Page) {
@@ -95,4 +103,13 @@ async function selectedLeadId(page: import('@playwright/test').Page) {
     throw new Error('selected lead id not found');
   }
   return id;
+}
+
+async function reopenLead(page: import('@playwright/test').Page, companyName: string) {
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '工作台' })).toBeVisible();
+  await page.getByRole('button', { name: '线索', exact: true }).click();
+  await page.getByLabel('搜索').fill(companyName);
+  await page.getByRole('button', { name: '搜索', exact: true }).click();
+  await page.getByRole('button', { name: companyName }).click();
 }

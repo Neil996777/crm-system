@@ -2,17 +2,17 @@ import { Contact } from '../api/accounts';
 
 export function ContactTable({ contacts }: { contacts: Contact[] }) {
   if (contacts.length === 0) {
-    return <p className="emptyState">No contacts.</p>;
+    return <p className="emptyState">暂无联系人。</p>;
   }
 
   return (
-    <table className="dataTable" aria-label="Contacts">
+    <table className="dataTable" aria-label="联系人">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Phone</th>
-          <th>Role note</th>
+          <th>姓名</th>
+          <th>邮箱</th>
+          <th>电话</th>
+          <th>角色备注</th>
         </tr>
       </thead>
       <tbody>

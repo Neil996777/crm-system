@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Contract } from '../../api/contracts';
 import { listPaymentContracts } from '../../api/payments';
+import { contractStatusLabel, labelFor } from '../../i18n/labels';
 import { PaymentDetail } from './PaymentDetail';
 
 export function PaymentList() {
@@ -20,7 +21,7 @@ export function PaymentList() {
       setContracts(response.items);
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -34,8 +35,8 @@ export function PaymentList() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>Payments</h1>
-          <p>Post-sale payment tracking for signed and active commercial work.</p>
+          <h1>回款</h1>
+          <p>跟踪已签署和启用合同的售后回款。</p>
         </div>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
@@ -43,22 +44,22 @@ export function PaymentList() {
         <div className="listPane">
           <form className="toolbar" onSubmit={searchContracts}>
             <label>
-              Search
+              搜索
               <input value={search} onChange={(event) => setSearch(event.target.value)} />
             </label>
-            <button className="secondaryButton" type="submit">Search</button>
+            <button className="secondaryButton" type="submit">搜索</button>
           </form>
-          <div className="recordList" aria-label="Payment contract records">
-            {contracts.length === 0 ? <p className="emptyState">No contracts found.</p> : contracts.map((contract) => (
+          <div className="recordList" aria-label="回款合同记录">
+            {contracts.length === 0 ? <p className="emptyState">暂无合同。</p> : contracts.map((contract) => (
               <button className="recordRow" type="button" key={contract.id} onClick={() => { setError(''); setSelected(contract); }}>
                 <strong>{contract.opportunityId}</strong>
-                <span>{contract.status} · {contract.amount}</span>
+                <span>{labelFor(contractStatusLabel, contract.status)} · {contract.amount}</span>
               </button>
             ))}
           </div>
         </div>
         <div className="detailShell">
-          {selected ? <PaymentDetail key={selected.id} contract={selected} onError={setError} /> : <p className="emptyState">Select a contract to manage payment plan and actual payment.</p>}
+          {selected ? <PaymentDetail key={selected.id} contract={selected} onError={setError} /> : <p className="emptyState">选择合同以管理回款计划和实际回款。</p>}
         </div>
       </section>
     </main>

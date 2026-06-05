@@ -14,6 +14,15 @@ static/non-persistent behavior (SVC-ACC-011, DEC-008).
 Total tasks: 40 (TASK-001..TASK-040). Foundation TASK-001..006; capability slices
 TASK-007..038; deployment/release evidence TASK-039..040.
 
+Post-G12 cross-cutting frontend i18n closure (2026-06-05): single-language zh-CN
+display localization is Done for the frontend surfaces owned by TASK-006, TASK-009,
+TASK-012, TASK-016, TASK-021, TASK-022, TASK-023, TASK-025, TASK-026, TASK-027,
+TASK-028, TASK-029, TASK-030, TASK-033, TASK-034, TASK-035, and TASK-036. Backend
+comparison values, role names, lifecycle/status/stage enum values, view keys, API
+fields, and test ids remain unchanged; display mappings live in
+`frontend/src/i18n/labels.ts`. Evidence: `npm run build` and `npm run test:e2e`
+from `frontend/` passed with 39/39 tests on 2026-06-05.
+
 ---
 
 ## Phase 0 — Foundation / Platform

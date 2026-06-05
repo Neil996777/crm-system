@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Contract, changeContractStatus } from '../../api/contracts';
+import { contractStatusLabel, labelFor } from '../../i18n/labels';
 
 export function ContractDetail({ contract, onUpdated, onError }: { contract: Contract; onUpdated: (contract: Contract) => Promise<void>; onError: (message: string) => void }) {
   const [signedEffectiveDate, setSignedEffectiveDate] = useState(contract.signedEffectiveDate ?? '');
@@ -14,63 +15,63 @@ export function ContractDetail({ contract, onUpdated, onError }: { contract: Con
       await onUpdated(next);
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || 'Request failed.');
+      onError(apiError.safeMessage || '请求失败。');
     }
   }
 
   return (
-    <section className="detailPane" aria-label="Contract detail">
+    <section className="detailPane" aria-label="合同详情">
       <div className="detailHeader">
         <div>
           <h2>{contract.id}</h2>
-          <p>Status: {contract.status}</p>
+          <p>状态：{labelFor(contractStatusLabel, contract.status)}</p>
         </div>
-        <span className="statusPill">{contract.status}</span>
+        <span className="statusPill">{labelFor(contractStatusLabel, contract.status)}</span>
       </div>
-      {pendingReminder && <div role="alert" className="error">Pending signature expected date has passed.</div>}
+      {pendingReminder && <div role="alert" className="error">待签署合同的预计签署日期已过。</div>}
       <dl className="detailGrid">
         <div>
-          <dt>Quote</dt>
+          <dt>报价</dt>
           <dd>{contract.quoteId}</dd>
         </div>
         <div>
-          <dt>Opportunity</dt>
+          <dt>商机</dt>
           <dd>{contract.opportunityId}</dd>
         </div>
         <div>
-          <dt>Customer</dt>
+          <dt>客户</dt>
           <dd>{contract.customerId}</dd>
         </div>
         <div>
-          <dt>Amount</dt>
+          <dt>金额</dt>
           <dd>{contract.amount}</dd>
         </div>
         <div>
-          <dt>Expected signed date</dt>
+          <dt>预计签署日期</dt>
           <dd>{contract.expectedSignedDate}</dd>
         </div>
         <div>
-          <dt>Signed/effective date</dt>
-          <dd>{contract.signedEffectiveDate || 'Not signed'}</dd>
+          <dt>签署/生效日期</dt>
+          <dd>{contract.signedEffectiveDate || '未签署'}</dd>
         </div>
         <div>
-          <dt>Contract note</dt>
+          <dt>合同备注</dt>
           <dd>{contract.contractNote}</dd>
         </div>
         <div>
-          <dt>Amount difference reason</dt>
-          <dd>{contract.amountDifferenceReason || 'None'}</dd>
+          <dt>金额差异原因</dt>
+          <dd>{contract.amountDifferenceReason || '无'}</dd>
         </div>
       </dl>
       <label className="singleField">
-        Signed/effective date
+        签署/生效日期
         <input type="date" value={signedEffectiveDate} onChange={(event) => setSignedEffectiveDate(event.target.value)} />
       </label>
       <div className="actionBand opportunityActions">
-        <button className="secondaryButton" type="button" disabled={contract.status !== 'Pending Signature'} onClick={() => void change('Signed')}>Sign</button>
-        <button className="secondaryButton" type="button" disabled={contract.status !== 'Signed'} onClick={() => void change('Active')}>Activate</button>
-        <button className="secondaryButton" type="button" disabled={contract.status !== 'Active'} onClick={() => void change('Completed')}>Complete</button>
-        <button className="secondaryButton" type="button" disabled={contract.status === 'Completed' || contract.status === 'Terminated'} onClick={() => void change('Terminated')}>Terminate</button>
+        <button className="secondaryButton" type="button" disabled={contract.status !== 'Pending Signature'} onClick={() => void change('Signed')}>签署</button>
+        <button className="secondaryButton" type="button" disabled={contract.status !== 'Signed'} onClick={() => void change('Active')}>启用</button>
+        <button className="secondaryButton" type="button" disabled={contract.status !== 'Active'} onClick={() => void change('Completed')}>完成</button>
+        <button className="secondaryButton" type="button" disabled={contract.status === 'Completed' || contract.status === 'Terminated'} onClick={() => void change('Terminated')}>终止</button>
       </div>
     </section>
   );

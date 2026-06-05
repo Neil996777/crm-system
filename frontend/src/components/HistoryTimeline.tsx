@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../api/client';
 import { HistoryEvent, getRecordHistory } from '../api/history';
+import { labelFor, objectTypeLabel, resultLabel, summaryTextZh } from '../i18n/labels';
 
 type Props = {
   resource: string;
@@ -23,7 +24,7 @@ export function HistoryTimeline({ resource, recordId, reloadKey }: Props) {
         if (!cancelled) setEvents(response.events);
       } catch (caught) {
         const apiError = caught as ApiError;
-        if (!cancelled) setError(apiError.safeMessage || 'Permission denied.');
+        if (!cancelled) setError(apiError.safeMessage || '权限不足。');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -35,43 +36,43 @@ export function HistoryTimeline({ resource, recordId, reloadKey }: Props) {
   }, [resource, recordId, reloadKey]);
 
   return (
-    <section className="historyTimeline" aria-label="Record history">
+    <section className="historyTimeline" aria-label="记录历史">
       <div className="sectionTitle">
-        <h3>History</h3>
-        <span>Read-only</span>
+        <h3>历史</h3>
+        <span>只读</span>
       </div>
-      {loading && <p className="emptyState">Loading history...</p>}
+      {loading && <p className="emptyState">正在加载历史...</p>}
       {error && <p role="alert" className="error">{error}</p>}
-      {!loading && !error && events.length === 0 && <p className="emptyState">No history events found.</p>}
+      {!loading && !error && events.length === 0 && <p className="emptyState">暂无历史事件。</p>}
       {!loading && !error && events.length > 0 && (
         <ol className="timelineList">
           {events.map((event) => (
             <li key={event.eventUid} className="timelineItem">
               <div className="timelineHeader">
                 <strong>{event.eventId}</strong>
-                <span>{event.result}</span>
+                <span>{labelFor(resultLabel, event.result)}</span>
               </div>
               <p>{event.safeSummary}</p>
               <dl className="timelineMeta">
                 <div>
-                  <dt>Actor</dt>
-                  <dd>Actor: {event.actorUserId}</dd>
+                  <dt>操作者</dt>
+                  <dd>操作者：{event.actorUserId}</dd>
                 </div>
                 <div>
-                  <dt>Resource</dt>
-                  <dd>Resource: {event.resourceType} {event.resourceId}</dd>
+                  <dt>资源</dt>
+                  <dd>资源：{labelFor(objectTypeLabel, event.resourceType)} {event.resourceId}</dd>
                 </div>
                 <div>
-                  <dt>Occurred</dt>
-                  <dd>Occurred: {formatDate(event.occurredAt)}</dd>
+                  <dt>发生时间</dt>
+                  <dd>发生时间：{formatDate(event.occurredAt)}</dd>
                 </div>
                 <div>
-                  <dt>Before</dt>
-                  <dd>Before: {summaryText(event.beforeSummary)}</dd>
+                  <dt>变更前</dt>
+                  <dd>变更前：{summaryTextZh(event.beforeSummary)}</dd>
                 </div>
                 <div>
-                  <dt>After</dt>
-                  <dd>After: {summaryText(event.afterSummary)}</dd>
+                  <dt>变更后</dt>
+                  <dd>变更后：{summaryTextZh(event.afterSummary)}</dd>
                 </div>
               </dl>
             </li>
@@ -86,12 +87,4 @@ function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toISOString();
-}
-
-function summaryText(summary: Record<string, unknown> | undefined) {
-  if (!summary || Object.keys(summary).length === 0) return 'None';
-  return Object.entries(summary)
-    .filter(([, value]) => value !== '' && value !== null && value !== undefined)
-    .map(([key, value]) => `${key}: ${String(value)}`)
-    .join(', ');
 }

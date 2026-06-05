@@ -3,6 +3,7 @@ import { Account, checkAccountDuplicate, createAccount, getAccount, listAccounts
 import { ApiError } from '../../api/client';
 import { DuplicateWarningResult } from '../../api/duplicates';
 import { DuplicateWarning } from '../../components/DuplicateWarning';
+import { accountStatusLabel, archiveStatusLabel, labelFor } from '../../i18n/labels';
 import { AccountDetail } from './AccountDetail';
 
 export function AccountList() {
@@ -47,7 +48,7 @@ export function AccountList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -60,40 +61,40 @@ export function AccountList() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>Companies/Customers</h1>
-          <p>Manage account records and their contacts.</p>
+          <h1>公司/客户</h1>
+          <p>管理客户记录及其联系人。</p>
         </div>
-        <button className="primaryButton" type="button" onClick={() => { setDuplicateWarning(null); setCreating((value) => !value); }}>New customer</button>
+        <button className="primaryButton" type="button" onClick={() => { setDuplicateWarning(null); setCreating((value) => !value); }}>新建客户</button>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
       <section className="leadLayout">
         <div className="listPane">
           <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void refresh(search); }}>
             <label>
-              Search
+              搜索
               <input value={search} onChange={(event) => setSearch(event.target.value)} />
             </label>
             <label className="inlineCheckbox">
               <input type="checkbox" checked={includeArchived} onChange={(event) => setIncludeArchived(event.target.checked)} />
-              Include archived
+              包含已归档
             </label>
-            <button className="secondaryButton" type="submit">Search</button>
+            <button className="secondaryButton" type="submit">搜索</button>
           </form>
           {creating && (
             <form className="createPanel" onSubmit={submit}>
               <label>
-                Company name
+                公司名称
                 <input value={form.companyName} onChange={(event) => { setDuplicateWarning(null); setForm({ ...form, companyName: event.target.value }); }} />
               </label>
               <label>
-                Customer status
+                客户状态
                 <input value={form.customerStatus} onChange={(event) => setForm({ ...form, customerStatus: event.target.value })} />
               </label>
               <label>
-                Owner ID
+                负责人 ID
                 <input value={form.ownerId} onChange={(event) => setForm({ ...form, ownerId: event.target.value })} />
               </label>
-              <button className="primaryButton" type="submit">Save customer</button>
+              <button className="primaryButton" type="submit">保存客户</button>
               {duplicateWarning ? (
                 <DuplicateWarning
                   warning={duplicateWarning}
@@ -103,17 +104,17 @@ export function AccountList() {
               ) : null}
             </form>
           )}
-          <div className="recordList" aria-label="Customer records">
-            {accounts.length === 0 ? <p className="emptyState">No customers found.</p> : accounts.map((account) => (
+          <div className="recordList" aria-label="客户记录">
+            {accounts.length === 0 ? <p className="emptyState">暂无客户。</p> : accounts.map((account) => (
               <button className="recordRow" type="button" key={account.id} onClick={() => void selectAccount(account.id)}>
                 <strong>{account.companyName}</strong>
-                <span>{account.customerStatus}</span>
+                <span>{account.archived ? labelFor(archiveStatusLabel, 'Archived') : labelFor(accountStatusLabel, account.customerStatus)}</span>
               </button>
             ))}
           </div>
         </div>
         <div className="detailShell">
-          {selected ? <AccountDetail account={selected} onArchived={() => { setSelected(null); void refresh(); }} onError={setError} /> : <p className="emptyState">Select a customer to view contacts.</p>}
+          {selected ? <AccountDetail account={selected} onArchived={() => { setSelected(null); void refresh(); }} onError={setError} /> : <p className="emptyState">选择客户以查看联系人。</p>}
         </div>
       </section>
     </main>

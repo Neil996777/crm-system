@@ -3,6 +3,7 @@ import { UserRole } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { ManagedUser, UserStatus, changeUserRole, changeUserStatus, createUser, listUsers } from '../../api/users';
 import { RoleStatusChangeDialog } from '../../components/RoleStatusChangeDialog';
+import { labelFor, roleLabel, userStatusLabel } from '../../i18n/labels';
 
 const roles: UserRole[] = ['Administrator', 'Sales Manager', 'Sales'];
 const statuses: UserStatus[] = ['Active', 'Disabled'];
@@ -40,7 +41,7 @@ export function UserManagement() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -73,7 +74,7 @@ export function UserManagement() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
       setConfirming(false);
       await refresh();
     }
@@ -83,8 +84,8 @@ export function UserManagement() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>User Management</h1>
-          <p>Administrator-only role and status governance.</p>
+          <h1>用户管理</h1>
+          <p>仅管理员可维护角色和状态。</p>
         </div>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
@@ -92,47 +93,47 @@ export function UserManagement() {
         <div className="listPane">
           <form className="createPanel" onSubmit={submit}>
             <label>
-              Email
+              邮箱
               <input value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
             </label>
             <label>
-              Display name
+              显示名称
               <input value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} />
             </label>
             <label>
-              Password
+              密码
               <input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} />
             </label>
             <label>
-              Role
+              角色
               <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as UserRole })}>
-                {roles.map((role) => <option key={role} value={role}>{role}</option>)}
+                {roles.map((role) => <option key={role} value={role}>{labelFor(roleLabel, role)}</option>)}
               </select>
             </label>
-            <button className="primaryButton" type="submit">Create user</button>
+            <button className="primaryButton" type="submit">创建用户</button>
           </form>
-          <table className="dataTable" aria-label="User table">
+          <table className="dataTable" aria-label="用户表">
             <thead>
               <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Action</th>
+                <th>用户</th>
+                <th>角色</th>
+                <th>状态</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
                   <td>{user.displayName}<br />{user.email}</td>
-                  <td>{user.role}</td>
-                  <td>{user.status}</td>
-                  <td><button className="secondaryButton" type="button" onClick={() => edit(user)}>Edit {user.displayName}</button></td>
+                  <td>{labelFor(roleLabel, user.role)}</td>
+                  <td>{labelFor(userStatusLabel, user.status)}</td>
+                  <td><button className="secondaryButton" type="button" onClick={() => edit(user)}>编辑 {user.displayName}</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <section className="detailPane" aria-label="User detail">
+        <section className="detailPane" aria-label="用户详情">
           {selected ? (
             <>
               <div className="detailHeader">
@@ -140,28 +141,28 @@ export function UserManagement() {
                   <h2>{selected.displayName}</h2>
                   <p>{selected.email}</p>
                 </div>
-                <span className="statusPill">{selected.status}</span>
+                <span className="statusPill">{labelFor(userStatusLabel, selected.status)}</span>
               </div>
               <label>
-                New role
+                新角色
                 <select value={nextRole} onChange={(event) => setNextRole(event.target.value as UserRole)}>
-                  {roles.map((role) => <option key={role} value={role}>{role}</option>)}
+                  {roles.map((role) => <option key={role} value={role}>{labelFor(roleLabel, role)}</option>)}
                 </select>
               </label>
               <label>
-                New status
+                新状态
                 <select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as UserStatus)}>
-                  {statuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                  {statuses.map((status) => <option key={status} value={status}>{labelFor(userStatusLabel, status)}</option>)}
                 </select>
               </label>
-              {lastAdminBlocked && <div role="alert" className="error">Last active Administrator change is blocked.</div>}
+              {lastAdminBlocked && <div role="alert" className="error">不能变更最后一个启用的管理员。</div>}
               <button className="primaryButton" type="button" disabled={lastAdminBlocked || (nextRole === selected.role && nextStatus === selected.status)} onClick={() => setConfirming(true)}>
-                Review role/status change
+                复核角色/状态变更
               </button>
               {confirming && <RoleStatusChangeDialog user={selected} nextRole={nextRole} nextStatus={nextStatus} onCancel={() => setConfirming(false)} onConfirm={() => void confirm()} />}
             </>
           ) : (
-            <p className="emptyState">Select a user to review role and status.</p>
+            <p className="emptyState">选择用户以复核角色和状态。</p>
           )}
         </section>
       </section>

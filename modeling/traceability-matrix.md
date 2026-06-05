@@ -49,6 +49,15 @@ docs. Task/Test/Audit are forward placeholders produced at later gates.
 
 ## Matrix
 
+Post-G12 cross-cutting frontend i18n closure (2026-06-05): all CRM frontend
+display surfaces were localized to zh-CN without changing backend comparison
+values or API contracts. Trace applies to frontend tasks TASK-006, TASK-009,
+TASK-012, TASK-016, TASK-021, TASK-022, TASK-023, TASK-025, TASK-026, TASK-027,
+TASK-028, TASK-029, TASK-030, TASK-033, TASK-034, TASK-035, and TASK-036 across
+ACC-001..006, ACC-008..014, ACC-018, ACC-020..023. Evidence: `frontend/src/i18n/labels.ts`
+enum display mappings; `npm run build`; `npm run test:e2e` 39/39 passed
+(2026-06-05).
+
 | PRD ID | Acceptance ID | Business Rule ID | UX ID | UI ID | Security ID | Architecture ID | CIM ID | PIM ID | PSM ID | Architecture Acceptance ID | Task ID | Test ID | Audit ID |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PRD-001, NFR-002, DEC-005 | ACC-001 | BR-001 | UX-001 | UI-001, UI-017 | SEC-001, SEC-002, SEC-008, SEC-016, SEC-017 | ADR-ARCH-005; ARCH-RISK-002, ARCH-RISK-009 | CIM-001, CIM-002, CIM-003; CIM-PROC-001, CIM-PROC-024 | PIM-001, PIM-002 | PSM-001 | ARCH-ACC-002, ARCH-ACC-008 | TASK-002 (backend auth/session; G12 systematic explicit auth error envelope and cookie-only session-check documentation); TASK-006 (frontend auth shell) | TEST-AUTH-LOGIN-001..006; TEST-ABUSE-UNAUTH-001; TEST-ABUSE-ENUM-001; G12 systematic TEST-DENIAL-CONTRACT-001/003; TASK-006 E2E TEST-AUTH-LOGIN-001/005 | TASK-002 evidence: go test ./... in services/identity-authz; make test-task001 regression; compose seed admin login smoke (2026-06-01). G12 rework evidence (BLK-G12-008): fail-first stale-authz test expected `AUTHZ_VERSION_STALE` on role authz-version change, then passed after identity-authz revoked stale sessions and returned the code; go test ./... in services/identity-authz (2026-06-03). G12 systematic evidence (BLK-G12-024): denial-contract script first flagged two-argument/codeless auth error helper and undocumented `/internal/sessions/check`; after explicit `AUTHENTICATION_FAILED` / `authentication` calls and api-spec cookie-only documentation, `python3 scripts/test_denial_contract.py` and `go test ./... -count=1` passed in services/identity-authz (2026-06-04). TASK-006 evidence: npm run build; npm run test:e2e through gateway-bff (2026-06-01) |

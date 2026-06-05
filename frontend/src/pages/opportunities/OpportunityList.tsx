@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Opportunity, createOpportunity, getOpportunity, listOpportunities } from '../../api/opportunities';
+import { labelFor, opportunityStageLabel } from '../../i18n/labels';
 import { OpportunityDetail } from './OpportunityDetail';
 
 export function OpportunityList() {
@@ -37,7 +38,7 @@ export function OpportunityList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -55,57 +56,57 @@ export function OpportunityList() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>Opportunities</h1>
-          <p>Move deals through pipeline stages and terminal close outcomes.</p>
+          <h1>商机</h1>
+          <p>推进商机阶段并处理赢单/丢单结果。</p>
         </div>
-        <button className="primaryButton" type="button" onClick={() => setCreating((value) => !value)}>New opportunity</button>
+        <button className="primaryButton" type="button" onClick={() => setCreating((value) => !value)}>新建商机</button>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
       <section className="leadLayout">
         <div className="listPane">
           <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void refresh(search); }}>
             <label>
-              Search
+              搜索
               <input value={search} onChange={(event) => setSearch(event.target.value)} />
             </label>
-            <button className="secondaryButton" type="submit">Search</button>
+            <button className="secondaryButton" type="submit">搜索</button>
           </form>
           {creating && (
             <form className="createPanel" onSubmit={submit}>
               <label>
-                Title
+                标题
                 <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
               </label>
               <label>
-                Customer ID
+                客户 ID
                 <input value={form.customerId} onChange={(event) => setForm({ ...form, customerId: event.target.value })} />
               </label>
               <label>
-                Owner ID
+                负责人 ID
                 <input value={form.ownerId} onChange={(event) => setForm({ ...form, ownerId: event.target.value })} />
               </label>
               <label>
-                Expected amount
+                预计金额
                 <input value={form.expectedAmount} onChange={(event) => setForm({ ...form, expectedAmount: event.target.value })} />
               </label>
               <label>
-                Expected close date
+                预计关闭日期
                 <input type="date" value={form.expectedCloseDate} onChange={(event) => setForm({ ...form, expectedCloseDate: event.target.value })} />
               </label>
-              <button className="primaryButton" type="submit">Save opportunity</button>
+              <button className="primaryButton" type="submit">保存商机</button>
             </form>
           )}
-          <div className="recordList" aria-label="Opportunity records">
-            {opportunities.length === 0 ? <p className="emptyState">No opportunities found.</p> : opportunities.map((opportunity) => (
+          <div className="recordList" aria-label="商机记录">
+            {opportunities.length === 0 ? <p className="emptyState">暂无商机。</p> : opportunities.map((opportunity) => (
               <button className="recordRow" type="button" key={opportunity.id} onClick={() => void selectOpportunity(opportunity.id)}>
                 <strong>{opportunity.title || opportunity.id}</strong>
-                <span>{opportunity.stage}</span>
+                <span>{labelFor(opportunityStageLabel, opportunity.stage)}</span>
               </button>
             ))}
           </div>
         </div>
         <div className="detailShell">
-          {selected ? <OpportunityDetail opportunity={selected} onUpdated={updateSelected} onError={setError} /> : <p className="emptyState">Select an opportunity to view stage and close actions.</p>}
+          {selected ? <OpportunityDetail opportunity={selected} onUpdated={updateSelected} onError={setError} /> : <p className="emptyState">选择商机以查看阶段和关闭操作。</p>}
         </div>
       </section>
     </main>

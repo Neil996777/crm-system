@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Contract, createContract, getContract, listContracts } from '../../api/contracts';
+import { contractStatusLabel, labelFor } from '../../i18n/labels';
 import { ContractDetail } from './ContractDetail';
 
 export function ContractList() {
@@ -40,7 +41,7 @@ export function ContractList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -58,69 +59,69 @@ export function ContractList() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>Contracts</h1>
-          <p>Create Pending Signature contracts from accepted quotes and manage signing.</p>
+          <h1>合同</h1>
+          <p>基于已接受报价创建待签署合同并管理签署。</p>
         </div>
-        <button className="primaryButton" type="button" onClick={() => setCreating((value) => !value)}>New contract</button>
+        <button className="primaryButton" type="button" onClick={() => setCreating((value) => !value)}>新建合同</button>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
       <section className="leadLayout">
         <div className="listPane">
           <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void refresh(search); }}>
             <label>
-              Search
+              搜索
               <input value={search} onChange={(event) => setSearch(event.target.value)} />
             </label>
-            <button className="secondaryButton" type="submit">Search</button>
+            <button className="secondaryButton" type="submit">搜索</button>
           </form>
           {creating && (
             <form className="createPanel" onSubmit={submit}>
               <label>
-                Quote ID
+                报价 ID
                 <input value={form.quoteId} onChange={(event) => setForm({ ...form, quoteId: event.target.value })} />
               </label>
               <label>
-                Opportunity ID
+                商机 ID
                 <input value={form.opportunityId} onChange={(event) => setForm({ ...form, opportunityId: event.target.value })} />
               </label>
               <label>
-                Customer ID
+                客户 ID
                 <input value={form.customerId} onChange={(event) => setForm({ ...form, customerId: event.target.value })} />
               </label>
               <label>
-                Amount
+                金额
                 <input value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
               </label>
               <label>
-                Expected signed date
+                预计签署日期
                 <input type="date" value={form.expectedSignedDate} onChange={(event) => setForm({ ...form, expectedSignedDate: event.target.value })} />
               </label>
               <label>
-                Contract note
+                合同备注
                 <textarea value={form.contractNote} onChange={(event) => setForm({ ...form, contractNote: event.target.value })} />
               </label>
               <label>
-                Amount difference reason
+                金额差异原因
                 <input value={form.amountDifferenceReason} onChange={(event) => setForm({ ...form, amountDifferenceReason: event.target.value })} />
               </label>
               <label>
-                Owner ID
+                负责人 ID
                 <input value={form.ownerId} onChange={(event) => setForm({ ...form, ownerId: event.target.value })} />
               </label>
-              <button className="primaryButton" type="submit">Save contract</button>
+              <button className="primaryButton" type="submit">保存合同</button>
             </form>
           )}
-          <div className="recordList" aria-label="Contract records">
-            {contracts.length === 0 ? <p className="emptyState">No contracts found.</p> : contracts.map((contract) => (
+          <div className="recordList" aria-label="合同记录">
+            {contracts.length === 0 ? <p className="emptyState">暂无合同。</p> : contracts.map((contract) => (
               <button className="recordRow" type="button" key={contract.id} onClick={() => void selectContract(contract.id)}>
                 <strong>{contract.opportunityId}</strong>
-                <span>{contract.status} · {contract.amount}</span>
+                <span>{labelFor(contractStatusLabel, contract.status)} · {contract.amount}</span>
               </button>
             ))}
           </div>
         </div>
         <div className="detailShell">
-          {selected ? <ContractDetail contract={selected} onUpdated={updateSelected} onError={setError} /> : <p className="emptyState">Select a contract to manage status.</p>}
+          {selected ? <ContractDetail contract={selected} onUpdated={updateSelected} onError={setError} /> : <p className="emptyState">选择合同以管理状态。</p>}
         </div>
       </section>
     </main>

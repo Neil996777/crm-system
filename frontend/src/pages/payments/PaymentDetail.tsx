@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Contract } from '../../api/contracts';
 import { ActualPayment, PaymentPlan, createPaymentPlan, recordPayment } from '../../api/payments';
+import { labelFor, paymentStatusLabel } from '../../i18n/labels';
 
 export function PaymentDetail({ contract, onError }: { contract: Contract; onError: (message: string) => void }) {
   const [plan, setPlan] = useState<PaymentPlan | null>(null);
@@ -17,7 +18,7 @@ export function PaymentDetail({ contract, onError }: { contract: Contract; onErr
       setPlan(await createPaymentPlan(contract.id, planForm));
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || 'Request failed.');
+      onError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -33,81 +34,81 @@ export function PaymentDetail({ contract, onError }: { contract: Contract; onErr
       }
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || 'Request failed.');
+      onError(apiError.safeMessage || '请求失败。');
     }
   }
 
   return (
-    <section className="detailPane" aria-label="Payment detail">
+    <section className="detailPane" aria-label="回款详情">
       <div className="detailHeader">
         <div>
           <h2>{contract.opportunityId}</h2>
-          <p>Post-sale payment tracking</p>
+          <p>售后回款跟踪</p>
         </div>
-        <span className="statusPill">{payment?.paymentStatus ?? plan?.status ?? 'No plan'}</span>
+        <span className="statusPill">{labelFor(paymentStatusLabel, payment?.paymentStatus ?? plan?.status ?? 'No plan')}</span>
       </div>
-      {overdue && <div role="alert" className="error">Payment plan is overdue.</div>}
+      {overdue && <div role="alert" className="error">回款计划已逾期。</div>}
       <dl className="detailGrid">
         <div>
-          <dt>Contract</dt>
+          <dt>合同</dt>
           <dd>{contract.id}</dd>
         </div>
         <div>
-          <dt>Contract amount</dt>
+          <dt>合同金额</dt>
           <dd>{contract.amount}</dd>
         </div>
         <div>
-          <dt>Plan status</dt>
-          <dd>{plan?.status ?? 'No plan'}</dd>
+          <dt>计划状态</dt>
+          <dd>{labelFor(paymentStatusLabel, plan?.status ?? 'No plan')}</dd>
         </div>
         <div>
-          <dt>Remaining amount</dt>
+          <dt>剩余金额</dt>
           <dd>{payment?.remainingAmount ?? contract.amount}</dd>
         </div>
       </dl>
       <form className="createPanel" onSubmit={submitPlan}>
         <label>
-          Plan amount
+          计划金额
           <input value={planForm.dueAmount} onChange={(event) => setPlanForm({ ...planForm, dueAmount: event.target.value })} />
         </label>
         <label>
-          Plan due date
+          计划到期日
           <input type="date" value={planForm.dueDate} onChange={(event) => setPlanForm({ ...planForm, dueDate: event.target.value })} />
         </label>
         <label>
-          Plan currency
+          计划币种
           <input value={planForm.currency} onChange={(event) => setPlanForm({ ...planForm, currency: event.target.value })} />
         </label>
-        <button className="primaryButton" type="submit">Save payment plan</button>
+        <button className="primaryButton" type="submit">保存回款计划</button>
       </form>
-      {plan && <p className="inlineNotice">Plan status: {plan.status}</p>}
+      {plan && <p className="inlineNotice">计划状态：{labelFor(paymentStatusLabel, plan.status)}</p>}
       <form className="createPanel" onSubmit={submitPayment}>
         <label>
-          Payment amount
+          回款金额
           <input value={paymentForm.amount} onChange={(event) => setPaymentForm({ ...paymentForm, amount: event.target.value })} />
         </label>
         <label>
-          Payment date
+          回款日期
           <input type="date" value={paymentForm.paymentDate} onChange={(event) => setPaymentForm({ ...paymentForm, paymentDate: event.target.value })} />
         </label>
         <label>
-          Idempotency key
+          幂等键
           <input value={paymentForm.idempotencyKey} onChange={(event) => setPaymentForm({ ...paymentForm, idempotencyKey: event.target.value })} />
         </label>
         <label>
-          Payment note
+          回款备注
           <input value={paymentForm.note} onChange={(event) => setPaymentForm({ ...paymentForm, note: event.target.value })} />
         </label>
         <label>
-          Payment currency
+          回款币种
           <input value={paymentForm.currency} onChange={(event) => setPaymentForm({ ...paymentForm, currency: event.target.value })} />
         </label>
-        <button className="primaryButton" type="submit">Record payment</button>
+        <button className="primaryButton" type="submit">登记回款</button>
       </form>
       {payment && (
         <div className="inlineNotice">
-          <p>Payment status: {payment.paymentStatus}</p>
-          <p>Remaining amount: {payment.remainingAmount}</p>
+          <p>回款状态：{labelFor(paymentStatusLabel, payment.paymentStatus)}</p>
+          <p>剩余金额：{payment.remainingAmount}</p>
         </div>
       )}
     </section>

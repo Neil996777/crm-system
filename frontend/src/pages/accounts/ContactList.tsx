@@ -28,21 +28,21 @@ export function ContactList() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>Contacts</h1>
-          <p>Find authorized contact records across customer accounts.</p>
+          <h1>联系人</h1>
+          <p>查找有权限访问的客户联系人记录。</p>
         </div>
       </section>
       <section className="leadLayout">
         <div className="listPane">
           <form className="toolbar" onSubmit={submit}>
             <label>
-              Search
+              搜索
               <input value={search} onChange={(event) => setSearch(event.target.value)} />
             </label>
-            <button className="secondaryButton" type="submit">Search</button>
+            <button className="secondaryButton" type="submit">搜索</button>
           </form>
-          <div className="recordList" aria-label="Contact records">
-            {contacts.length === 0 ? <p className="emptyState">No contacts found.</p> : contacts.map((contact) => (
+          <div className="recordList" aria-label="联系人记录">
+            {contacts.length === 0 ? <p className="emptyState">暂无联系人。</p> : contacts.map((contact) => (
               <button className="recordRow" type="button" key={contact.id} onClick={() => void selectContact(contact.id)}>
                 <strong>{contact.contactName}</strong>
                 <span>{contact.accountName || contact.accountId}</span>
@@ -52,35 +52,35 @@ export function ContactList() {
         </div>
         <div className="detailShell">
           {selected ? (
-            <section className="detailPane" aria-label="Contact detail">
+            <section className="detailPane" aria-label="联系人详情">
               <div className="detailHeader">
                 <div>
                   <h2>{selected.contactName}</h2>
                   <p>{selected.accountName || selected.accountId}</p>
                 </div>
-                <span className="statusPill">Contact</span>
+                <span className="statusPill">联系人</span>
               </div>
               <dl className="detailGrid">
                 <div>
-                  <dt>Account</dt>
+                  <dt>客户</dt>
                   <dd>{selected.accountName || selected.accountId}</dd>
                 </div>
                 <div>
-                  <dt>Email</dt>
-                  <dd>{selected.email || 'None'}</dd>
+                  <dt>邮箱</dt>
+                  <dd>{selected.email || '无'}</dd>
                 </div>
                 <div>
-                  <dt>Phone</dt>
-                  <dd>{selected.phone || 'None'}</dd>
+                  <dt>电话</dt>
+                  <dd>{selected.phone || '无'}</dd>
                 </div>
                 <div>
-                  <dt>Role note</dt>
-                  <dd>{selected.roleNote || 'None'}</dd>
+                  <dt>角色备注</dt>
+                  <dd>{selected.roleNote || '无'}</dd>
                 </div>
               </dl>
             </section>
           ) : (
-            <p className="emptyState">Select a contact to view details.</p>
+            <p className="emptyState">选择联系人以查看详情。</p>
           )}
         </div>
       </section>

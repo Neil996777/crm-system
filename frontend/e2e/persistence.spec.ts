@@ -6,10 +6,10 @@ const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'AdminChangeMe-001!';
 
 async function signIn(page: import('@playwright/test').Page) {
   await page.goto('/');
-  await page.getByLabel('Email').fill(adminEmail);
-  await page.getByLabel('Password').fill(adminPassword);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'Work Overview' })).toBeVisible();
+  await page.getByLabel('邮箱').fill(adminEmail);
+  await page.getByLabel('密码').fill(adminPassword);
+  await page.getByRole('button', { name: '登录' }).click();
+  await expect(page.getByRole('heading', { name: '工作台' })).toBeVisible();
 }
 
 async function createLead(page: import('@playwright/test').Page, companyName: string) {
@@ -56,7 +56,7 @@ test('TEST-PERSISTENCE-001..005 lead data survives refresh, re-login, and servic
   await page.reload();
   await expectLeadPersisted(page, leadId, companyName);
 
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: '退出登录' }).click();
   await signIn(page);
   await expectLeadPersisted(page, leadId, companyName);
 

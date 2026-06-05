@@ -7,7 +7,7 @@ const password = 'UserAdmin-001!';
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await signIn(page, adminEmail, adminPassword);
-  await expect(page.getByRole('heading', { name: 'Work Overview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '工作台' })).toBeVisible();
 });
 
 test('TEST-USER-ADMIN-001 creates user and changes role/status with confirmation', async ({ page }) => {
@@ -15,40 +15,40 @@ test('TEST-USER-ADMIN-001 creates user and changes role/status with confirmation
   const email = `user-admin-${suffix}@example.com`;
   const displayName = `User Admin Evidence ${suffix}`;
 
-  await page.getByRole('button', { name: 'Admin: Users/Roles' }).click();
-  await expect(page.getByRole('heading', { name: 'User Management' })).toBeVisible();
+  await page.getByRole('button', { name: '管理：用户与角色' }).click();
+  await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible();
 
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Display name').fill(displayName);
-  await page.getByLabel('Password').fill(password);
-  await page.getByLabel('Role').selectOption('Sales');
-  await page.getByRole('button', { name: 'Create user' }).click();
-  await expect(page.getByRole('row', { name: displayName })).toContainText('Sales');
+  await page.getByLabel('邮箱').fill(email);
+  await page.getByLabel('显示名称').fill(displayName);
+  await page.getByLabel('密码').fill(password);
+  await page.getByLabel('角色').selectOption('Sales');
+  await page.getByRole('button', { name: '创建用户' }).click();
+  await expect(page.getByRole('row', { name: displayName })).toContainText('销售');
 
-  await page.getByRole('button', { name: `Edit ${displayName}` }).click();
-  await page.getByLabel('New role').selectOption('Sales Manager');
-  await page.getByRole('button', { name: 'Review role/status change' }).click();
-  await expect(page.getByRole('dialog')).toContainText('Old role: Sales');
-  await expect(page.getByRole('dialog')).toContainText('New role: Sales Manager');
-  await expect(page.getByRole('dialog')).toContainText('Access impact');
-  await expect(page.getByRole('dialog')).toContainText('Operation log');
-  await page.getByRole('button', { name: 'Confirm change' }).click();
-  await expect(page.getByRole('row', { name: displayName })).toContainText('Sales Manager');
+  await page.getByRole('button', { name: `编辑 ${displayName}` }).click();
+  await page.getByLabel('新角色').selectOption('Sales Manager');
+  await page.getByRole('button', { name: '复核角色/状态变更' }).click();
+  await expect(page.getByRole('dialog')).toContainText('原角色：销售');
+  await expect(page.getByRole('dialog')).toContainText('新角色：销售经理');
+  await expect(page.getByRole('dialog')).toContainText('访问影响');
+  await expect(page.getByRole('dialog')).toContainText('操作日志');
+  await page.getByRole('button', { name: '确认变更' }).click();
+  await expect(page.getByRole('row', { name: displayName })).toContainText('销售经理');
 
-  await page.getByRole('button', { name: `Edit ${displayName}` }).click();
-  await page.getByLabel('New status').selectOption('Disabled');
-  await page.getByRole('button', { name: 'Review role/status change' }).click();
-  await expect(page.getByRole('dialog')).toContainText('New status: Disabled');
-  await page.getByRole('button', { name: 'Confirm change' }).click();
-  await expect(page.getByRole('row', { name: displayName })).toContainText('Disabled');
+  await page.getByRole('button', { name: `编辑 ${displayName}` }).click();
+  await page.getByLabel('新状态').selectOption('Disabled');
+  await page.getByRole('button', { name: '复核角色/状态变更' }).click();
+  await expect(page.getByRole('dialog')).toContainText('新状态：停用');
+  await page.getByRole('button', { name: '确认变更' }).click();
+  await expect(page.getByRole('row', { name: displayName })).toContainText('停用');
 });
 
 test('TEST-INV-LASTADMIN-001 blocks disabling or downgrading the last active Administrator', async ({ page }) => {
-  await page.getByRole('button', { name: 'Admin: Users/Roles' }).click();
-  await page.getByRole('button', { name: 'Edit Seed Administrator' }).click();
-  await page.getByLabel('New role').selectOption('Sales');
-  await expect(page.getByText('Last active Administrator change is blocked.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Review role/status change' })).toBeDisabled();
+  await page.getByRole('button', { name: '管理：用户与角色' }).click();
+  await page.getByRole('button', { name: '编辑 Seed Administrator' }).click();
+  await page.getByLabel('新角色').selectOption('Sales');
+  await expect(page.getByText('不能变更最后一个启用的管理员。')).toBeVisible();
+  await expect(page.getByRole('button', { name: '复核角色/状态变更' })).toBeDisabled();
 });
 
 test('TEST-PERM-USERADMIN-002/003 sales is denied user administration', async ({ page }) => {
@@ -56,10 +56,10 @@ test('TEST-PERM-USERADMIN-002/003 sales is denied user administration', async ({
   const email = `user-admin-sales-${suffix}@example.com`;
   await createSalesUser(page, email);
 
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: '退出登录' }).click();
   await signIn(page, email, password);
   await expect(page.locator('.topbar').getByText('Sales Denied User Admin')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Admin: Users/Roles' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '管理：用户与角色' })).toHaveCount(0);
 
   const denied = await page.evaluate(async () => {
     const response = await fetch('/admin/users', { credentials: 'include' });
@@ -70,9 +70,9 @@ test('TEST-PERM-USERADMIN-002/003 sales is denied user administration', async ({
 });
 
 async function signIn(page: import('@playwright/test').Page, email: string, userPassword: string) {
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(userPassword);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('邮箱').fill(email);
+  await page.getByLabel('密码').fill(userPassword);
+  await page.getByRole('button', { name: '登录' }).click();
 }
 
 async function createSalesUser(page: import('@playwright/test').Page, email: string) {

@@ -37,7 +37,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           setUser(response.user);
         } catch (caught) {
           const apiError = caught as ApiError;
-          setError(apiError.safeMessage || 'Authentication failed.');
+          setError(apiError.safeMessage || '认证失败。');
           setUser(null);
         } finally {
           setLoading(false);

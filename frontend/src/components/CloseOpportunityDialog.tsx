@@ -30,40 +30,40 @@ export function CloseOpportunityDialog({
   return (
     <form className="dialogPanel" onSubmit={submit}>
       <div className="sectionTitle">
-        <h3>{mode === 'Won' ? 'Close Won' : 'Close Lost'}</h3>
-        <button className="secondaryButton" type="button" onClick={onCancel}>Cancel</button>
+        <h3>{mode === 'Won' ? '确认赢单' : '确认丢单'}</h3>
+        <button className="secondaryButton" type="button" onClick={onCancel}>取消</button>
       </div>
       {mode === 'Won' && (
         <label>
-          Contract ID
+          合同 ID
           <input value={contractId} onChange={(event) => setContractId(event.target.value)} />
         </label>
       )}
       <label>
-        Close date
+        关闭日期
         <input type="date" value={closeDate} onChange={(event) => setCloseDate(event.target.value)} />
       </label>
       {mode === 'Lost' && (
         <>
           <label>
-            Lost reason
+            丢单原因
             <select value={reasonCode} onChange={(event) => setReasonCode(event.target.value)}>
-              <option value="">Select reason</option>
-              <option value="PRICE">PRICE</option>
-              <option value="COMPETITOR">COMPETITOR</option>
-              <option value="NO_BUDGET">NO_BUDGET</option>
-              <option value="NO_DECISION">NO_DECISION</option>
-              <option value="OTHER">OTHER</option>
+              <option value="">选择原因</option>
+              <option value="PRICE">价格</option>
+              <option value="COMPETITOR">竞争对手</option>
+              <option value="NO_BUDGET">无预算</option>
+              <option value="NO_DECISION">未决策</option>
+              <option value="OTHER">其他</option>
             </select>
           </label>
           <label>
-            Reason detail
+            原因详情
             <input value={reasonDetail} onChange={(event) => setReasonDetail(event.target.value)} />
           </label>
         </>
       )}
       <button className="primaryButton" type="submit" disabled={saving}>
-        {mode === 'Won' ? 'Confirm Won' : 'Confirm Lost'}
+        {mode === 'Won' ? '确认赢单' : '确认丢单'}
       </button>
     </form>
   );

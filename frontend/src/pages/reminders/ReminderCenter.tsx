@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { ReminderRow, listReminders } from '../../api/reminders';
+import { labelFor, reminderTypeLabel, taskStatusLabel, contractStatusLabel, paymentStatusLabel } from '../../i18n/labels';
 
 export function ReminderCenter() {
   const [businessDate, setBusinessDate] = useState(today());
@@ -26,7 +27,7 @@ export function ReminderCenter() {
       setTimezone(response.timezone);
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -39,22 +40,22 @@ export function ReminderCenter() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>Reminder Center</h1>
+          <h1>提醒中心</h1>
           <p>{timezone}</p>
         </div>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
       <form className="toolbar" onSubmit={submit}>
         <label>
-          Business date
+          业务日期
           <input type="date" value={businessDate} onChange={(event) => setBusinessDate(event.target.value)} />
         </label>
-        <button className="primaryButton" type="submit">Refresh reminders</button>
+        <button className="primaryButton" type="submit">刷新提醒</button>
       </form>
       <section className="leadLayout">
-        <ReminderGroup title="Task Reminders" rows={grouped.tasks} />
-        <ReminderGroup title="Contract Reminders" rows={grouped.contracts} />
-        <ReminderGroup title="Payment Reminders" rows={grouped.payments} />
+        <ReminderGroup title="任务提醒" rows={grouped.tasks} />
+        <ReminderGroup title="合同提醒" rows={grouped.contracts} />
+        <ReminderGroup title="回款提醒" rows={grouped.payments} />
       </section>
     </main>
   );
@@ -64,12 +65,12 @@ function ReminderGroup({ title, rows }: { title: string; rows: ReminderRow[] }) 
   return (
     <section className="detailPane" aria-label={title}>
       <h2>{title}</h2>
-      {rows.length === 0 ? <p className="emptyState">No active reminders.</p> : (
+      {rows.length === 0 ? <p className="emptyState">暂无有效提醒。</p> : (
         <div className="recordList">
           {rows.map((row) => (
             <div className="recordRow staticRow" key={`${row.type}-${row.id}`}>
               <strong>{row.relatedRecord.display}</strong>
-              <span>{labelForType(row.type)} · {row.status} · {row.dueDate}</span>
+              <span>{labelForType(row)} · {row.dueDate}</span>
             </div>
           ))}
         </div>
@@ -78,17 +79,9 @@ function ReminderGroup({ title, rows }: { title: string; rows: ReminderRow[] }) 
   );
 }
 
-function labelForType(type: ReminderRow['type']) {
-  switch (type) {
-    case 'task_due':
-    case 'task_overdue':
-      return 'Task';
-    case 'contract_pending_signature':
-      return 'Pending Signature';
-    case 'payment_due':
-    case 'payment_overdue':
-      return 'Payment';
-  }
+function labelForType(row: ReminderRow) {
+  const statusLabels = { ...taskStatusLabel, ...contractStatusLabel, ...paymentStatusLabel };
+  return `${labelFor(reminderTypeLabel, row.type)} · ${labelFor(statusLabels, row.status)}`;
 }
 
 function today() {

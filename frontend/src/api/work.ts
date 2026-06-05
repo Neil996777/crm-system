@@ -88,10 +88,10 @@ export async function createTask(input: { relatedType: string; relatedId: string
   return unwrap(response);
 }
 
-export async function changeTaskStatus(id: string, toStatus: string) {
+export async function changeTaskStatus(id: string, toStatus: string, expectedVersion: number) {
   const response = await apiRequest<GatewayEnvelope<WorkTask>>(`/api/tasks/${id}/status`, {
     method: 'POST',
-    body: JSON.stringify({ toStatus })
+    body: JSON.stringify({ toStatus, expectedVersion })
   });
   return unwrap(response);
 }

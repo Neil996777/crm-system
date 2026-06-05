@@ -16,13 +16,14 @@ import { ImportExportPage } from '../pages/importexport/Import';
 import { OperationLogs } from '../pages/admin/OperationLogs';
 import { UserManagement } from '../pages/admin/UserManagement';
 import { AppView, Nav } from './Nav';
+import { appName, labelFor, roleLabel } from '../i18n/labels';
 
 export function Shell() {
   const { user, loading, logout } = useSession();
   const [view, setView] = useState<AppView>('overview');
 
   if (loading && !user) {
-    return <div className="boot">Loading</div>;
+    return <div className="boot">加载中</div>;
   }
 
   if (!user) {
@@ -32,17 +33,17 @@ export function Shell() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">CRM System</div>
+        <div className="brand">{appName}</div>
         <Nav role={user.role} activeView={view} onSelect={setView} />
       </aside>
       <div className="workspace">
         <header className="topbar">
           <div>
             <strong>{user.displayName}</strong>
-            <span>{user.role}</span>
+            <span>{labelFor(roleLabel, user.role)}</span>
           </div>
           <button className="secondaryButton" type="button" onClick={logout}>
-            Sign out
+            退出登录
           </button>
         </header>
         {view === 'leads' ? <LeadList /> : view === 'accounts' ? <AccountList /> : view === 'contacts' ? <ContactList /> : view === 'opportunities' ? <OpportunityList /> : view === 'quotes' ? <QuoteList /> : view === 'contracts' ? <ContractList /> : view === 'payments' ? <PaymentList /> : view === 'tasks' ? <TaskList /> : view === 'reminders' ? <ReminderCenter /> : view === 'managerOverview' ? <ManagerOverview /> : view === 'importExport' ? <ImportExportPage /> : view === 'userManagement' ? <UserManagement /> : view === 'operationLogs' ? <OperationLogs /> : <WorkOverview user={user} />}

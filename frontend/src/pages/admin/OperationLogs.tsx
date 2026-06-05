@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { HistoryEvent } from '../../api/history';
 import { getOperationLog } from '../../api/oplog';
+import { labelFor, objectTypeLabel, resultLabel, summaryTextZh } from '../../i18n/labels';
 
 export function OperationLogs() {
   const [events, setEvents] = useState<HistoryEvent[]>([]);
@@ -17,7 +18,7 @@ export function OperationLogs() {
         setEvents(response.events);
       } catch (caught) {
         const apiError = caught as ApiError;
-        setError(apiError.safeMessage || 'Permission denied.');
+        setError(apiError.safeMessage || '权限不足。');
       } finally {
         setLoading(false);
       }
@@ -29,24 +30,24 @@ export function OperationLogs() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>Operation Logs</h1>
-          <p>Administrator-only audit events.</p>
+          <h1>操作日志</h1>
+          <p>仅管理员可见的审计事件。</p>
         </div>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
-      {loading && <p className="emptyState">Loading operation logs...</p>}
+      {loading && <p className="emptyState">正在加载操作日志...</p>}
       {!loading && !error && (
-        <table className="dataTable" aria-label="Operation log table">
+        <table className="dataTable" aria-label="操作日志表">
           <thead>
             <tr>
-              <th>Event</th>
-              <th>Action</th>
-              <th>Actor</th>
-              <th>Resource</th>
-              <th>Occurred</th>
-              <th>Result</th>
-              <th>Before</th>
-              <th>After</th>
+              <th>事件</th>
+              <th>动作</th>
+              <th>操作者</th>
+              <th>资源</th>
+              <th>发生时间</th>
+              <th>结果</th>
+              <th>变更前</th>
+              <th>变更后</th>
             </tr>
           </thead>
           <tbody>
@@ -55,16 +56,16 @@ export function OperationLogs() {
                 <td>{event.eventId}</td>
                 <td>{event.action}</td>
                 <td>{event.actorUserId}</td>
-                <td>{event.resourceType} {event.resourceId}</td>
+                <td>{labelFor(objectTypeLabel, event.resourceType)} {event.resourceId}</td>
                 <td>{formatDate(event.occurredAt)}</td>
-                <td>{event.result}</td>
-                <td>Before: {summaryText(event.beforeSummary)}</td>
-                <td>After: {summaryText(event.afterSummary)}</td>
+                <td>{labelFor(resultLabel, event.result)}</td>
+                <td>变更前：{summaryTextZh(event.beforeSummary)}</td>
+                <td>变更后：{summaryTextZh(event.afterSummary)}</td>
               </tr>
             ))}
             {events.length === 0 && (
               <tr>
-                <td colSpan={8}>No operation logs found.</td>
+                <td colSpan={8}>暂无操作日志。</td>
               </tr>
             )}
           </tbody>
@@ -78,12 +79,4 @@ function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toISOString();
-}
-
-function summaryText(summary: Record<string, unknown> | undefined) {
-  if (!summary || Object.keys(summary).length === 0) return 'None';
-  return Object.entries(summary)
-    .filter(([, value]) => value !== '' && value !== null && value !== undefined)
-    .map(([key, value]) => `${key}: ${String(value)}`)
-    .join(', ');
 }

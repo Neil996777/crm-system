@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Quote, createQuote, getQuote, listQuotes } from '../../api/quotes';
+import { labelFor, quoteStatusLabel } from '../../i18n/labels';
 import { QuoteDetail } from './QuoteDetail';
 
 export function QuoteList() {
@@ -31,7 +32,7 @@ export function QuoteList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || 'Request failed.');
+      setError(apiError.safeMessage || '请求失败。');
     }
   }
 
@@ -49,57 +50,57 @@ export function QuoteList() {
     <main className="content">
       <section className="pageHeader">
         <div>
-          <h1>Quotes</h1>
-          <p>Create the single quote for an opportunity and manage acceptance.</p>
+          <h1>报价</h1>
+          <p>为商机创建唯一报价并管理接受状态。</p>
         </div>
-        <button className="primaryButton" type="button" onClick={() => setCreating((value) => !value)}>New quote</button>
+        <button className="primaryButton" type="button" onClick={() => setCreating((value) => !value)}>新建报价</button>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
       <section className="leadLayout">
         <div className="listPane">
           <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void refresh(search); }}>
             <label>
-              Search
+              搜索
               <input value={search} onChange={(event) => setSearch(event.target.value)} />
             </label>
-            <button className="secondaryButton" type="submit">Search</button>
+            <button className="secondaryButton" type="submit">搜索</button>
           </form>
           {creating && (
             <form className="createPanel" onSubmit={submit}>
               <label>
-                Opportunity ID
+                商机 ID
                 <input value={form.opportunityId} onChange={(event) => setForm({ ...form, opportunityId: event.target.value })} />
               </label>
               <label>
-                Customer ID
+                客户 ID
                 <input value={form.customerId} onChange={(event) => setForm({ ...form, customerId: event.target.value })} />
               </label>
               <label>
-                Amount
+                金额
                 <input value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
               </label>
               <label>
-                Validity end
+                有效期截止日
                 <input type="date" value={form.validityEnd} onChange={(event) => setForm({ ...form, validityEnd: event.target.value })} />
               </label>
               <label>
-                Owner ID
+                负责人 ID
                 <input value={form.ownerId} onChange={(event) => setForm({ ...form, ownerId: event.target.value })} />
               </label>
-              <button className="primaryButton" type="submit">Save quote</button>
+              <button className="primaryButton" type="submit">保存报价</button>
             </form>
           )}
-          <div className="recordList" aria-label="Quote records">
-            {quotes.length === 0 ? <p className="emptyState">No quotes found.</p> : quotes.map((quote) => (
+          <div className="recordList" aria-label="报价记录">
+            {quotes.length === 0 ? <p className="emptyState">暂无报价。</p> : quotes.map((quote) => (
               <button className="recordRow" type="button" key={quote.id} onClick={() => void selectQuote(quote.id)}>
                 <strong>{quote.opportunityId}</strong>
-                <span>{quote.status} · {quote.amount}</span>
+                <span>{labelFor(quoteStatusLabel, quote.status)} · {quote.amount}</span>
               </button>
             ))}
           </div>
         </div>
         <div className="detailShell">
-          {selected ? <QuoteDetail quote={selected} onUpdated={updateSelected} onError={setError} /> : <p className="emptyState">Select a quote to manage status.</p>}
+          {selected ? <QuoteDetail quote={selected} onUpdated={updateSelected} onError={setError} /> : <p className="emptyState">选择报价以管理状态。</p>}
         </div>
       </section>
     </main>

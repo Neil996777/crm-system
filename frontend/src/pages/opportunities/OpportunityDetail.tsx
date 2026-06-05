@@ -4,6 +4,7 @@ import { Opportunity, changeOpportunityStage, closeOpportunityLost, closeOpportu
 import { ActivityNoteTaskPanel } from '../../components/ActivityNoteTaskPanel';
 import { CloseOpportunityDialog } from '../../components/CloseOpportunityDialog';
 import { StageStepper } from '../../components/StageStepper';
+import { labelFor, lostReasonLabel, opportunityStageLabel } from '../../i18n/labels';
 
 type CloseMode = 'Won' | 'Lost' | null;
 
@@ -33,7 +34,7 @@ export function OpportunityDetail({
       await onUpdated(updated);
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || 'Request failed.');
+      onError(apiError.safeMessage || '请求失败。');
       await refresh();
     } finally {
       setBusy(false);
@@ -54,58 +55,58 @@ export function OpportunityDetail({
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || 'Request failed.');
+      onError(apiError.safeMessage || '请求失败。');
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <section className="detailPane" aria-label="Opportunity detail">
+    <section className="detailPane" aria-label="商机详情">
       <div className="detailHeader">
         <div>
           <h2>{opportunity.title || opportunity.id}</h2>
-          <p>Current stage: {opportunity.stage}</p>
+          <p>当前阶段：{labelFor(opportunityStageLabel, opportunity.stage)}</p>
         </div>
-        <span className="statusPill">{terminal ? 'Terminal record' : opportunity.stage}</span>
+        <span className="statusPill">{terminal ? '已关闭记录' : labelFor(opportunityStageLabel, opportunity.stage)}</span>
       </div>
 
       <StageStepper currentStage={opportunity.stage} terminal={terminal || busy} onSelectStage={(stage) => void selectStage(stage)} />
 
       <dl className="detailGrid">
         <div>
-          <dt>Customer</dt>
+          <dt>客户</dt>
           <dd>{opportunity.customerId}</dd>
         </div>
         <div>
-          <dt>Owner</dt>
+          <dt>负责人</dt>
           <dd>{opportunity.ownerId}</dd>
         </div>
         <div>
-          <dt>Expected amount</dt>
+          <dt>预计金额</dt>
           <dd>{opportunity.expectedAmount}</dd>
         </div>
         <div>
-          <dt>Expected close</dt>
+          <dt>预计关闭日期</dt>
           <dd>{opportunity.expectedCloseDate}</dd>
         </div>
         {opportunity.wonContractId && (
           <div>
-            <dt>Won contract</dt>
+            <dt>赢单合同</dt>
             <dd>{opportunity.wonContractId}</dd>
           </div>
         )}
         {opportunity.lostReasonCode && (
           <div>
-            <dt>Lost reason</dt>
-            <dd>{opportunity.lostReasonCode}</dd>
+            <dt>丢单原因</dt>
+            <dd>{labelFor(lostReasonLabel, opportunity.lostReasonCode)}</dd>
           </div>
         )}
       </dl>
 
       <div className="actionBand opportunityActions">
-        <button className="secondaryButton" type="button" onClick={() => setCloseMode('Won')} disabled={terminal || busy}>Close Won</button>
-        <button className="secondaryButton" type="button" onClick={() => setCloseMode('Lost')} disabled={terminal || busy}>Close Lost</button>
+        <button className="secondaryButton" type="button" onClick={() => setCloseMode('Won')} disabled={terminal || busy}>关闭为赢单</button>
+        <button className="secondaryButton" type="button" onClick={() => setCloseMode('Lost')} disabled={terminal || busy}>关闭为丢单</button>
       </div>
 
       {closeMode && <CloseOpportunityDialog mode={closeMode} onCancel={() => setCloseMode(null)} onConfirm={close} />}

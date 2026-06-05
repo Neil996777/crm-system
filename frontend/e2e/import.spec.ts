@@ -5,10 +5,10 @@ const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'AdminChangeMe-001!';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Email').fill(adminEmail);
-  await page.getByLabel('Password').fill(adminPassword);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'Work Overview' })).toBeVisible();
+  await page.getByLabel('邮箱').fill(adminEmail);
+  await page.getByLabel('密码').fill(adminPassword);
+  await page.getByRole('button', { name: '登录' }).click();
+  await expect(page.getByRole('heading', { name: '工作台' })).toBeVisible();
 });
 
 test('TEST-CSV-IMPORT-001/002 imports valid CSV rows and shows row errors', async ({ page }) => {
@@ -16,19 +16,20 @@ test('TEST-CSV-IMPORT-001/002 imports valid CSV rows and shows row errors', asyn
   const companyName = `Import E2E ${suffix}`;
   const csv = `companyName,leadName,source,ownerId\n${companyName},Imported Lead,Website,sales-1\nBroken Lead,, ,sales-1\n`;
 
-  await page.getByRole('button', { name: 'Import/Export' }).click();
-  await expect(page.getByRole('heading', { name: 'Import/Export' })).toBeVisible();
-  await page.getByLabel('Object type').selectOption('lead');
-  await page.getByLabel('CSV file').setInputFiles({
+  await page.getByRole('button', { name: '导入/导出' }).click();
+  await expect(page.getByRole('heading', { name: '导入/导出' })).toBeVisible();
+  const importForm = page.locator('form.importForm');
+  await importForm.getByLabel('对象类型').selectOption('lead');
+  await importForm.getByLabel('CSV 文件').setInputFiles({
     name: 'leads.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from(csv)
   });
-  await page.getByRole('button', { name: 'Start import' }).click();
+  await page.getByRole('button', { name: '开始导入' }).click();
 
-  await expect(page.getByText('Imported 1 of 2 rows')).toBeVisible();
-  await expect(page.getByText('Row 3')).toBeVisible();
+  await expect(page.getByText('已导入 1 / 2 行')).toBeVisible();
+  await expect(page.getByText('第 3 行')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Leads' }).click();
+  await page.getByRole('button', { name: '线索', exact: true }).click();
   await expect(page.getByText(companyName)).toBeVisible();
 });

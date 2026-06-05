@@ -1,11 +1,12 @@
 import { Check, Circle, CircleDot } from 'lucide-react';
+import { labelFor, opportunityStageLabel } from '../i18n/labels';
 
 const stages = ['New Opportunity', 'Needs Confirmed', 'Quote', 'Contract Negotiation', 'Won', 'Lost'];
 
 export function StageStepper({ currentStage, terminal, onSelectStage }: { currentStage: string; terminal: boolean; onSelectStage: (stage: string) => void }) {
   const currentIndex = stages.indexOf(currentStage);
   return (
-    <div className="stageStepper" aria-label="Opportunity stages">
+    <div className="stageStepper" aria-label="商机阶段">
       {stages.map((stage, index) => {
         const complete = currentStage === 'Lost' ? false : index < currentIndex;
         const current = stage === currentStage;
@@ -22,7 +23,7 @@ export function StageStepper({ currentStage, terminal, onSelectStage }: { curren
             aria-current={current ? 'step' : undefined}
           >
             <Icon size={16} />
-            <span>{stage}</span>
+            <span>{labelFor(opportunityStageLabel, stage)}</span>
           </button>
         );
       })}

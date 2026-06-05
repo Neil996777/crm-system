@@ -38,7 +38,7 @@ export function AddContactDialog({ accountId, onCreated, onError }: Props) {
       setOpen(false);
     } catch (caught) {
       const error = caught as ApiError;
-      onError(error.safeMessage || 'Request failed.');
+      onError(error.safeMessage || '请求失败。');
     }
   }
 
@@ -46,27 +46,27 @@ export function AddContactDialog({ accountId, onCreated, onError }: Props) {
     <section className="convertPanel">
       <button className="primaryButton iconButtonText" type="button" onClick={() => setOpen((value) => !value)}>
         <UserPlus size={16} />
-        Add contact
+        添加联系人
       </button>
       {open && (
         <form className="createPanel" onSubmit={submit}>
           <label>
-            Contact name
+            联系人姓名
             <input value={form.contactName} onChange={(event) => { setDuplicateWarning(null); setForm({ ...form, contactName: event.target.value }); }} />
           </label>
           <label>
-            Email
+            邮箱
             <input value={form.email} onChange={(event) => { setDuplicateWarning(null); setForm({ ...form, email: event.target.value }); }} />
           </label>
           <label>
-            Phone
+            电话
             <input value={form.phone} onChange={(event) => { setDuplicateWarning(null); setForm({ ...form, phone: event.target.value }); }} />
           </label>
           <label>
-            Role note
+            角色备注
             <input value={form.roleNote} onChange={(event) => setForm({ ...form, roleNote: event.target.value })} />
           </label>
-          <button className="primaryButton" type="submit">Save contact</button>
+          <button className="primaryButton" type="submit">保存联系人</button>
           {duplicateWarning ? (
             <DuplicateWarning
               warning={duplicateWarning}

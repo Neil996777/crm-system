@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { useSession } from '../auth/SessionProvider';
+import { appName } from '../i18n/labels';
 
 export function SignIn() {
   const { login, loading, error } = useSession();
@@ -19,20 +20,20 @@ export function SignIn() {
     <main className="signInPage">
       <form className="signInPanel" onSubmit={submit}>
         <div>
-          <h1>CRM System</h1>
-          <p>Sign in to continue</p>
+          <h1>{appName}</h1>
+          <p>登录以继续</p>
         </div>
         <label>
-          Email
+          邮箱
           <input autoFocus type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
         </label>
         <label>
-          Password
+          密码
           <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
         </label>
         {error && <div role="alert" className="error">{error}</div>}
         <button className="primaryButton" type="submit" disabled={!canSubmit}>
-          {loading ? 'Signing in' : 'Sign in'}
+          {loading ? '登录中' : '登录'}
         </button>
       </form>
     </main>
