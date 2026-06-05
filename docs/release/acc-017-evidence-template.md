@@ -1,5 +1,28 @@
 # ACC-017 Release Evidence
 
+## Production Go-Live Evidence — 2026-06-05
+
+| Field | Evidence |
+|---|---|
+| Release commit | `da9d63c Add production go-live runbook` |
+| Endpoint | `https://118.196.44.193` |
+| HTTP redirect endpoint | `http://118.196.44.193` returns `HTTP/1.1 301` with `Location: https://118.196.44.193/` |
+| TLS certificate status | `curl -vI https://118.196.44.193/health` verified TLS successfully; certificate SAN matches `IP Address:118.196.44.193` |
+| TLS issuer / validity | Let's Encrypt `YE1`; notBefore `Jun 3 05:46:05 2026 GMT`; notAfter `Jun 9 21:46:04 2026 GMT` |
+| Security headers | `HTTP/2 200` includes HSTS, X-Content-Type-Options, Referrer-Policy, and CSP |
+| Security group inbound rules | `TEST-DEPLOY-SG-001` passed against `docs/release/evidence/volcengine-security-group-verified-readonly-2026-06-03.json`; dedicated SG `sg-366ptx1bxp9ts1e710babmc8y` allows public TCP `22`, `80`, and `443` only |
+| Open public ports | Host listener evidence shows public `22`, `80`, and `443`; CRM gateway remains bound to `127.0.0.1:8080`; PostgreSQL remains Compose-internal (`5432/tcp`, no host publish) |
+| Health URL | `https://118.196.44.193/health` |
+| Deployment timestamp | `2026-06-05T11:44:53+08:00` |
+| Operator | `crm-deploy` |
+| Runtime host | `srv-volcengine-sh-01` / `iv-yemoz0an7kk36d2c9bp6` / `118.196.44.193` |
+| Backup before migration | `/opt/crm-system/backups/postgres/crm-postgres-20260604T170022Z.sql.gz.enc` |
+| Backup checksum | `71f2485871dacc00c94f47344e22a47e169b393217d474f0629bad2bc2a45ffb` |
+| Backup / TLS timers | `crm-backup.timer` and `crm-certbot-renew.timer` active |
+| Compose health | All 11 production containers running healthy; gateway published only as `127.0.0.1:8080->8080/tcp` |
+| Smoke result | `TEST-DEPLOY-SMOKE-001` and `TEST-DEPLOY-SMOKE-002` passed |
+| Evidence transcript | `docs/release/evidence/go-live-2026-06-05-transcript.txt` |
+
 | Field | Evidence |
 |---|---|
 | Endpoint | `https://118.196.44.193` |

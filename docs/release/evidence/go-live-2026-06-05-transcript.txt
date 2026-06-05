@@ -1,0 +1,177 @@
+CRM Go-Live Evidence Transcript - 2026-06-05
+Operator: crm-deploy
+Target: srv-volcengine-sh-01 / 118.196.44.193
+
+$ date
+Fri Jun  5 11:44:52 CST 2026
+
+$ git log --oneline -1 da9d63c
+da9d63c Add production go-live runbook
+
+$ route -n get 118.196.44.193
+   route to: 118.196.44.193
+destination: 118.196.44.193
+    gateway: 192.168.0.1
+  interface: en0
+      flags: <UP,GATEWAY,HOST,DONE,STATIC>
+ recvpipe  sendpipe  ssthresh  rtt,msec    rttvar  hopcount      mtu     expire
+       0         0         0        76        35         0      1500         0 
+
+$ curl -vI https://118.196.44.193/health
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 118.196.44.193:443...
+* Connected to 118.196.44.193 (118.196.44.193) port 443
+* ALPN: curl offers h2,http/1.1
+* (304) (OUT), TLS handshake, Client hello (1):
+} [296 bytes data]
+*  CAfile: /etc/ssl/cert.pem
+*  CApath: none
+* (304) (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* (304) (IN), TLS handshake, Unknown (8):
+{ [15 bytes data]
+* (304) (IN), TLS handshake, Certificate (11):
+{ [3351 bytes data]
+* (304) (IN), TLS handshake, CERT verify (15):
+{ [78 bytes data]
+* (304) (IN), TLS handshake, Finished (20):
+{ [36 bytes data]
+* (304) (OUT), TLS handshake, Finished (20):
+} [36 bytes data]
+* SSL connection using TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256 / [blank] / UNDEF
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: [NONE]
+*  start date: Jun  3 05:46:05 2026 GMT
+*  expire date: Jun  9 21:46:04 2026 GMT
+*  subjectAltName: host "118.196.44.193" matched cert's IP address!
+*  issuer: C=US; O=Let's Encrypt; CN=YE1
+*  SSL certificate verify ok.
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://118.196.44.193/health
+* [HTTP/2] [1] [:method: HEAD]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: 118.196.44.193]
+* [HTTP/2] [1] [:path: /health]
+* [HTTP/2] [1] [user-agent: curl/8.7.1]
+* [HTTP/2] [1] [accept: */*]
+> HEAD /health HTTP/2
+> Host: 118.196.44.193
+> User-Agent: curl/8.7.1
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/2 200 
+< server: nginx/1.24.0 (Ubuntu)
+< date: Fri, 05 Jun 2026 03:44:52 GMT
+< content-type: application/json
+< content-length: 104
+< strict-transport-security: max-age=31536000; includeSubDomains
+< x-content-type-options: nosniff
+< referrer-policy: strict-origin-when-cross-origin
+< content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< 
+{ [0 bytes data]
+  0   104    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+* Connection #0 to host 118.196.44.193 left intact
+HTTP/2 200 
+server: nginx/1.24.0 (Ubuntu)
+date: Fri, 05 Jun 2026 03:44:52 GMT
+content-type: application/json
+content-length: 104
+strict-transport-security: max-age=31536000; includeSubDomains
+x-content-type-options: nosniff
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+
+$ curl -vI http://118.196.44.193
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 118.196.44.193:80...
+* Connected to 118.196.44.193 (118.196.44.193) port 80
+> HEAD / HTTP/1.1
+> Host: 118.196.44.193
+> User-Agent: curl/8.7.1
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/1.1 301 Moved Permanently
+< Server: nginx/1.24.0 (Ubuntu)
+< Date: Fri, 05 Jun 2026 03:44:52 GMT
+< Content-Type: text/html
+< Content-Length: 178
+< Connection: keep-alive
+< Location: https://118.196.44.193/
+< 
+  0   178    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+* Connection #0 to host 118.196.44.193 left intact
+HTTP/1.1 301 Moved Permanently
+Server: nginx/1.24.0 (Ubuntu)
+Date: Fri, 05 Jun 2026 03:44:52 GMT
+Content-Type: text/html
+Content-Length: 178
+Connection: keep-alive
+Location: https://118.196.44.193/
+
+
+$ openssl s_client -connect 118.196.44.193:443 -servername 118.196.44.193 | openssl x509 -noout -issuer -subject -dates -ext subjectAltName
+issuer=C=US, O=Let's Encrypt, CN=YE1
+subject=
+notBefore=Jun  3 05:46:05 2026 GMT
+notAfter=Jun  9 21:46:04 2026 GMT
+X509v3 Subject Alternative Name: critical
+    IP Address:118.196.44.193
+
+$ ssh crm-deploy remote go-live evidence commands
+REMOTE_DATE=2026-06-05T11:44:53+08:00
+REMOTE_USER=crm-deploy
+REMOTE_HOST=iv-yemoz0an7kk36d2c9bp6
+HEAD=da9d63c Add production go-live runbook
+BACKUP_SHA256_CHECK=/opt/crm-system/backups/postgres/crm-postgres-20260604T170022Z.sql.gz.enc: OK
+TIMERS=
+  UNIT                    LOAD   ACTIVE SUB     DESCRIPTION
+  crm-backup.timer        loaded active waiting Run CRM encrypted PostgreSQL backup daily
+  crm-certbot-renew.timer loaded active waiting Run CRM IP TLS certificate renewal twice daily
+
+Legend: LOAD   → Reflects whether the unit definition was properly loaded.
+        ACTIVE → The high-level unit activation state, i.e. generalization of SUB.
+        SUB    → The low-level unit activation state, values depend on unit type.
+
+2 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
+COMPOSE_PS=
+NAME                       IMAGE                                     COMMAND                  SERVICE          CREATED        STATUS                  PORTS
+current-account-1          crm-system/account:prod-20260603          "/app/server"            account          10 hours ago   Up 10 hours (healthy)   8080/tcp
+current-audit-history-1    crm-system/audit-history:prod-20260603    "/app/server"            audit-history    10 hours ago   Up 10 hours (healthy)   8080/tcp
+current-commercial-1       crm-system/commercial:prod-20260603       "/app/server"            commercial       10 hours ago   Up 10 hours (healthy)   8080/tcp
+current-gateway-bff-1      crm-system/gateway-bff:prod-20260603      "/app/server"            gateway-bff      10 hours ago   Up 10 hours (healthy)   127.0.0.1:8080->8080/tcp
+current-identity-authz-1   crm-system/identity-authz:prod-20260603   "/app/server"            identity-authz   10 hours ago   Up 10 hours (healthy)   8080/tcp
+current-import-export-1    crm-system/import-export:prod-20260603    "/app/server"            import-export    10 hours ago   Up 10 hours (healthy)   8080/tcp
+current-lead-1             crm-system/lead:prod-20260603             "/app/server"            lead             10 hours ago   Up 10 hours (healthy)   8080/tcp
+current-opportunity-1      crm-system/opportunity:prod-20260603      "/app/server"            opportunity      10 hours ago   Up 10 hours (healthy)   8080/tcp
+current-postgres-1         postgres:16-alpine                        "docker-entrypoint.s…"   postgres         44 hours ago   Up 44 hours (healthy)   5432/tcp
+current-reporting-1        crm-system/reporting:prod-20260603        "/app/server"            reporting        10 hours ago   Up 10 hours (healthy)   8080/tcp
+current-work-1             crm-system/work:prod-20260603             "/app/server"            work             10 hours ago   Up 10 hours (healthy)   8080/tcp
+LISTEN_PORTS=
+State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess
+LISTEN 0      511          0.0.0.0:443        0.0.0.0:*          
+LISTEN 0      511        127.0.0.1:18789      0.0.0.0:*          
+LISTEN 0      511          0.0.0.0:80         0.0.0.0:*          
+LISTEN 0      4096      127.0.0.54:53         0.0.0.0:*          
+LISTEN 0      4096       127.0.0.1:8080       0.0.0.0:*          
+LISTEN 0      4096   127.0.0.53%lo:53         0.0.0.0:*          
+LISTEN 0      4096       127.0.0.1:41215      0.0.0.0:*          
+LISTEN 0      511        127.0.0.1:34499      0.0.0.0:*          
+LISTEN 0      4096               *:22               *:*          
+LISTEN 0      511             [::]:80            [::]:*          
+LISTEN 0      511            [::1]:18789         [::]:*          
+HEALTHCHECK=
+TEST-DEPLOY-SMOKE-001 checking HTTPS endpoint https://118.196.44.193
+TEST-DEPLOY-SMOKE-001 passed
+TEST-DEPLOY-SMOKE-002 checking HTTP redirects to HTTPS
+TEST-DEPLOY-SMOKE-002 passed
+
+$ python3 scripts/test_security_group_evidence.py --evidence docs/release/evidence/volcengine-security-group-verified-readonly-2026-06-03.json --verification
+TEST-DEPLOY-SG-001 passed for dedicated security group sg-366ptx1bxp9ts1e710babmc8y
