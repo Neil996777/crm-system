@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../api/client';
 import { HistoryEvent, getRecordHistory } from '../api/history';
-import { labelFor, objectTypeLabel, resultLabel, summaryTextZh } from '../i18n/labels';
+import { labelFor, localizeError, localizeMessage, objectTypeLabel, resultLabel, summaryTextZh } from '../i18n/labels';
 
 type Props = {
   resource: string;
@@ -24,7 +24,7 @@ export function HistoryTimeline({ resource, recordId, reloadKey }: Props) {
         if (!cancelled) setEvents(response.events);
       } catch (caught) {
         const apiError = caught as ApiError;
-        if (!cancelled) setError(apiError.safeMessage || '权限不足。');
+        if (!cancelled) setError(localizeError(apiError, '权限不足。'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -52,7 +52,7 @@ export function HistoryTimeline({ resource, recordId, reloadKey }: Props) {
                 <strong>{event.eventId}</strong>
                 <span>{labelFor(resultLabel, event.result)}</span>
               </div>
-              <p>{event.safeSummary}</p>
+              <p>{localizeMessage(event.safeSummary, event.safeSummary)}</p>
               <dl className="timelineMeta">
                 <div>
                   <dt>操作者</dt>

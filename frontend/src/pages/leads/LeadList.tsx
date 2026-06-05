@@ -3,7 +3,7 @@ import { ApiError } from '../../api/client';
 import { DuplicateWarningResult } from '../../api/duplicates';
 import { ConversionResult, Lead, checkLeadDuplicate, createLead, getLead, listLeads } from '../../api/leads';
 import { DuplicateWarning } from '../../components/DuplicateWarning';
-import { labelFor, leadStatusLabel } from '../../i18n/labels';
+import { labelFor, leadStatusLabel, localizeError } from '../../i18n/labels';
 import { LeadDetail } from './LeadDetail';
 
 export function LeadList() {
@@ -56,7 +56,7 @@ export function LeadList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 

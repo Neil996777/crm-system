@@ -4,7 +4,7 @@ import { Opportunity, changeOpportunityStage, closeOpportunityLost, closeOpportu
 import { ActivityNoteTaskPanel } from '../../components/ActivityNoteTaskPanel';
 import { CloseOpportunityDialog } from '../../components/CloseOpportunityDialog';
 import { StageStepper } from '../../components/StageStepper';
-import { labelFor, lostReasonLabel, opportunityStageLabel } from '../../i18n/labels';
+import { labelFor, localizeError, lostReasonLabel, opportunityStageLabel } from '../../i18n/labels';
 
 type CloseMode = 'Won' | 'Lost' | null;
 
@@ -34,7 +34,7 @@ export function OpportunityDetail({
       await onUpdated(updated);
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || '请求失败。');
+      onError(localizeError(apiError));
       await refresh();
     } finally {
       setBusy(false);
@@ -55,7 +55,7 @@ export function OpportunityDetail({
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || '请求失败。');
+      onError(localizeError(apiError));
     } finally {
       setBusy(false);
     }

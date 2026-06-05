@@ -20,8 +20,14 @@ TASK-012, TASK-016, TASK-021, TASK-022, TASK-023, TASK-025, TASK-026, TASK-027,
 TASK-028, TASK-029, TASK-030, TASK-033, TASK-034, TASK-035, and TASK-036. Backend
 comparison values, role names, lifecycle/status/stage enum values, view keys, API
 fields, and test ids remain unchanged; display mappings live in
-`frontend/src/i18n/labels.ts`. Evidence: `npm run build` and `npm run test:e2e`
-from `frontend/` passed with 39/39 tests on 2026-06-05.
+`frontend/src/i18n/labels.ts`. Phase 2 also localizes backend-originated
+`ApiError.safeMessage` display, field/row errors, audit `event.action`, history
+safe summaries, and before/after summary labels without changing backend code or
+API contracts. Evidence: `npx tsc --noEmit`, `npm run build`, and
+`npx playwright test` from `frontend/` passed with 39/39 tests and 0 skips on
+2026-06-05; final production bundle `assets/index-BSnQsz2U.js` is served from
+`https://118.196.44.193/`; live login-failure alert shows `认证失败。`. Return
+to Claude for independent i18n audit; Codex does not self-pass.
 
 ---
 

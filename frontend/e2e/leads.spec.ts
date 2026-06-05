@@ -19,7 +19,7 @@ test('TEST-LEAD-CREATE-002 validates create lead required fields', async ({ page
   await page.getByLabel('公司名称').fill('E2E Missing Source');
   await page.getByRole('button', { name: '保存线索' }).click();
 
-  await expect(page.getByRole('alert')).toContainText('The lead input is invalid.');
+  await expect(page.getByRole('alert')).toContainText('线索输入无效。');
 });
 
 test('TEST-LEAD-QUALIFY-003 converts a valid lead through the UI', async ({ page }) => {

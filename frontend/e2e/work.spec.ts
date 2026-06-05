@@ -17,7 +17,7 @@ test('TEST-ACTIVITY-NOTE-002 validates missing fields and creates note and activ
 
   await expect(page.getByRole('heading', { name: '动态、备注、任务' })).toBeVisible();
   await page.getByRole('button', { name: '保存备注', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('The work item input is invalid.');
+  await expect(page.getByRole('alert')).toContainText('工作项输入无效。');
 
   await page.getByLabel('备注内容').fill('Decision maker confirmed next step');
   await page.getByRole('button', { name: '保存备注', exact: true }).click();

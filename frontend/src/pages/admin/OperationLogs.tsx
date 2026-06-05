@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { HistoryEvent } from '../../api/history';
 import { getOperationLog } from '../../api/oplog';
-import { labelFor, objectTypeLabel, resultLabel, summaryTextZh } from '../../i18n/labels';
+import { actionLabel, labelFor, localizeError, objectTypeLabel, resultLabel, summaryTextZh } from '../../i18n/labels';
 
 export function OperationLogs() {
   const [events, setEvents] = useState<HistoryEvent[]>([]);
@@ -18,7 +18,7 @@ export function OperationLogs() {
         setEvents(response.events);
       } catch (caught) {
         const apiError = caught as ApiError;
-        setError(apiError.safeMessage || '权限不足。');
+        setError(localizeError(apiError, '权限不足。'));
       } finally {
         setLoading(false);
       }
@@ -54,7 +54,7 @@ export function OperationLogs() {
             {events.map((event) => (
               <tr key={event.eventUid}>
                 <td>{event.eventId}</td>
-                <td>{event.action}</td>
+                <td>{labelFor(actionLabel, event.action)}</td>
                 <td>{event.actorUserId}</td>
                 <td>{labelFor(objectTypeLabel, event.resourceType)} {event.resourceId}</td>
                 <td>{formatDate(event.occurredAt)}</td>

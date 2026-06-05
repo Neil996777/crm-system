@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../api/client';
 import { WorkTask, changeTaskStatus, listTasks } from '../api/work';
-import { labelFor, objectTypeLabel, taskStatusLabel } from '../i18n/labels';
+import { labelFor, localizeError, objectTypeLabel, taskStatusLabel } from '../i18n/labels';
 
 export function TaskList() {
   const [tasks, setTasks] = useState<WorkTask[]>([]);
@@ -18,7 +18,7 @@ export function TaskList() {
       setTasks(response.items);
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 
@@ -31,7 +31,7 @@ export function TaskList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../api/client';
 import { Activity, Note, WorkTask, createActivity, createNote, createTask, listActivities, listNotes, listTasks } from '../api/work';
-import { labelFor, taskStatusLabel } from '../i18n/labels';
+import { labelFor, localizeError, taskStatusLabel } from '../i18n/labels';
 
 export function ActivityNoteTaskPanel({ relatedType, relatedId, ownerId, onError }: { relatedType: string; relatedId: string; ownerId: string; onError: (message: string) => void }) {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -35,7 +35,7 @@ export function ActivityNoteTaskPanel({ relatedType, relatedId, ownerId, onError
       setActivityForm({ activityType: '', content: '' });
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || '请求失败。');
+      onError(localizeError(apiError));
     }
   }
 
@@ -48,7 +48,7 @@ export function ActivityNoteTaskPanel({ relatedType, relatedId, ownerId, onError
       setNoteContent('');
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || '请求失败。');
+      onError(localizeError(apiError));
     }
   }
 
@@ -61,7 +61,7 @@ export function ActivityNoteTaskPanel({ relatedType, relatedId, ownerId, onError
       setTaskForm({ title: '', dueDate: '' });
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || '请求失败。');
+      onError(localizeError(apiError));
     }
   }
 

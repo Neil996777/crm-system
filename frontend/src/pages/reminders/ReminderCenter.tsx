@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { ReminderRow, listReminders } from '../../api/reminders';
-import { labelFor, reminderTypeLabel, taskStatusLabel, contractStatusLabel, paymentStatusLabel } from '../../i18n/labels';
+import { labelFor, reminderTypeLabel, taskStatusLabel, contractStatusLabel, paymentStatusLabel, localizeError } from '../../i18n/labels';
 
 export function ReminderCenter() {
   const [businessDate, setBusinessDate] = useState(today());
@@ -27,7 +27,7 @@ export function ReminderCenter() {
       setTimezone(response.timezone);
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 

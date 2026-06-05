@@ -3,7 +3,7 @@ import { UserRole } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { ManagedUser, UserStatus, changeUserRole, changeUserStatus, createUser, listUsers } from '../../api/users';
 import { RoleStatusChangeDialog } from '../../components/RoleStatusChangeDialog';
-import { labelFor, roleLabel, userStatusLabel } from '../../i18n/labels';
+import { labelFor, localizeError, roleLabel, userStatusLabel } from '../../i18n/labels';
 
 const roles: UserRole[] = ['Administrator', 'Sales Manager', 'Sales'];
 const statuses: UserStatus[] = ['Active', 'Disabled'];
@@ -41,7 +41,7 @@ export function UserManagement() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 
@@ -74,7 +74,7 @@ export function UserManagement() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
       setConfirming(false);
       await refresh();
     }

@@ -27,5 +27,5 @@ test('TEST-AUTH-LOGIN-002 shows one generic sign-in failure', async ({ page }) =
   await page.getByLabel('密码').fill('wrong-password');
   await page.getByRole('button', { name: '登录' }).click();
 
-  await expect(page.getByRole('alert')).toHaveText('Authentication failed.');
+  await expect(page.getByRole('alert')).toHaveText('认证失败。');
 });

@@ -3,7 +3,7 @@ import { Account, checkAccountDuplicate, createAccount, getAccount, listAccounts
 import { ApiError } from '../../api/client';
 import { DuplicateWarningResult } from '../../api/duplicates';
 import { DuplicateWarning } from '../../components/DuplicateWarning';
-import { accountStatusLabel, archiveStatusLabel, labelFor } from '../../i18n/labels';
+import { accountStatusLabel, archiveStatusLabel, labelFor, localizeError } from '../../i18n/labels';
 import { AccountDetail } from './AccountDetail';
 
 export function AccountList() {
@@ -48,7 +48,7 @@ export function AccountList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 

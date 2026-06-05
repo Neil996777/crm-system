@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Contract, changeContractStatus } from '../../api/contracts';
-import { contractStatusLabel, labelFor } from '../../i18n/labels';
+import { contractStatusLabel, labelFor, localizeError } from '../../i18n/labels';
 
 export function ContractDetail({ contract, onUpdated, onError }: { contract: Contract; onUpdated: (contract: Contract) => Promise<void>; onError: (message: string) => void }) {
   const [signedEffectiveDate, setSignedEffectiveDate] = useState(contract.signedEffectiveDate ?? '');
@@ -15,7 +15,7 @@ export function ContractDetail({ contract, onUpdated, onError }: { contract: Con
       await onUpdated(next);
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || '请求失败。');
+      onError(localizeError(apiError));
     }
   }
 

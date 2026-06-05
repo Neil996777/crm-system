@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Quote, createQuote, getQuote, listQuotes } from '../../api/quotes';
-import { labelFor, quoteStatusLabel } from '../../i18n/labels';
+import { labelFor, localizeError, quoteStatusLabel } from '../../i18n/labels';
 import { QuoteDetail } from './QuoteDetail';
 
 export function QuoteList() {
@@ -32,7 +32,7 @@ export function QuoteList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 

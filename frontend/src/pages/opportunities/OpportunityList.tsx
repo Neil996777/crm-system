@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Opportunity, createOpportunity, getOpportunity, listOpportunities } from '../../api/opportunities';
-import { labelFor, opportunityStageLabel } from '../../i18n/labels';
+import { labelFor, localizeError, opportunityStageLabel } from '../../i18n/labels';
 import { OpportunityDetail } from './OpportunityDetail';
 
 export function OpportunityList() {
@@ -38,7 +38,7 @@ export function OpportunityList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { CurrentUser, currentUser, signIn, signOut } from '../api/auth';
 import { ApiError } from '../api/client';
+import { localizeError } from '../i18n/labels';
 
 type SessionState = {
   user: CurrentUser | null;
@@ -37,7 +38,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           setUser(response.user);
         } catch (caught) {
           const apiError = caught as ApiError;
-          setError(apiError.safeMessage || '认证失败。');
+          setError(localizeError(apiError, '认证失败。'));
           setUser(null);
         } finally {
           setLoading(false);

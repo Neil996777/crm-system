@@ -21,7 +21,7 @@ test('TEST-QUOTE-LIFECYCLE-002 validates quote required fields', async ({ page }
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存报价' }).click();
 
-  await expect(page.getByRole('alert')).toContainText('The quote input is invalid.');
+  await expect(page.getByRole('alert')).toContainText('报价输入无效。');
 });
 
 test('TEST-QUOTE-LIFECYCLE-002 shows expired quote warning and blocks contract link', async ({ page }) => {

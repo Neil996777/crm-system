@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BasicReport, getBasicReport, GroupRow, PaymentGroupRow } from '../../api/reports';
-import { contractStatusLabel, labelFor, leadStatusLabel, opportunityStageLabel, paymentStatusLabel, quoteStatusLabel, reportArchiveFilterLabel, reportScopeLabel } from '../../i18n/labels';
+import { contractStatusLabel, labelFor, leadStatusLabel, localizeError, opportunityStageLabel, paymentStatusLabel, quoteStatusLabel, reportArchiveFilterLabel, reportScopeLabel } from '../../i18n/labels';
 
 export function BasicReports() {
   const [report, setReport] = useState<BasicReport | null>(null);
@@ -15,8 +15,7 @@ export function BasicReports() {
     try {
       setReport(await getBasicReport());
     } catch (err) {
-      const safe = err as { safeMessage?: string };
-      setError(safe.safeMessage ?? '无法加载基础报表。');
+      setError(localizeError(err as { safeMessage?: string }, '无法加载基础报表。'));
     }
   }
 

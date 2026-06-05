@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Contract, createContract, getContract, listContracts } from '../../api/contracts';
-import { contractStatusLabel, labelFor } from '../../i18n/labels';
+import { contractStatusLabel, labelFor, localizeError } from '../../i18n/labels';
 import { ContractDetail } from './ContractDetail';
 
 export function ContractList() {
@@ -41,7 +41,7 @@ export function ContractList() {
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 

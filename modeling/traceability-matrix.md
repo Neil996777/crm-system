@@ -54,9 +54,15 @@ display surfaces were localized to zh-CN without changing backend comparison
 values or API contracts. Trace applies to frontend tasks TASK-006, TASK-009,
 TASK-012, TASK-016, TASK-021, TASK-022, TASK-023, TASK-025, TASK-026, TASK-027,
 TASK-028, TASK-029, TASK-030, TASK-033, TASK-034, TASK-035, and TASK-036 across
-ACC-001..006, ACC-008..014, ACC-018, ACC-020..023. Evidence: `frontend/src/i18n/labels.ts`
-enum display mappings; `npm run build`; `npm run test:e2e` 39/39 passed
-(2026-06-05).
+ACC-001..006, ACC-008..014, ACC-018, ACC-020..023. Phase 2 covers
+backend-originated `ApiError.safeMessage` display, field/row errors, audit
+`event.action`, history safe summaries, and before/after summary labels via the
+frontend catalog in `frontend/src/i18n/labels.ts`; unknown backend messages fall
+back to their raw text and never render blank. Evidence: 63 canonical backend
+messages mapped; `npx tsc --noEmit`; `npm run build` final bundle
+`assets/index-BSnQsz2U.js`; `npx playwright test` 39/39 passed with 0 skips; prod
+spot-check served `assets/index-BSnQsz2U.js` and showed live alert `认证失败。`
+(2026-06-05). Pending Claude independent i18n audit.
 
 | PRD ID | Acceptance ID | Business Rule ID | UX ID | UI ID | Security ID | Architecture ID | CIM ID | PIM ID | PSM ID | Architecture Acceptance ID | Task ID | Test ID | Audit ID |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|

@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Contract } from '../../api/contracts';
 import { listPaymentContracts } from '../../api/payments';
-import { contractStatusLabel, labelFor } from '../../i18n/labels';
+import { contractStatusLabel, labelFor, localizeError } from '../../i18n/labels';
 import { PaymentDetail } from './PaymentDetail';
 
 export function PaymentList() {
@@ -21,7 +21,7 @@ export function PaymentList() {
       setContracts(response.items);
     } catch (caught) {
       const apiError = caught as ApiError;
-      setError(apiError.safeMessage || '请求失败。');
+      setError(localizeError(apiError));
     }
   }
 

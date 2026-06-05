@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Contract } from '../../api/contracts';
 import { ActualPayment, PaymentPlan, createPaymentPlan, recordPayment } from '../../api/payments';
-import { labelFor, paymentStatusLabel } from '../../i18n/labels';
+import { labelFor, localizeError, paymentStatusLabel } from '../../i18n/labels';
 
 export function PaymentDetail({ contract, onError }: { contract: Contract; onError: (message: string) => void }) {
   const [plan, setPlan] = useState<PaymentPlan | null>(null);
@@ -18,7 +18,7 @@ export function PaymentDetail({ contract, onError }: { contract: Contract; onErr
       setPlan(await createPaymentPlan(contract.id, planForm));
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || '请求失败。');
+      onError(localizeError(apiError));
     }
   }
 
@@ -34,7 +34,7 @@ export function PaymentDetail({ contract, onError }: { contract: Contract; onErr
       }
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || '请求失败。');
+      onError(localizeError(apiError));
     }
   }
 

@@ -34,7 +34,7 @@ test('TEST-HISTORY-001 and TEST-HISTORY-004 shows read-only record-local history
   const history = page.getByLabel('记录历史');
   await expect(history.getByRole('heading', { name: '历史' })).toBeVisible();
   await expect(history).toContainText('EVT-LEAD-QUALIFIED');
-  await expect(history).toContainText('Lead qualified');
+  await expect(history).toContainText('线索已确认');
   const qualifiedEvent = history.locator('.timelineItem', { hasText: 'EVT-LEAD-QUALIFIED' });
   await expect(qualifiedEvent).toContainText('线索');
   await expect(qualifiedEvent.getByText(/操作者：usr_seed_admin/)).toBeVisible();

@@ -3,6 +3,7 @@ import { FormEvent, useState } from 'react';
 import { checkContactDuplicate, Contact, createContact } from '../api/accounts';
 import { ApiError } from '../api/client';
 import { DuplicateWarningResult } from '../api/duplicates';
+import { localizeError } from '../i18n/labels';
 import { DuplicateWarning } from './DuplicateWarning';
 
 type Props = {
@@ -38,7 +39,7 @@ export function AddContactDialog({ accountId, onCreated, onError }: Props) {
       setOpen(false);
     } catch (caught) {
       const error = caught as ApiError;
-      onError(error.safeMessage || '请求失败。');
+      onError(localizeError(error));
     }
   }
 

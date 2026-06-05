@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getManagerOverview, ManagerOverview as ManagerOverviewData } from '../../api/reports';
-import { labelFor, opportunityStageLabel, reportArchiveFilterLabel, reportScopeLabel } from '../../i18n/labels';
+import { labelFor, localizeError, opportunityStageLabel, reportArchiveFilterLabel, reportScopeLabel } from '../../i18n/labels';
 import { BasicReports } from './BasicReports';
 
 export function ManagerOverview() {
@@ -16,8 +16,7 @@ export function ManagerOverview() {
     try {
       setOverview(await getManagerOverview());
     } catch (err) {
-      const safe = err as { safeMessage?: string };
-      setError(safe.safeMessage ?? '无法加载经理总览。');
+      setError(localizeError(err as { safeMessage?: string }, '无法加载经理总览。'));
     }
   }
 

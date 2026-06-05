@@ -4,7 +4,7 @@ import { ApiError } from '../../api/client';
 import { AddContactDialog } from '../../components/AddContactDialog';
 import { ArchiveConfirmation } from '../../components/ArchiveConfirmation';
 import { ContactTable } from '../../components/ContactTable';
-import { accountStatusLabel, archiveStatusLabel, labelFor } from '../../i18n/labels';
+import { accountStatusLabel, archiveStatusLabel, labelFor, localizeError } from '../../i18n/labels';
 
 type Props = {
   account: Account;
@@ -38,7 +38,7 @@ export function AccountDetail({ account, onArchived, onError }: Props) {
       setReason('归档非活跃客户记录');
     } catch (caught) {
       const error = caught as ApiError;
-      onError(error.safeMessage || '请求失败。');
+      onError(localizeError(error));
     }
   }
 
@@ -50,7 +50,7 @@ export function AccountDetail({ account, onArchived, onError }: Props) {
       onArchived();
     } catch (caught) {
       const error = caught as ApiError;
-      onError(error.safeMessage || '请求失败。');
+      onError(localizeError(error));
     }
   }
 

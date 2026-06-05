@@ -16,7 +16,7 @@ test('TEST-OPP-STAGE-002 shows backend-backed blocked transition alert', async (
   await createOpportunity(page, title);
 
   await page.getByLabel('商机阶段').getByRole('button', { name: '报价', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('The requested stage transition is not allowed.');
+  await expect(page.getByRole('alert')).toContainText('不允许该阶段流转。');
   await expect(page.getByText('当前阶段：新商机')).toBeVisible();
 });
 
@@ -29,7 +29,7 @@ test('TEST-OPP-CLOSE-002 blocks Won until related contract is Signed', async ({ 
   await page.getByLabel('关闭日期').fill('2027-07-01');
   await page.getByRole('button', { name: '确认赢单' }).click();
 
-  await expect(page.getByRole('alert')).toContainText('Won requires a Signed related contract.');
+  await expect(page.getByRole('alert')).toContainText('赢单需要有已签署的关联合同。');
   await expect(page.getByText('当前阶段：新商机')).toBeVisible();
 });
 

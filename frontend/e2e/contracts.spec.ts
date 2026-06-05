@@ -25,7 +25,7 @@ test('TEST-CONTRACT-CREATE-002 validates required fields amount difference reaso
   await openContracts(page);
   await page.getByRole('button', { name: '新建合同', exact: true }).click();
   await page.getByRole('button', { name: '保存合同', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('The contract input is invalid.');
+  await expect(page.getByRole('alert')).toContainText('合同输入无效。');
 
   await page.getByLabel('报价 ID').fill(quote.id);
   await page.getByLabel('商机 ID').fill(quote.opportunityId);
@@ -35,7 +35,7 @@ test('TEST-CONTRACT-CREATE-002 validates required fields amount difference reaso
   await page.getByLabel('合同备注').fill('Commercial note required for contract creation');
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存合同', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('A reason is required when contract amount differs from quote amount.');
+  await expect(page.getByRole('alert')).toContainText('合同金额与报价金额不一致时必须填写原因。');
 
   await page.getByLabel('金额差异原因').fill('Negotiated implementation services');
   await page.getByRole('button', { name: '保存合同', exact: true }).click();
@@ -60,7 +60,7 @@ test('TEST-CONTRACT-LIFECYCLE-002 rejects signing without signed effective date 
   await page.getByRole('button', { name: '保存合同', exact: true }).click();
 
   await page.getByRole('button', { name: '签署', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Signed or effective date is required for this contract status.');
+  await expect(page.getByRole('alert')).toContainText('该合同状态需要填写签署或生效日期。');
 
   await page.getByLabel('签署/生效日期').fill('2027-12-15');
   await page.getByRole('button', { name: '签署', exact: true }).click();

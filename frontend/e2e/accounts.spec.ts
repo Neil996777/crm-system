@@ -19,7 +19,7 @@ test('TEST-CUSTOMER-CRUD-002 validates required customer fields', async ({ page 
   await page.getByLabel('公司名称').fill('E2E Missing Status');
   await page.getByRole('button', { name: '保存客户' }).click();
 
-  await expect(page.getByRole('alert')).toContainText('The account input is invalid.');
+  await expect(page.getByRole('alert')).toContainText('客户输入无效。');
 });
 
 test('TEST-CONTACT-LINK-003 creates two contacts visible in customer context', async ({ page }) => {

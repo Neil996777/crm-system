@@ -19,7 +19,7 @@ test('TEST-OPLOG-001/002/005 administrator sees read-only global operation logs'
 
   const logTable = page.getByLabel('操作日志表');
   await expect(logTable).toContainText('EVT-USER-ADMIN-CHANGED');
-  await expect(logTable).toContainText('create_user');
+  await expect(logTable).toContainText('新建用户');
   await expect(logTable).toContainText('usr_seed_admin');
   await expect(logTable).toContainText('用户');
   await expect(logTable).toContainText('成功');

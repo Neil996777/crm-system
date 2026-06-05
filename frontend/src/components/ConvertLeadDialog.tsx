@@ -2,6 +2,7 @@ import { GitBranch } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { ApiError } from '../api/client';
 import { ConversionResult, Lead, convertLead } from '../api/leads';
+import { localizeError } from '../i18n/labels';
 
 type Props = {
   lead: Lead;
@@ -25,7 +26,7 @@ export function ConvertLeadDialog({ lead, onConverted, onError }: Props) {
       setOpen(false);
     } catch (caught) {
       const error = caught as ApiError;
-      onError(error.safeMessage || '请求失败。');
+      onError(localizeError(error));
     } finally {
       setSubmitting(false);
     }

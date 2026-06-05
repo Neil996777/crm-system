@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ImportRun, startImport } from '../../api/importexport';
-import { labelFor, objectTypeLabel, runStatusLabel } from '../../i18n/labels';
+import { labelFor, localizeError, localizeMessage, objectTypeLabel, runStatusLabel } from '../../i18n/labels';
 import { ExportPanel } from './Export';
 
 export function ImportExportPage() {
@@ -24,8 +24,7 @@ export function ImportExportPage() {
       const content = await file.text();
       setResult(await startImport({ objectType, filename: file.name, content }));
     } catch (err) {
-      const safe = err as { safeMessage?: string };
-      setError(safe.safeMessage ?? '无法启动导入。');
+      setError(localizeError(err as { safeMessage?: string }, '无法启动导入。'));
     } finally {
       setBusy(false);
     }
@@ -82,7 +81,7 @@ export function ImportExportPage() {
                     <td>第 {row.rowNumber} 行</td>
                     <td>{row.field}</td>
                     <td>{row.code}</td>
-                    <td>{row.safeMessage}</td>
+                    <td>{localizeMessage(row.safeMessage, row.code)}</td>
                   </tr>
                 ))}
               </tbody>

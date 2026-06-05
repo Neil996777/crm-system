@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ExportRun, startExport } from '../../api/importexport';
-import { labelFor, objectTypeLabel } from '../../i18n/labels';
+import { labelFor, localizeError, objectTypeLabel } from '../../i18n/labels';
 
 export function ExportPanel() {
   const [objectType, setObjectType] = useState('lead');
@@ -17,8 +17,7 @@ export function ExportPanel() {
     try {
       setResult(await startExport({ objectType, confirmed, includeArchived }));
     } catch (err) {
-      const safe = err as { safeMessage?: string };
-      setError(safe.safeMessage ?? '无法启动导出。');
+      setError(localizeError(err as { safeMessage?: string }, '无法启动导出。'));
     } finally {
       setBusy(false);
     }

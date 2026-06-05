@@ -1,6 +1,6 @@
 import { ApiError } from '../../api/client';
 import { Quote, changeQuoteStatus } from '../../api/quotes';
-import { labelFor, quoteStatusLabel } from '../../i18n/labels';
+import { labelFor, localizeError, quoteStatusLabel } from '../../i18n/labels';
 
 export function QuoteDetail({ quote, onUpdated, onError }: { quote: Quote; onUpdated: (quote: Quote) => Promise<void>; onError: (message: string) => void }) {
   const expired = quote.status === 'Expired';
@@ -12,7 +12,7 @@ export function QuoteDetail({ quote, onUpdated, onError }: { quote: Quote; onUpd
       await onUpdated(await changeQuoteStatus(quote.id, quote.version, toStatus));
     } catch (caught) {
       const apiError = caught as ApiError;
-      onError(apiError.safeMessage || '请求失败。');
+      onError(localizeError(apiError));
     }
   }
 

@@ -67,7 +67,7 @@ test('TEST-PAYMENT-GUARD-003 blocks zero amount and contract overpayment', async
   await page.getByLabel('回款日期').fill('2027-08-05');
   await page.getByLabel('幂等键').fill(`pay_zero_${Date.now()}`);
   await page.getByRole('button', { name: '登记回款', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Payment amount must be greater than zero.');
+  await expect(page.getByRole('alert')).toContainText('回款金额必须大于零。');
 
   await page.getByLabel('回款金额').fill('9000.00');
   await page.getByLabel('幂等键').fill(`pay_ok_${Date.now()}`);
@@ -77,7 +77,7 @@ test('TEST-PAYMENT-GUARD-003 blocks zero amount and contract overpayment', async
   await page.getByLabel('回款金额').fill('1000.01');
   await page.getByLabel('幂等键').fill(`pay_over_${Date.now()}`);
   await page.getByRole('button', { name: '登记回款', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Payment exceeds the remaining contract amount.');
+  await expect(page.getByRole('alert')).toContainText('回款金额超过合同剩余应收。');
 });
 
 async function openPayments(page: import('@playwright/test').Page) {

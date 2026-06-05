@@ -2,6 +2,7 @@ import { CheckCircle2, RotateCcw, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Lead, qualifyInvalid, qualifyValid, restoreInvalid } from '../api/leads';
 import { ApiError } from '../api/client';
+import { localizeError } from '../i18n/labels';
 
 type Props = {
   lead: Lead;
@@ -23,7 +24,7 @@ export function QualificationActions({ lead, onUpdated, onError }: Props) {
       setInvalidReason('');
     } catch (caught) {
       const error = caught as ApiError;
-      onError(error.safeMessage || '请求失败。');
+      onError(localizeError(error));
     } finally {
       setSubmitting(false);
     }

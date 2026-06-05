@@ -1,4 +1,5 @@
 import { ArchiveEligibility } from '../api/accounts';
+import { localizeMessage } from '../i18n/labels';
 
 type Props = {
   eligibility: ArchiveEligibility | null;
@@ -16,7 +17,7 @@ export function ArchiveConfirmation({ eligibility, reason, onReasonChange, onCon
         <strong>仍有未完成事项，不能归档</strong>
         <ul>
           {eligibility.obligations.map((obligation) => (
-            <li key={`${obligation.service}-${obligation.id}`}>{obligation.safeMessage || obligation.type}</li>
+            <li key={`${obligation.service}-${obligation.id}`}>{localizeMessage(obligation.safeMessage, obligation.type)}</li>
           ))}
         </ul>
       </div>
