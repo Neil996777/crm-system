@@ -22,9 +22,12 @@ read:
 - `../../company/operating-model.md`
 - `../../standards/acceptance-matrix-standard.md`
 - `../../standards/status-and-priority-standard.md`
+- `../../standards/cross-cutting-requirements-standard.md` — mandatory cross-cutting / non-functional requirements checklist (language, locale, currency, timezone, accessibility, device, data residency, seed data, performance); each item must be resolved before G3
+- `../../standards/cicd-and-release-standard.md` — off-host build, digest-pinned deployment, commit-traceable images, required release evidence, and the break-glass exception; production hosts must not build source
 - `../../workflows/project-initialization.md`
 - `../../workflows/software-delivery.md`
 - `../../company/policy-changes/2026-05-29-default-microservice-governance.md`
+- `../../company/policy-changes/2026-06-06-cicd-and-release-pipeline.md`
 - `../../templates/architecture.md`
 - `../../templates/modeling/PSM.md`
 - `../../templates/tasks.md`
