@@ -3,10 +3,35 @@
 ## Document Control
 
 - Project: CRM System
-- Phase: G4 UX Design
+- Phase: G4 UX Design (G4b)
 - Owner Agent: UX Designer
 - Source: `docs/ux-ui/screen-flows.md`, `docs/ux-ui/interaction-spec.md`
-- Status: Accepted as Architecture Input
+- Status: Accepted as Architecture Input; canonical interactive-state set added
+  2026-06-06 (grounded in the locked dashboard), pending re-acceptance.
+
+## Canonical Interactive States (1:1 map for UI Design)
+
+This document is the authoritative source for the **canonical interactive state
+names**. UI Design (`design-system.md`) must render exactly these names, and the
+modern interaction layer (`interaction-spec.md` Part B) specifies the behavior
+and transition into/out of each. Use these names verbatim everywhere:
+
+`loading · empty · error · disabled · selected · focused · hover ·
+permission-denied · optimistic-update · success`
+
+- The original six per-screen states (`loading`, `empty`, `error`, `success`,
+  `disabled`, `permission-denied`) remain mandatory for every P0/P1 screen in the
+  matrix below (no-downgrade: nothing here is weakened).
+- The four interaction-level states (`selected`, `focused`, `hover`,
+  `optimistic-update`) are cross-cutting component states defined in
+  "Cross-Screen State Requirements" below and in `interaction-spec.md` Part B
+  (B4). They apply wherever the corresponding interaction exists (selectable
+  rows, focusable controls, hoverable surfaces, safe optimistic edits) rather
+  than being enumerated per screen.
+- Transition behavior (skeleton→content crossfade, optimistic apply + rollback,
+  inline-error vs toast, the card→focus hero transition, live-update highlight)
+  is owned by `interaction-spec.md` Part B; this file owns the per-screen state
+  coverage and the static state contracts.
 
 ## State Principles
 
@@ -16,6 +41,9 @@
   explanation is safe to reveal.
 - Permission-denied states must not reveal restricted record data.
 - State design must support QA verification and manual reproduction.
+- `selected`, `focused`, `hover`, and `optimistic-update` must be visually and
+  behaviorally distinct from each other and from `disabled`/`permission-denied`
+  (see `interaction-spec.md` Part B4 and B6).
 
 ## Screen State Matrix
 
@@ -101,11 +129,72 @@
 - Conflict handling must preserve no-downgrade behavior for persistence and
   history.
 
+### Selected
+
+- Persistent selection of a row/card/item; drives bulk-action availability.
+- Must be visually distinct from `hover` and `focused`.
+- Clearable via toggle, Esc, or an explicit clear control.
+
+### Focused
+
+- Keyboard focus produces a visible focus-visible affordance on every
+  interactive element.
+- Focus must be restored after drawer/stage/modal close and must never be lost
+  to the page body after a transition or live update (see Part B5/B6).
+
+### Hover
+
+- Lightweight affordance only (lift/tint); must never be the only way to reveal
+  essential information or a critical action.
+- Suppressed on touch and under `prefers-reduced-motion`.
+
+### Optimistic-Update
+
+- For safe inline edits only: apply the change in the UI immediately with a
+  pending affordance, then reconcile.
+- On success, the optimistic value is confirmed (no contradictory flash); on
+  failure, **roll back** to the prior value and show an inline `error` with
+  retry — feedback must never imply persistence that did not occur.
+- Forbidden for business-gated/terminal actions (qualify, stage change, Won/Lost
+  close, accept quote, contract create/sign, payment record, archive, owner
+  transfer, user/role change) — these use confirm-then-commit with real
+  `loading`/`success`/`error` (see Part B4/B7 and Interaction Spec Part A).
+
+### List Archetype (商机 exemplar, generalizes to all CRM lists)
+
+- The full **List Archetype interaction pattern** (data scope by role, debounced
+  live-count search + facets, columns/sort, drawer drill-in, selection + bulk
+  actions, pagination decision, per-state list behavior, list live-update + pause,
+  and list keyboard/a11y) is specified in `interaction-spec.md` **Part B8**
+  ("List Archetype"). The Opportunity List, Lead List, Company/Customer List,
+  Contact List, Quote List, Contract List, Payment List, and Activity/Note/Task
+  List rows in the Screen State Matrix above all render against that one pattern,
+  using the canonical state names verbatim. List visuals are owed by
+  `design-system.md` (see Part B8.11 + the Part B "UI Handoff" list).
+
+### Live Update (no full reload)
+
+- Auto-refreshing surfaces (dashboard panels, and inheriting entity lists /
+  reminder counts) patch changed rows/values in place without a full-page
+  reload, preserving scroll, focus, selection, and in-progress edits.
+- A changed row/value shows a transient `arrived` highlight that is redundant
+  with the already-correct static value (no motion-only signaling).
+- A `暂停` (pause) view-preference buffers updates (never drops them) and offers
+  a non-blocking "有 N 条新更新" apply affordance. See `interaction-spec.md` B3.
+
 ## UX-To-UI Handoff Requirements
 
 UI Design must define:
 - Visual hierarchy for dense CRM list/detail work.
 - Component states for validation, warnings, disabled actions, success,
   loading, empty, permission denied, blocked, and conflict.
+- Visual tokens for the canonical interactive states `selected`, `focused`
+  (focus-visible ring), `hover`, and the `optimistic-update` pending affordance,
+  each visually distinct.
 - Responsive behavior for lists, detail panels, forms, tables, and modals.
 - Accessible focus order, labels, and keyboard behavior for all core states.
+- The visual treatments enumerated in `interaction-spec.md` Part B
+  ("UI Handoff — Visual Treatments Owed"): motion tokens, `arrived` highlight,
+  skeleton/shimmer, live-dot states, scrim, strip-card, rail flyout, toast,
+  new-updates pill, and hit-area padding — all consistent with the LOCKED
+  palette and the approved dashboard mockup.

@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRM 系统 - 工作台设计预览</title>
+  <style>
+    :root {
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --text: #0F172A;
+      --muted: #475569;
+      --subtle: #94A3B8;
+      --border: #E2E8F0;
+      --card: #FFFFFF;
+      --section: #F1F5F9;
+      --app: #F8FAFC;
+      --success: #16A34A;
+      --warning: #D97706;
+      --danger: #DC2626;
+      --radius: 6px;
+      --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 1440px;
+      min-height: 1080px;
+      background: var(--app);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 248px 1fr;
+      width: 1440px;
+      height: 1180px;
+      background: var(--app);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: #fff;
+      padding: 16px 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 40px;
+      padding: 0 8px 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .brandMark {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius);
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .brandText {
+      line-height: 1.1;
+    }
+
+    .brandText strong {
+      display: block;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .brandText span {
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .collapse {
+      margin-left: auto;
+      color: var(--subtle);
+      font-size: 16px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .navItem {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .navItem.active {
+      background: color-mix(in srgb, var(--primary) 12%, #fff);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .navIcon {
+      width: 16px;
+      color: inherit;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: 64px 1fr;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, .92);
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 420px;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--subtle);
+      font-size: 14px;
+    }
+
+    .topbarSpacer {
+      flex: 1;
+    }
+
+    .quickLink {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .userMenu {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--section);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .content {
+      position: relative;
+      padding: 20px 24px 24px;
+      overflow: hidden;
+    }
+
+    .pageTitle {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .pageTitle p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .button {
+      height: 34px;
+      padding: 0 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .button.primary {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .liveButton {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .liveDot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--primary);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, #fff);
+      flex: 0 0 auto;
+    }
+
+    .liveDot.hollow {
+      background: #fff;
+      border: 1px solid var(--subtle);
+      box-shadow: none;
+    }
+
+    .liveDot.warning {
+      background: var(--warning);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--warning) 12%, #fff);
+    }
+
+    .updateMeta {
+      color: var(--subtle);
+      font-size: 12px;
+      line-height: 34px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .liveReport {
+      display: grid;
+      grid-template-columns: 130px repeat(4, 1fr);
+      align-items: center;
+      height: 44px;
+      padding: 0 16px;
+      margin-bottom: 12px;
+    }
+
+    .reportLead {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .reportItem {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 8px;
+      height: 24px;
+      border-left: 1px solid var(--border);
+    }
+
+    .reportItem span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .reportItem strong {
+      color: var(--primary);
+      font-size: 16px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .kpi {
+      display: grid;
+      grid-template-columns: 1fr 108px;
+      gap: 12px;
+      min-height: 116px;
+      padding: 16px;
+      position: relative;
+    }
+
+    .kpi.livePulse::after {
+      content: "";
+      position: absolute;
+      inset: -6px;
+      border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
+      border-radius: calc(var(--radius) + 6px);
+      box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 6%, transparent);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .metric {
+      margin-top: 10px;
+      color: var(--primary);
+      font-size: 24px;
+      line-height: 1;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .delta {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 12px;
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .delta.up { color: var(--success); }
+    .delta.down { color: var(--danger); }
+
+    .sparkline {
+      align-self: end;
+      width: 108px;
+      height: 58px;
+    }
+
+    .dashboardGrid {
+      display: grid;
+      grid-template-columns: 1.18fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .panel {
+      padding: 16px;
+    }
+
+    .panelHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 28px;
+      margin-bottom: 12px;
+    }
+
+    .panelTitle {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .panelMeta {
+      color: var(--subtle);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .funnelRows {
+      display: grid;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .funnelRow {
+      display: grid;
+      grid-template-columns: 78px 1fr 104px;
+      gap: 10px;
+      align-items: center;
+      height: 36px;
+    }
+
+    .funnelLabel {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .barTrack {
+      height: 12px;
+      border-radius: 999px;
+      background: var(--section);
+      overflow: hidden;
+    }
+
+    .barFill {
+      height: 12px;
+      border-radius: 999px;
+      background: var(--primary);
+    }
+
+    .barFill.glow {
+      background: var(--primary-hover);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 30%, #fff), 0 0 12px color-mix(in srgb, var(--primary) 30%, #fff);
+    }
+
+    .funnelValue {
+      text-align: right;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .chartBox {
+      position: relative;
+      height: 248px;
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, #fff 0%, var(--app) 100%);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .chartBox svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 12px;
+    }
+
+    .donutWrap {
+      display: grid;
+      grid-template-columns: 142px 1fr;
+      gap: 12px;
+      align-items: center;
+      height: 210px;
+    }
+
+    .donutCenter {
+      font-size: 20px;
+      font-weight: 800;
+      fill: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .legend {
+      display: grid;
+      gap: 8px;
+    }
+
+    .legendItem {
+      display: grid;
+      grid-template-columns: 10px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      height: 24px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--primary);
+    }
+
+    .num {
+      color: var(--text);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lowerGrid {
+      display: grid;
+      grid-template-columns: 340px 280px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .middleStack,
+    .rightStack {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .list {
+      display: grid;
+      gap: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      height: 36px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .row > div:first-child {
+      min-width: 0;
+    }
+
+    .row strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .row span {
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .badges {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .badge.primary {
+      background: color-mix(in srgb, var(--primary) 12%, #fff);
+      color: var(--primary-hover);
+    }
+
+    .badge.success {
+      background: #DCFCE7;
+      color: #166534;
+    }
+
+    .badge.warning {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    .badge.danger {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+
+    .badge.neutral {
+      background: var(--section);
+      color: var(--muted);
+    }
+
+    .timeline {
+      display: grid;
+      gap: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 16px 1fr auto;
+      gap: 10px;
+      align-items: start;
+      min-height: 48px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      position: relative;
+    }
+
+    .event.arrived {
+      margin: 0 -16px;
+      padding: 8px 16px 8px 14px;
+      border-left: 2px solid var(--primary);
+      background: color-mix(in srgb, var(--primary) 8%, #fff);
+    }
+
+    .eventMark {
+      width: 9px;
+      height: 9px;
+      margin-top: 5px;
+      border-radius: 999px;
+      background: var(--primary);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, #fff);
+    }
+
+    .event.warning .eventMark {
+      background: var(--warning);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--warning) 12%, #fff);
+    }
+
+    .event.success .eventMark {
+      background: var(--success);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 12%, #fff);
+    }
+
+    .event.danger .eventMark {
+      background: var(--danger);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 12%, #fff);
+    }
+
+    .event.neutral .eventMark {
+      background: var(--subtle);
+      box-shadow: 0 0 0 4px var(--section);
+    }
+
+    .event p {
+      margin: 0;
+      color: var(--text);
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .event small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .eventTime {
+      color: var(--subtle);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timeline.live {
+      position: relative;
+      overflow: hidden;
+      max-height: 332px;
+    }
+
+    .timeline.live::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 36px;
+      background: linear-gradient(180deg, color-mix(in srgb, #fff 0%, transparent), #fff);
+      pointer-events: none;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    .table th,
+    .table td {
+      height: 36px;
+      padding: 0 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .table th {
+      color: var(--muted);
+      background: var(--section);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .money {
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+
+    .paymentSummary {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--primary) 10%, #fff);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .paymentSummary .money {
+      margin-left: 4px;
+      color: var(--primary);
+    }
+
+    .paymentRows {
+      display: grid;
+      border-top: 1px solid var(--border);
+    }
+
+    .paymentPanel {
+      padding: 12px 16px;
+    }
+
+    .paymentPanel .panelHeader {
+      margin-bottom: 8px;
+    }
+
+    .paymentRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      min-height: 34px;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .paymentRow.arrived {
+      margin: 0 -16px;
+      padding-left: 14px;
+      padding-right: 16px;
+      border-left: 2px solid var(--primary);
+      background: color-mix(in srgb, var(--primary) 8%, #fff);
+    }
+
+    .paymentRow strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .paymentRow small {
+      display: block;
+      margin-top: 2px;
+      color: var(--subtle);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .paymentRight {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .statusDemo {
+      padding: 12px 16px;
+    }
+
+    .statusDemo.liveFloat {
+      position: absolute;
+      right: 24px;
+      top: 984px;
+      width: 420px;
+      z-index: 2;
+    }
+
+    .statusDemo .panelHeader {
+      height: 22px;
+      margin-bottom: 8px;
+    }
+
+    .statusRows {
+      display: grid;
+      gap: 6px;
+    }
+
+    .statusRow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 28px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .statusRow.warningText {
+      color: var(--warning);
+    }
+
+    .statusNote {
+      margin-top: 6px;
+      color: var(--subtle);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brandMark">CRM</div>
+        <div class="brandText">
+          <strong>CRM 系统</strong>
+          <span>销售运营平台</span>
+        </div>
+        <div class="collapse">‹</div>
+      </div>
+      <nav class="nav" aria-label="主导航">
+        <div class="navItem active"><span class="navIcon">●</span>工作台</div>
+        <div class="navItem"><span class="navIcon">□</span>线索</div>
+        <div class="navItem"><span class="navIcon">□</span>公司客户</div>
+        <div class="navItem"><span class="navIcon">□</span>联系人</div>
+        <div class="navItem"><span class="navIcon">□</span>商机</div>
+        <div class="navItem"><span class="navIcon">□</span>报价</div>
+        <div class="navItem"><span class="navIcon">□</span>合同</div>
+        <div class="navItem"><span class="navIcon">□</span>回款</div>
+        <div class="navItem"><span class="navIcon">□</span>任务</div>
+        <div class="navItem"><span class="navIcon">□</span>提醒中心</div>
+        <div class="navItem"><span class="navIcon">□</span>报表</div>
+        <div class="navItem"><span class="navIcon">□</span>导入导出</div>
+        <div class="navItem"><span class="navIcon">□</span>管理:用户与角色</div>
+        <div class="navItem"><span class="navIcon">□</span>操作日志</div>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="search">搜索线索、客户、合同或负责人</div>
+        <div class="topbarSpacer"></div>
+        <div class="quickLink">新建线索</div>
+        <div class="quickLink">导出报表</div>
+        <div class="userMenu">
+          <span class="avatar">管</span>
+          <span>管理员 · admin@example.com</span>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="pageTitle">
+          <div>
+            <h1>工作台</h1>
+            <p>2026 年 6 月销售运营总览 · 数据更新时间 09:30</p>
+          </div>
+          <div class="actions">
+            <button class="button">本月</button>
+            <button class="button primary">刷新数据</button>
+            <button class="button liveButton"><span class="liveDot"></span>实时更新 暂停</button>
+            <span class="updateMeta">更新于 09:30</span>
+          </div>
+        </div>
+
+        <section class="card liveReport" aria-label="今日实时战报">
+          <div class="reportLead"><span class="liveDot"></span>今日实时战报</div>
+          <div class="reportItem"><span>今日新增线索</span><strong>24</strong></div>
+          <div class="reportItem"><span>今日赢单</span><strong>6</strong></div>
+          <div class="reportItem"><span>今日回款</span><strong>¥486,000</strong></div>
+          <div class="reportItem"><span>今日新合同</span><strong>3</strong></div>
+        </section>
+
+        <section class="kpis" aria-label="关键指标">
+          <article class="card kpi livePulse">
+            <div>
+              <div class="eyebrow">本月新增线索</div>
+              <div class="metric">186</div>
+              <div class="delta up">▲ 12%</div>
+            </div>
+            <svg class="sparkline" viewBox="0 0 108 58" aria-hidden="true">
+              <path d="M0 48 C16 42 18 30 34 34 C48 38 52 18 68 22 C84 26 84 10 108 14" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"/>
+              <path d="M0 58 L0 48 C16 42 18 30 34 34 C48 38 52 18 68 22 C84 26 84 10 108 14 L108 58 Z" fill="color-mix(in srgb, var(--primary) 14%, transparent)"/>
+            </svg>
+          </article>
+          <article class="card kpi">
+            <div>
+              <div class="eyebrow">进行中商机金额</div>
+              <div class="metric">¥8.42M</div>
+              <div class="delta up">▲ 8%</div>
+            </div>
+            <svg class="sparkline" viewBox="0 0 108 58" aria-hidden="true">
+              <path d="M0 42 C14 38 20 46 32 30 C46 12 54 24 68 20 C82 16 92 18 108 8" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"/>
+              <path d="M0 58 L0 42 C14 38 20 46 32 30 C46 12 54 24 68 20 C82 16 92 18 108 8 L108 58 Z" fill="color-mix(in srgb, var(--primary) 14%, transparent)"/>
+            </svg>
+          </article>
+          <article class="card kpi">
+            <div>
+              <div class="eyebrow">本月赢单数</div>
+              <div class="metric">27</div>
+              <div class="delta down">▼ 3%</div>
+            </div>
+            <svg class="sparkline" viewBox="0 0 108 58" aria-hidden="true">
+              <path d="M0 18 C14 20 22 16 34 24 C48 34 54 28 68 36 C82 44 92 38 108 46" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"/>
+              <path d="M0 58 L0 18 C14 20 22 16 34 24 C48 34 54 28 68 36 C82 44 92 38 108 46 L108 58 Z" fill="color-mix(in srgb, var(--primary) 14%, transparent)"/>
+            </svg>
+          </article>
+          <article class="card kpi">
+            <div>
+              <div class="eyebrow">待办任务</div>
+              <div class="metric">42</div>
+              <div class="delta up">▲ 6%</div>
+            </div>
+            <svg class="sparkline" viewBox="0 0 108 58" aria-hidden="true">
+              <path d="M0 50 C12 46 20 46 32 36 C44 26 56 32 68 24 C84 14 92 24 108 18" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"/>
+              <path d="M0 58 L0 50 C12 46 20 46 32 36 C44 26 56 32 68 24 C84 14 92 24 108 18 L108 58 Z" fill="color-mix(in srgb, var(--primary) 14%, transparent)"/>
+            </svg>
+          </article>
+        </section>
+
+        <section class="dashboardGrid">
+          <article class="card panel">
+            <div class="panelHeader">
+              <div class="panelTitle">销售漏斗</div>
+              <div class="panelMeta">数量 · 金额</div>
+            </div>
+            <div class="funnelRows">
+              <div class="funnelRow"><div class="funnelLabel">新商机</div><div class="barTrack"><div class="barFill" style="width:100%"></div></div><div class="funnelValue">86 · ¥5.2M</div></div>
+              <div class="funnelRow"><div class="funnelLabel">需求已确认</div><div class="barTrack"><div class="barFill glow" style="width:78%"></div></div><div class="funnelValue">64 · ¥4.1M</div></div>
+              <div class="funnelRow"><div class="funnelLabel">报价</div><div class="barTrack"><div class="barFill" style="width:56%"></div></div><div class="funnelValue">39 · ¥2.8M</div></div>
+              <div class="funnelRow"><div class="funnelLabel">合同谈判</div><div class="barTrack"><div class="barFill" style="width:38%"></div></div><div class="funnelValue">24 · ¥1.9M</div></div>
+              <div class="funnelRow"><div class="funnelLabel">赢单</div><div class="barTrack"><div class="barFill" style="width:24%"></div></div><div class="funnelValue">27 · ¥1.36M</div></div>
+            </div>
+            <table class="table" aria-label="重点商机">
+              <thead>
+                <tr><th>重点商机</th><th>客户</th><th>阶段</th><th>金额</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>智能客服平台二期</td><td>杭州智云科技</td><td><span class="badge primary">报价</span></td><td class="money">¥680,000</td></tr>
+                <tr><td>数据中台续约</td><td>上海铭岚实业</td><td><span class="badge warning">合同谈判</span></td><td class="money">¥1,240,000</td></tr>
+                <tr><td>门店运营系统</td><td>成都青川零售</td><td><span class="badge success">赢单</span></td><td class="money">¥460,000</td></tr>
+              </tbody>
+            </table>
+          </article>
+
+          <article class="card panel">
+            <div class="panelHeader">
+              <div class="panelTitle">赢单金额趋势</div>
+              <div class="panelMeta">近 6 月 · CNY</div>
+            </div>
+            <div class="chartBox">
+              <svg viewBox="0 0 520 248" aria-hidden="true">
+                <g stroke="#E2E8F0" stroke-width="1">
+                  <line x1="42" y1="36" x2="496" y2="36"/><line x1="42" y1="78" x2="496" y2="78"/><line x1="42" y1="120" x2="496" y2="120"/><line x1="42" y1="162" x2="496" y2="162"/><line x1="42" y1="204" x2="496" y2="204"/>
+                </g>
+                <path d="M42 192 C82 178 102 160 132 168 C174 180 186 112 224 126 C270 142 284 76 322 88 C366 100 386 56 424 66 C454 74 470 54 496 42 L496 224 L42 224 Z" fill="color-mix(in srgb, var(--primary) 18%, transparent)"/>
+                <path d="M42 192 C82 178 102 160 132 168 C174 180 186 112 224 126 C270 142 284 76 322 88 C366 100 386 56 424 66 C454 74 470 54 496 42" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"/>
+                <g fill="#475569" font-size="12" font-family="Inter, sans-serif">
+                  <text x="42" y="232">1月</text><text x="126" y="232">2月</text><text x="210" y="232">3月</text><text x="294" y="232">4月</text><text x="378" y="232">5月</text><text x="462" y="232">6月</text>
+                  <text x="8" y="40">2.0M</text><text x="8" y="124">1.0M</text><text x="8" y="208">0</text>
+                </g>
+              </svg>
+            </div>
+          </article>
+        </section>
+
+        <section class="lowerGrid">
+          <article class="card panel">
+            <div class="panelHeader">
+              <div class="panelTitle">商机阶段构成</div>
+              <div class="panelMeta">213 个</div>
+            </div>
+            <div class="donutWrap">
+              <svg viewBox="0 0 142 142" aria-hidden="true">
+                <circle cx="71" cy="71" r="48" fill="none" stroke="#E2E8F0" stroke-width="20"/>
+                <circle cx="71" cy="71" r="48" fill="none" stroke="var(--primary)" stroke-width="20" stroke-dasharray="112 302" stroke-dashoffset="0" transform="rotate(-90 71 71)"/>
+                <circle cx="71" cy="71" r="48" fill="none" stroke="#16A34A" stroke-width="20" stroke-dasharray="64 302" stroke-dashoffset="-112" transform="rotate(-90 71 71)"/>
+                <circle cx="71" cy="71" r="48" fill="none" stroke="#D97706" stroke-width="20" stroke-dasharray="72 302" stroke-dashoffset="-176" transform="rotate(-90 71 71)"/>
+                <circle cx="71" cy="71" r="48" fill="none" stroke="#DC2626" stroke-width="20" stroke-dasharray="54 302" stroke-dashoffset="-248" transform="rotate(-90 71 71)"/>
+                <text x="71" y="66" text-anchor="middle" class="donutCenter">213</text>
+                <text x="71" y="86" text-anchor="middle" fill="#64748B" font-size="12">商机</text>
+              </svg>
+              <div class="legend">
+                <div class="legendItem"><span class="dot"></span><span>报价</span><span class="num">39</span></div>
+                <div class="legendItem"><span class="dot" style="background:#16A34A"></span><span>赢单</span><span class="num">27</span></div>
+                <div class="legendItem"><span class="dot" style="background:#D97706"></span><span>合同谈判</span><span class="num">24</span></div>
+                <div class="legendItem"><span class="dot" style="background:#DC2626"></span><span>丢单风险</span><span class="num">18</span></div>
+              </div>
+            </div>
+          </article>
+
+          <div class="middleStack">
+            <article class="card panel">
+              <div class="panelHeader">
+                <div class="panelTitle">待办与提醒</div>
+                <div class="panelMeta">今天 9 项</div>
+              </div>
+              <div class="list">
+                <div class="row"><div><strong>南京星河医疗合同回款逾期</strong><span>2026-06-02 · 负责人 陈晨</span></div><div class="badges"><span class="badge danger">逾期回款</span><span class="badge neutral">¥82,000</span></div></div>
+                <div class="row"><div><strong>杭州智云科技报价有效期将至</strong><span>2026-06-06 · 负责人 林悦</span></div><div class="badges"><span class="badge warning">报价</span></div></div>
+                <div class="row"><div><strong>成都青川零售实施确认会</strong><span>2026-06-05 15:00 · 任务</span></div><div class="badges"><span class="badge primary">待处理</span></div></div>
+                <div class="row"><div><strong>北京云栖教育合同待签署</strong><span>2026-06-08 · 负责人 周航</span></div><div class="badges"><span class="badge warning">待签署</span></div></div>
+                <div class="row"><div><strong>深圳蓝海制造首付款确认</strong><span>2026-06-05 · 财务跟进</span></div><div class="badges"><span class="badge success">部分回款</span></div></div>
+              </div>
+            </article>
+
+          </div>
+
+          <div class="rightStack">
+            <article class="card panel paymentPanel">
+              <div class="panelHeader">
+                <div class="panelTitle">回款到账</div>
+                <div class="panelMeta"><span class="liveDot"></span> 实时 <span class="paymentSummary">今日已回款 <span class="money">¥486,000</span></span></div>
+              </div>
+              <div class="paymentRows">
+                <div class="paymentRow arrived"><div><strong>深圳蓝海制造</strong><small>09:30 新</small></div><div class="paymentRight"><span class="money">¥120,000</span><span class="badge success">已回款</span></div></div>
+                <div class="paymentRow"><div><strong>杭州智云科技</strong><small>09:21</small></div><div class="paymentRight"><span class="money">¥86,000</span><span class="badge success">部分回款</span></div></div>
+                <div class="paymentRow"><div><strong>成都青川零售</strong><small>08:58</small></div><div class="paymentRight"><span class="money">¥160,000</span><span class="badge success">已回款</span></div></div>
+                <div class="paymentRow"><div><strong>北京云栖教育</strong><small>08:30</small></div><div class="paymentRight"><span class="money">¥120,000</span><span class="badge neutral">待确认</span></div></div>
+              </div>
+            </article>
+
+            <article class="card panel">
+              <div class="panelHeader">
+                <div class="panelTitle">最近活动</div>
+                <div class="panelMeta"><span class="liveDot"></span> 实时 · 更新于 09:30</div>
+              </div>
+              <div class="timeline live">
+                <div class="event warning arrived"><span class="eventMark"></span><div><p>王敏将「上海铭岚实业」推进到合同谈判 <span class="badge primary">新</span></p><small><span class="badge warning">合同谈判</span> 商机金额 ¥1,240,000</small></div><span class="eventTime">09:30</span></div>
+                <div class="event warning"><span class="eventMark"></span><div><p>王敏将「上海铭岚实业」推进到合同谈判</p><small><span class="badge warning">合同谈判</span> 商机金额 ¥1,240,000</small></div><span class="eventTime">09:18</span></div>
+                <div class="event"><span class="eventMark"></span><div><p>李想创建线索「苏州凌越自动化」</p><small><span class="badge primary">待确认</span> 来源：官网表单</small></div><span class="eventTime">08:46</span></div>
+                <div class="event success"><span class="eventMark"></span><div><p>陈晨登记「深圳蓝海制造」回款</p><small><span class="badge success">已回款</span> 实收 ¥120,000</small></div><span class="eventTime">昨日</span></div>
+                <div class="event neutral"><span class="eventMark"></span><div><p>管理员变更张岚的角色权限</p><small><span class="badge neutral">管理日志</span> 销售 → 销售经理</small></div><span class="eventTime">昨日</span></div>
+                <div class="event danger"><span class="eventMark"></span><div><p>系统阻止无权限访问客户详情</p><small><span class="badge danger">访问被拒绝</span> 操作者 sales-09</small></div><span class="eventTime">06-03</span></div>
+              </div>
+            </article>
+
+            <article class="card statusDemo liveFloat">
+              <div class="panelHeader">
+                <div class="panelTitle">实时状态</div>
+                <div class="panelMeta">示意</div>
+              </div>
+              <div class="statusRows">
+                <div class="statusRow"><span class="liveDot hollow"></span><span>已暂停实时更新 · 点击恢复</span><span class="badge primary">+3</span></div>
+                <div class="statusRow warningText"><span class="liveDot warning"></span><span>连接中断，正在重连…</span></div>
+              </div>
+              <div class="statusNote">实时状态示意 · 非默认视图</div>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
