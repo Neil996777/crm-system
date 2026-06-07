@@ -1,8 +1,13 @@
-# CRM System — Claude Entry (Planning + Audit)
+# CRM System — Claude Entry (Requirements/Standards + Audit)
 
 This project inherits workspace governance. On Claude, this project is in the
-**planning** phase (G1–G8) or the **independent audit** phase (G12). Per project
-state, the current gate is G6 (MDA Modeling).
+**yardstick** phase (requirements + acceptance + binding constraints, G1–G3) or
+the **independent audit** phase (the G8 design/planning handoff audit + G12).
+
+> Aligned to the collaboration-model redirect on 2026-06-06. Authority/index:
+> `../../company/policy-changes/2026-06-06-collaboration-model-redirect.md`,
+> `../../company/collaboration-model.md`, project sync notice
+> `COLLAB-MODEL-REDIRECT-SYNC-NOTICE.md`; mirrors `../../templates/project-CLAUDE.md`.
 
 ## Required Workspace Context
 
@@ -23,10 +28,17 @@ Before working, read:
 
 ## Platform Rules
 
-- Claude owns G1–G8 (planning) and G12 (independent audit).
-- At G8, stop and produce a self-contained execution handoff package on disk;
-  do not write implementation code.
-- G9–G11 (implementation, QA execution, integration) belong to Codex.
+- Claude owns the yardstick (requirements + acceptance + binding constraints,
+  G1–G3) and independent audit (the G8 design/planning handoff audit + G12).
+- Codex produces design/architecture/modeling/copy/task planning (G2–G8) and does
+  implementation/QA/integration (G9–G11). Do not produce or implement those on
+  Claude.
+- At the G8 handoff, Codex produces the self-contained handoff package on disk and
+  Claude audits it against the yardstick; implementation may not start until that
+  audit passes (no implementation code before G8).
+- The (A) requirements / (B) acceptance / (C) binding constraints (no-downgrade,
+  P0/P1 status rules, security invariants, locked design system, real enums) are
+  red lines and are never moved to Codex.
 - Follow the no-downgrade rule; P0/P1 items are only `Done`, `Blocked`, or
   `Formal Scope Change by User`.
 - Project-specific rules may only strengthen workspace rules.
@@ -34,9 +46,15 @@ Before working, read:
 ## Project-Specific Note
 
 Architecture, MDA, task planning, and implementation artifacts were discarded by
-user direction on 2026-05-29. G5 architecture was redesigned and passed
-2026-05-30. New MDA (G6) must trace the accepted architecture, not redefine it.
-Implementation remains blocked until G8.
+user direction on 2026-05-29; G5 architecture was redesigned and passed 2026-05-30.
+The base product passed the G12 audit and went live on 2026-06-05 (zh-CN phase 1+2
+localized and live). Two follow-on changes are in flight: **UI/UX completion**
+(`delivery/uiux-completion-charter.md`) and **CI/CD migration**
+(`delivery/cicd-migration-plan.md`). Under the new model their design / architecture
+/ task production (G2–G8) is Codex's; Claude defines requirements / acceptance /
+binding constraints (e.g. `docs/ux-ui/requirements/`, the locked design system,
+the real opportunity-stage enum) and performs the G8 handoff audit + G12. Current
+gate/responsible-platform state is tracked in `planning/gate-status.md`.
 
 ## Editable Scope
 

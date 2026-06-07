@@ -9,6 +9,17 @@ Status values: `Open` / `In Review` / `Resolved` / `Formal Scope Change by User`
 No-downgrade rule applies: a blocker touching a P0/P1 acceptance may only move to
 `Resolved` (with the deciding source recorded) or `Formal Scope Change by User`.
 
+## Open UI/UX Execution Blockers
+
+These blockers are surfaced during the 2026-06-07 UI/UX completion G9 execution
+attempt after Claude passed the UI/UX G8 handoff audit. Per the G8 yardstick,
+Codex may not silently recolor locked tokens or weaken accessibility.
+
+| ID | Blocker | Owner | Blocks | Touches | Status | Opened |
+|---|---|---|---|---|---|---|
+| BLK-UIUX-G9-001 | A5 accessibility requires WCAG AA text contrast, while C6 locks the approved `docs/ux-ui/design-system.md` palette and forbids recolor/new tokens. Codex measured locked token/background pairs before implementing UIUX-001 and found multiple AA failures: `--subtle #94A3B8` on `--card #FFFFFF` = 2.56; `--subtle #94A3B8` on `--section #F6F7FD` = 2.40; `--success #16A34A` on `--mint-soft #E5F7F0` = 2.97; `--warning #D97706` on `--peach-soft #FDEDE5` = 2.79; `--danger #DC2626` on `#FEE2E2` = 3.95 for normal text; `--purple #B79CF0` on `--purple-soft #F2ECFD` = 2.02. The yardstick's 2026-06-07 A5↔C6裁决 says this exact case must kick back to Claude; Codex must not silently change colors or proceed with known non-AA text pairings. Claude needs to decide whether to approve minimal contrast-only token exceptions, clarify which locked pairings are non-text/large-only/decorative, or revise the yardstick/design-system. | Claude (Product Manager / UI / Accessibility yardstick owner) | UI/UX G9 implementation start; UIUX-001 and all downstream UIUX-002..014 | ACC-018, ACC-023; A5; C6 | **Resolved** | 2026-06-07 |
+| | **Resolution (2026-06-07, user 选定方案 A → DEC-UIUX-A5-001, recorded in `docs/ux-ui/requirements/uiux-implementation.requirements.md` A5):** Approved a strictly-bounded **contrast-only text-token exception**. Codex (UIUX-001) adds minimal darker *text-shade* tokens (e.g. `--success-ink/--warning-ink/--danger-ink/--purple-ink`) — each the locked hue darkened the minimum to reach AA (≥4.5:1 normal / ≥3:1 large) on the backgrounds it renders on; readable secondary text uses existing `--muted #475569`; `--subtle #94A3B8` reclassified non-text/decorative/disabled only (WCAG 1.4.3 exempt). **All backgrounds/soft tints/solid fills/brand/borders/icon colors stay byte-for-byte locked (C6)** — exception is text-legibility ONLY, never a fill/background/chip color. Codex must deliver exact hex + recomputed WCAG ≥AA table + token diff proving additions-only, append the decision as an accessibility addendum to `design-system.md`, and return to Claude for token re-audit before downstream UIUX work; final verification folded into G12. G9 unblocked. | | | | | |
+
 ## Open Modeling Decisions — must close before G8
 
 These were surfaced by the G6 MDA modeling (CIM/PIM) and its independent multi-agent
