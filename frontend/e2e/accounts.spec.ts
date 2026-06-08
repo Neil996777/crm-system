@@ -33,7 +33,7 @@ test('TEST-CONTACT-LINK-003 creates two contacts visible in customer context', a
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存客户' }).click();
 
-  await page.getByRole('button', { name: companyName }).click();
+  await expect(page.getByLabel('客户详情').getByRole('heading', { name: companyName })).toBeVisible();
   await page.getByRole('button', { name: '添加联系人', exact: true }).click();
   await expect(page.getByLabel('联系人姓名')).toBeVisible();
   await page.getByLabel('联系人姓名').fill('Primary Buyer');

@@ -17,6 +17,12 @@ test('TEST-CSV-EXPORT-001 exports active authorized records after confirmation',
   await page.getByRole('checkbox', { name: '确认导出范围并记录审计日志' }).check();
   await page.getByRole('button', { name: '开始导出' }).click();
 
-  await expect(page.getByText(/已导出 \d+ 行线索/)).toBeVisible();
-  await expect(page.locator('.exportResult').getByText('不包含已归档')).toBeVisible();
+  await expect(page.getByLabel('导出结果')).toContainText('导出行数');
+  await expect(page.getByLabel('导出结果')).toContainText('包含归档');
+  await expect(page.getByLabel('导出结果')).toContainText('文件安全');
+  await expect(page.getByLabel('导出结果')).toContainText('危险单元格已安全前缀化');
+  await expect(page.getByLabel('导出结果')).not.toContainText('dangerous_cells_prefixed');
+  await expect(page.getByLabel('审计与清理').last()).toContainText('审计记录状态');
+  await expect(page.getByLabel('审计与清理').last()).toContainText('清理状态');
+  await expect(page.getByLabel('审计与清理').last()).toContainText('保留至');
 });

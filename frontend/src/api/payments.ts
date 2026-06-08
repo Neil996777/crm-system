@@ -29,8 +29,11 @@ function unwrap<T>(response: GatewayEnvelope<T>) {
   return response.data;
 }
 
-export async function listPaymentContracts(search: string) {
-  const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+export async function listPaymentContracts(search: string, includeArchived = false) {
+  const params = new URLSearchParams();
+  if (search.trim()) params.set('search', search.trim());
+  if (includeArchived) params.set('includeArchived', 'true');
+  const query = params.toString() ? `?${params.toString()}` : '';
   const response = await apiRequest<GatewayEnvelope<{ items: Contract[] }>>(`/api/contracts${query}`);
   return unwrap(response);
 }

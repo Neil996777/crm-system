@@ -1,15 +1,40 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ArrowRight, FileText, MoreHorizontal, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { Quote, createQuote, getQuote, listQuotes } from '../../api/quotes';
+import {
+  ActiveFilterSummary,
+  CrudListShell,
+  CrudPagination,
+  DEFAULT_PAGE_SIZE,
+  ExportSelectedButton,
+  FormSection,
+  FormShell,
+  RecordIdentity,
+  StatusPill,
+  exportRows,
+  paginate
+} from '../../components/CrudScaffold';
+import { BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
+import { useSession } from '../../auth/SessionProvider';
 import { labelFor, localizeError, quoteStatusLabel } from '../../i18n/labels';
 import { QuoteDetail } from './QuoteDetail';
 
+type Mode = 'list' | 'create' | 'detail';
+const statuses = Object.keys(quoteStatusLabel);
+
 export function QuoteList() {
+  const { user } = useSession();
+  const [mode, setMode] = useState<Mode>('list');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [selected, setSelected] = useState<Quote | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [form, setForm] = useState({ opportunityId: '', customerId: '', amount: '', validityEnd: '', ownerId: '' });
 
   useEffect(() => {
@@ -19,6 +44,7 @@ export function QuoteList() {
   async function refresh(nextSearch = search) {
     const response = await listQuotes(nextSearch);
     setQuotes(response.items);
+    setPage(1);
   }
 
   async function submit(event: FormEvent) {
@@ -27,7 +53,7 @@ export function QuoteList() {
     try {
       const created = await createQuote(form);
       setSelected(created);
-      setCreating(false);
+      setMode('detail');
       setForm({ opportunityId: '', customerId: '', amount: '', validityEnd: '', ownerId: '' });
       await refresh();
     } catch (caught) {
@@ -39,6 +65,7 @@ export function QuoteList() {
   async function selectQuote(id: string) {
     setError('');
     setSelected(await getQuote(id));
+    setMode('detail');
   }
 
   async function updateSelected(quote: Quote) {
@@ -46,63 +73,136 @@ export function QuoteList() {
     await refresh();
   }
 
-  return (
-    <main className="content">
-      <section className="pageHeader">
-        <div>
-          <h1>报价</h1>
-          <p>为商机创建唯一报价并管理接受状态。</p>
-        </div>
-        <button className="primaryButton" type="button" onClick={() => setCreating((value) => !value)}>新建报价</button>
-      </section>
-      {error && <div role="alert" className="error">{error}</div>}
-      <section className="leadLayout">
-        <div className="listPane">
-          <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void refresh(search); }}>
-            <label>
-              搜索
-              <input value={search} onChange={(event) => setSearch(event.target.value)} />
-            </label>
-            <button className="secondaryButton" type="submit">搜索</button>
-          </form>
-          {creating && (
-            <form className="createPanel" onSubmit={submit}>
-              <label>
-                商机 ID
-                <input value={form.opportunityId} onChange={(event) => setForm({ ...form, opportunityId: event.target.value })} />
-              </label>
-              <label>
-                客户 ID
-                <input value={form.customerId} onChange={(event) => setForm({ ...form, customerId: event.target.value })} />
-              </label>
-              <label>
-                金额
-                <input value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
-              </label>
-              <label>
-                有效期截止日
-                <input type="date" value={form.validityEnd} onChange={(event) => setForm({ ...form, validityEnd: event.target.value })} />
-              </label>
-              <label>
-                负责人 ID
-                <input value={form.ownerId} onChange={(event) => setForm({ ...form, ownerId: event.target.value })} />
-              </label>
-              <button className="primaryButton" type="submit">保存报价</button>
-            </form>
-          )}
-          <div className="recordList" aria-label="报价记录">
-            {quotes.length === 0 ? <p className="emptyState">暂无报价。</p> : quotes.map((quote) => (
-              <button className="recordRow" type="button" key={quote.id} onClick={() => void selectQuote(quote.id)}>
-                <strong>{quote.opportunityId}</strong>
-                <span>{labelFor(quoteStatusLabel, quote.status)} · {quote.amount}</span>
-              </button>
-            ))}
+  const rows = useMemo(() => quotes.filter((quote) => !status || quote.status === status), [quotes, status]);
+  const slice = paginate(rows, page, pageSize);
+  const selectedRows = rows.filter((quote) => selectedIds.includes(quote.id));
+  const scopeLabel = user?.role === 'Sales' ? '本人范围' : user?.role === 'Sales Manager' ? '团队范围' : '全部范围';
+
+  function toggleRow(quote: Quote, checked: boolean) {
+    setSelectedIds((value) => checked ? [...new Set([...value, quote.id])] : value.filter((id) => id !== quote.id));
+  }
+
+  function toggleAll(checked: boolean) {
+    setSelectedIds(checked ? slice.items.map((quote) => quote.id) : []);
+  }
+
+  function exportSelected() {
+    if (selectedRows.length === 0) return;
+    exportRows('quotes-selected.csv', selectedRows.map((quote) => ({
+      报价: quote.id,
+      商机: quote.opportunityId,
+      客户: quote.customerId,
+      状态: labelFor(quoteStatusLabel, quote.status),
+      金额: quote.amount,
+      有效期: quote.validityEnd
+    })));
+    setNotice(`已导出 ${selectedRows.length} 条报价。`);
+  }
+
+  if (mode === 'create') {
+    return (
+      <FormShell
+        title="新建报价"
+        description="每个商机最多一个报价，保存后初始状态为草稿。"
+        badge="新建"
+        onCancel={() => setMode('list')}
+        actions={<Button variant="primary" form="quote-form" type="submit">保存</Button>}
+        side={<QuoteFormRules />}
+      >
+        {error && <div role="alert" className="error">{error}</div>}
+        <form id="quote-form" className="actionBand" onSubmit={submit}>
+          <FormSection title="报价基本信息">
+            <div className="formFields">
+              <TextField label="商机 ID" value={form.opportunityId} onChange={(event) => setForm({ ...form, opportunityId: event.target.value })} />
+              <TextField label="客户 ID" value={form.customerId} onChange={(event) => setForm({ ...form, customerId: event.target.value })} />
+              <TextField label="金额" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
+              <TextField label="有效期截止日" type="date" value={form.validityEnd} onChange={(event) => setForm({ ...form, validityEnd: event.target.value })} />
+              <TextField label="负责人 ID" value={form.ownerId} onChange={(event) => setForm({ ...form, ownerId: event.target.value })} />
+            </div>
+          </FormSection>
+          <div className="saveBar">
+            <Button onClick={() => setMode('list')}>取消</Button>
+            <Button variant="primary" type="submit">保存报价</Button>
           </div>
-        </div>
-        <div className="detailShell">
-          {selected ? <QuoteDetail quote={selected} onUpdated={updateSelected} onError={setError} /> : <p className="emptyState">选择报价以管理状态。</p>}
-        </div>
-      </section>
-    </main>
+        </form>
+      </FormShell>
+    );
+  }
+
+  if (mode === 'detail' && selected) {
+    return <QuoteDetail quote={selected} onUpdated={updateSelected} onError={setError} onBack={() => setMode('list')} error={error} />;
+  }
+
+  return (
+    <CrudListShell
+      title="报价"
+      description={`${scopeLabel} · 共 ${rows.length} 条 · 默认按更新时间倒序`}
+      scope={`${scopeLabel} · 第 ${slice.page} / ${slice.totalPages} 页`}
+      actions={<><Button onClick={() => void refresh(search)}><RotateCcw size={16} aria-hidden="true" />刷新</Button><Button variant="primary" onClick={() => setMode('create')}><Plus size={16} aria-hidden="true" />新建报价</Button></>}
+      toolbar={
+        <Toolbar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="搜索报价、商机或客户"
+          filters={<label className="inlineCheckbox"><span>状态</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">全部状态</option>{statuses.map((item) => <option value={item} key={item}>{labelFor(quoteStatusLabel, item)}</option>)}</select></label>}
+          actions={<Button onClick={() => void refresh(search)}>应用筛选</Button>}
+        />
+      }
+      activeFilters={<ActiveFilterSummary onClear={() => { setSearch(''); setStatus(''); setSelectedIds([]); void refresh(''); }}><span className="chip">负责人：{scopeLabel}</span><span className="chip">状态：{status ? labelFor(quoteStatusLabel, status) : '全部状态'}</span></ActiveFilterSummary>}
+      bulkBar={
+        <BulkActionBar>
+          <div className="bulkSummary"><span className="bulkCount">已选择 {selectedRows.length} 条</span><span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '报价当前无转移/归档接口，按 A3 仅提供导出与清除选择。')}</span></div>
+          <div className="bulkActions">
+            {user?.role !== 'Sales' ? <><Button className="bulkButton" disabled title="报价当前无负责人转移接口；按 A3 禁用。">批量转移负责人</Button><Button className="bulkButton" disabled title="报价当前无归档接口；按 A3 禁用。">批量归档</Button></> : null}
+            <ExportSelectedButton disabled={selectedRows.length === 0} onExport={exportSelected} />
+            <Button className="bulkButton" variant="primary" disabled={selectedRows.length === 0} onClick={() => setSelectedIds([])}>清除选择</Button>
+          </div>
+        </BulkActionBar>
+      }
+      table={
+        <DataTable
+          caption="报价结果表"
+          rows={slice.items}
+          rowKey={(quote) => quote.id}
+          selectedRowKeys={selectedIds}
+          onToggleRow={toggleRow}
+          onToggleAll={toggleAll}
+          getRowClassName={(quote) => selected?.id === quote.id ? 'selected' : undefined}
+          empty="没有符合当前筛选条件的报价。"
+          columns={[
+            { key: 'quote', header: '报价', width: '220px', render: (quote) => <RecordIdentity icon={<FileText size={17} aria-hidden="true" />} title={quote.opportunityId} subtitle={quote.id} tone="purple" /> },
+            { key: 'customer', header: '客户', render: (quote) => quote.customerId },
+            { key: 'status', header: '状态', render: (quote) => <StatusPill tone={quoteTone(quote.status)}>{labelFor(quoteStatusLabel, quote.status)}</StatusPill> },
+            { key: 'amount', header: '金额', align: 'right', render: (quote) => <span className="amountText">{money(quote.amount)}</span> },
+            { key: 'validity', header: '有效期', align: 'right', render: (quote) => quote.validityEnd },
+            { key: 'updated', header: '更新时间', align: 'right', sortable: true, sortDirection: 'desc', render: (quote) => formatDate(quote.updatedAt) }
+          ]}
+          actions={(quote) => <div className="rowActions"><button className="rowAction" type="button" aria-label={`查看报价 ${quote.id}`} onClick={() => void selectQuote(quote.id)}><ArrowRight size={16} aria-hidden="true" /></button><span className="rowAction" aria-hidden="true"><MoreHorizontal size={16} /></span></div>}
+        />
+      }
+      pagination={<CrudPagination slice={slice} onPageChange={setPage} onPageSizeChange={(next) => { setPageSize(next); setPage(1); }} />}
+    />
   );
+}
+
+function QuoteFormRules() {
+  return <div className="sideCard"><h3>字段状态</h3><div className="rule"><span>1</span><p>报价保存时状态固定为草稿。</p></div><div className="rule"><span>2</span><p>报价接受后才可进入合同创建流程。</p></div></div>;
+}
+
+function quoteTone(status: string): 'primary' | 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'Accepted') return 'success';
+  if (status === 'Rejected' || status === 'Expired') return 'danger';
+  if (status === 'Sent') return 'primary';
+  return 'neutral';
+}
+
+function money(value: string) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return value || '未填写';
+  return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(number);
+}
+
+function formatDate(value: string) {
+  if (!value) return '未更新';
+  return value.length > 10 ? value.slice(0, 10) : value;
 }

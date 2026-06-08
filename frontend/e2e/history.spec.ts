@@ -20,9 +20,9 @@ test('TEST-HISTORY-001 and TEST-HISTORY-004 shows read-only record-local history
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存线索' }).click();
 
-  await page.getByRole('button', { name: companyName }).click();
+  await expect(page.getByLabel('线索详情').getByRole('heading', { name: companyName })).toBeVisible();
   await page.getByRole('button', { name: '标记有效' }).click();
-  await expect(page.getByLabel('线索详情').getByText('有效', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('线索详情').getByText('有效', { exact: true }).first()).toBeVisible();
   const leadId = await selectedLeadId(page);
   await expect.poll(async () => page.evaluate(async (id) => {
     const response = await fetch(`/api/leads/${id}/history`, { credentials: 'include' });
@@ -73,10 +73,10 @@ test('TEST-HISTORY-003 denies non-owned record-local history without leaking eve
   await page.getByLabel('来源').fill('Referral');
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存线索' }).click();
-  await page.getByRole('button', { name: companyName }).click();
+  await expect(page.getByLabel('线索详情').getByRole('heading', { name: companyName })).toBeVisible();
   const leadId = await selectedLeadId(page);
   await page.getByRole('button', { name: '标记有效' }).click();
-  await expect(page.getByLabel('线索详情').getByText('有效', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('线索详情').getByText('有效', { exact: true }).first()).toBeVisible();
 
   await page.getByRole('button', { name: '退出登录' }).click();
   await signIn(page, salesEmail, salesPassword);
@@ -110,6 +110,10 @@ async function reopenLead(page: import('@playwright/test').Page, companyName: st
   await expect(page.getByRole('heading', { name: '工作台' })).toBeVisible();
   await page.getByRole('button', { name: '线索', exact: true }).click();
   await page.getByLabel('搜索').fill(companyName);
-  await page.getByRole('button', { name: '搜索', exact: true }).click();
-  await page.getByRole('button', { name: companyName }).click();
+  await page.getByRole('button', { name: '应用筛选' }).click();
+  await page.getByRole('button', { name: new RegExp(`查看 ${escapeRegExp(companyName)}`) }).click();
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

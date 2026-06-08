@@ -1,15 +1,41 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ArrowRight, FileSignature, MoreHorizontal, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
-import { Contract, createContract, getContract, listContracts } from '../../api/contracts';
+import { Contract, archiveContract, createContract, getContract, listContracts } from '../../api/contracts';
+import {
+  ActiveFilterSummary,
+  CrudListShell,
+  CrudPagination,
+  DEFAULT_PAGE_SIZE,
+  ExportSelectedButton,
+  FormSection,
+  FormShell,
+  RecordIdentity,
+  StatusPill,
+  exportRows,
+  paginate
+} from '../../components/CrudScaffold';
+import { BulkActionBar, Button, DataTable, TextAreaField, TextField, Toolbar } from '../../components/ui';
+import { useSession } from '../../auth/SessionProvider';
 import { contractStatusLabel, labelFor, localizeError } from '../../i18n/labels';
 import { ContractDetail } from './ContractDetail';
 
+type Mode = 'list' | 'create' | 'detail';
+const statuses = Object.keys(contractStatusLabel);
+
 export function ContractList() {
+  const { user } = useSession();
+  const [mode, setMode] = useState<Mode>('list');
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [selected, setSelected] = useState<Contract | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [form, setForm] = useState({
     quoteId: '',
     opportunityId: '',
@@ -25,9 +51,10 @@ export function ContractList() {
     void refresh();
   }, []);
 
-  async function refresh(nextSearch = search) {
-    const response = await listContracts(nextSearch);
+  async function refresh(nextSearch = search, nextIncludeArchived = includeArchived) {
+    const response = await listContracts(nextSearch, nextIncludeArchived);
     setContracts(response.items);
+    setPage(1);
   }
 
   async function submit(event: FormEvent) {
@@ -36,7 +63,7 @@ export function ContractList() {
     try {
       const created = await createContract(form);
       setSelected(created);
-      setCreating(false);
+      setMode('detail');
       setForm({ quoteId: '', opportunityId: '', customerId: '', amount: '', expectedSignedDate: '', contractNote: '', amountDifferenceReason: '', ownerId: '' });
       await refresh();
     } catch (caught) {
@@ -48,6 +75,7 @@ export function ContractList() {
   async function selectContract(id: string) {
     setError('');
     setSelected(await getContract(id));
+    setMode('detail');
   }
 
   async function updateSelected(contract: Contract) {
@@ -55,75 +83,135 @@ export function ContractList() {
     await refresh();
   }
 
+  const rows = useMemo(() => contracts.filter((contract) => {
+    if (status && contract.status !== status) return false;
+    if (!includeArchived && contract.archived) return false;
+    return true;
+  }), [contracts, status, includeArchived]);
+  const slice = paginate(rows, page, pageSize);
+  const selectedRows = rows.filter((contract) => selectedIds.includes(contract.id));
+  const scopeLabel = user?.role === 'Sales' ? '本人范围' : user?.role === 'Sales Manager' ? '团队范围' : '全部范围';
+
+  function toggleRow(contract: Contract, checked: boolean) {
+    setSelectedIds((value) => checked ? [...new Set([...value, contract.id])] : value.filter((id) => id !== contract.id));
+  }
+
+  function toggleAll(checked: boolean) {
+    setSelectedIds(checked ? slice.items.map((contract) => contract.id) : []);
+  }
+
+  async function archiveSelected() {
+    if (selectedRows.length === 0 || user?.role === 'Sales') return;
+    setError('');
+    try {
+      let archived = 0;
+      for (const contract of selectedRows) {
+        if (contract.archived) continue;
+        await archiveContract(contract, '批量归档合同记录');
+        archived += 1;
+      }
+      setSelectedIds([]);
+      setNotice(`已归档 ${archived} 条合同。`);
+      await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
+  function exportSelected() {
+    if (selectedRows.length === 0) return;
+    exportRows('contracts-selected.csv', selectedRows.map((contract) => ({
+      合同: contract.id,
+      报价: contract.quoteId,
+      商机: contract.opportunityId,
+      状态: labelFor(contractStatusLabel, contract.status),
+      金额: contract.amount,
+      预计签署: contract.expectedSignedDate
+    })));
+    setNotice(`已导出 ${selectedRows.length} 条合同。`);
+  }
+
+  if (mode === 'create') {
+    return (
+      <FormShell title="新建合同" description="基于已接受报价创建待签署合同。" badge="新建" onCancel={() => setMode('list')} actions={<Button variant="primary" form="contract-form" type="submit">保存</Button>} side={<ContractFormRules />}>
+        {error && <div role="alert" className="error">{error}</div>}
+        <form id="contract-form" className="actionBand" onSubmit={submit}>
+          <FormSection title="合同基本信息">
+            <div className="formFields">
+              <TextField label="报价 ID" value={form.quoteId} onChange={(event) => setForm({ ...form, quoteId: event.target.value })} />
+              <TextField label="商机 ID" value={form.opportunityId} onChange={(event) => setForm({ ...form, opportunityId: event.target.value })} />
+              <TextField label="客户 ID" value={form.customerId} onChange={(event) => setForm({ ...form, customerId: event.target.value })} />
+              <TextField label="金额" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
+              <TextField label="预计签署日期" type="date" value={form.expectedSignedDate} onChange={(event) => setForm({ ...form, expectedSignedDate: event.target.value })} />
+              <TextField label="负责人 ID" value={form.ownerId} onChange={(event) => setForm({ ...form, ownerId: event.target.value })} />
+              <TextAreaField className="full" label="合同备注" value={form.contractNote} onChange={(event) => setForm({ ...form, contractNote: event.target.value })} />
+              <TextField className="full" label="金额差异原因" value={form.amountDifferenceReason} onChange={(event) => setForm({ ...form, amountDifferenceReason: event.target.value })} />
+            </div>
+          </FormSection>
+          <div className="saveBar"><Button onClick={() => setMode('list')}>取消</Button><Button variant="primary" type="submit">保存合同</Button></div>
+        </form>
+      </FormShell>
+    );
+  }
+
+  if (mode === 'detail' && selected) {
+    return <ContractDetail contract={selected} onUpdated={updateSelected} onError={setError} onBack={() => setMode('list')} error={error} />;
+  }
+
   return (
-    <main className="content">
-      <section className="pageHeader">
-        <div>
-          <h1>合同</h1>
-          <p>基于已接受报价创建待签署合同并管理签署。</p>
-        </div>
-        <button className="primaryButton" type="button" onClick={() => setCreating((value) => !value)}>新建合同</button>
-      </section>
-      {error && <div role="alert" className="error">{error}</div>}
-      <section className="leadLayout">
-        <div className="listPane">
-          <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void refresh(search); }}>
-            <label>
-              搜索
-              <input value={search} onChange={(event) => setSearch(event.target.value)} />
-            </label>
-            <button className="secondaryButton" type="submit">搜索</button>
-          </form>
-          {creating && (
-            <form className="createPanel" onSubmit={submit}>
-              <label>
-                报价 ID
-                <input value={form.quoteId} onChange={(event) => setForm({ ...form, quoteId: event.target.value })} />
-              </label>
-              <label>
-                商机 ID
-                <input value={form.opportunityId} onChange={(event) => setForm({ ...form, opportunityId: event.target.value })} />
-              </label>
-              <label>
-                客户 ID
-                <input value={form.customerId} onChange={(event) => setForm({ ...form, customerId: event.target.value })} />
-              </label>
-              <label>
-                金额
-                <input value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
-              </label>
-              <label>
-                预计签署日期
-                <input type="date" value={form.expectedSignedDate} onChange={(event) => setForm({ ...form, expectedSignedDate: event.target.value })} />
-              </label>
-              <label>
-                合同备注
-                <textarea value={form.contractNote} onChange={(event) => setForm({ ...form, contractNote: event.target.value })} />
-              </label>
-              <label>
-                金额差异原因
-                <input value={form.amountDifferenceReason} onChange={(event) => setForm({ ...form, amountDifferenceReason: event.target.value })} />
-              </label>
-              <label>
-                负责人 ID
-                <input value={form.ownerId} onChange={(event) => setForm({ ...form, ownerId: event.target.value })} />
-              </label>
-              <button className="primaryButton" type="submit">保存合同</button>
-            </form>
-          )}
-          <div className="recordList" aria-label="合同记录">
-            {contracts.length === 0 ? <p className="emptyState">暂无合同。</p> : contracts.map((contract) => (
-              <button className="recordRow" type="button" key={contract.id} onClick={() => void selectContract(contract.id)}>
-                <strong>{contract.opportunityId}</strong>
-                <span>{labelFor(contractStatusLabel, contract.status)} · {contract.amount}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="detailShell">
-          {selected ? <ContractDetail contract={selected} onUpdated={updateSelected} onError={setError} /> : <p className="emptyState">选择合同以管理状态。</p>}
-        </div>
-      </section>
-    </main>
+    <CrudListShell
+      title="合同"
+      description={`${scopeLabel} · 共 ${rows.length} 条 · 默认按更新时间倒序`}
+      scope={`${scopeLabel} · 第 ${slice.page} / ${slice.totalPages} 页`}
+      actions={<><Button onClick={() => void refresh(search, includeArchived)}><RotateCcw size={16} aria-hidden="true" />刷新</Button><Button variant="primary" onClick={() => setMode('create')}><Plus size={16} aria-hidden="true" />新建合同</Button></>}
+      toolbar={<Toolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="搜索合同、报价或客户" filters={<><label className="inlineCheckbox"><span>状态</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">全部状态</option>{statuses.map((item) => <option value={item} key={item}>{labelFor(contractStatusLabel, item)}</option>)}</select></label><label className="inlineCheckbox"><input type="checkbox" checked={includeArchived} onChange={(event) => setIncludeArchived(event.target.checked)} />包含已归档</label></>} actions={<Button onClick={() => void refresh(search, includeArchived)}>应用筛选</Button>} />}
+      activeFilters={<ActiveFilterSummary onClear={() => { setSearch(''); setStatus(''); setIncludeArchived(false); setSelectedIds([]); void refresh('', false); }}><span className="chip">负责人：{scopeLabel}</span><span className="chip">状态：{status ? labelFor(contractStatusLabel, status) : '全部状态'}</span><span className="chip">归档：{includeArchived ? '包含已归档' : '仅活动记录'}</span></ActiveFilterSummary>}
+      bulkBar={<BulkActionBar><div className="bulkSummary"><span className="bulkCount">已选择 {selectedRows.length} 条</span><span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '合同批量归档通过现有单条归档接口逐条执行。')}</span></div><div className="bulkActions">{user?.role !== 'Sales' ? <><Button className="bulkButton" disabled title="合同当前无负责人转移接口；按 A3 禁用。">批量转移负责人</Button><Button className="bulkButton" disabled={selectedRows.length === 0} onClick={() => void archiveSelected()}>批量归档</Button></> : null}<ExportSelectedButton disabled={selectedRows.length === 0} onExport={exportSelected} /><Button className="bulkButton" variant="primary" disabled={selectedRows.length === 0} onClick={() => setSelectedIds([])}>清除选择</Button></div></BulkActionBar>}
+      table={
+        <DataTable
+          caption="合同结果表"
+          rows={slice.items}
+          rowKey={(contract) => contract.id}
+          selectedRowKeys={selectedIds}
+          onToggleRow={toggleRow}
+          onToggleAll={toggleAll}
+          getRowClassName={(contract) => selected?.id === contract.id ? 'selected' : undefined}
+          empty="没有符合当前筛选条件的合同。"
+          columns={[
+            { key: 'contract', header: '合同', width: '220px', render: (contract) => <RecordIdentity icon={<FileSignature size={17} aria-hidden="true" />} title={contract.opportunityId} subtitle={`${contract.archived ? '已归档 · ' : ''}${contract.id}`} tone="peach" /> },
+            { key: 'quote', header: '报价', render: (contract) => contract.quoteId },
+            { key: 'status', header: '状态', render: (contract) => <StatusPill tone={contractTone(contract.status)}>{labelFor(contractStatusLabel, contract.status)}</StatusPill> },
+            { key: 'amount', header: '金额', align: 'right', render: (contract) => <span className="amountText">{money(contract.amount)}</span> },
+            { key: 'signed', header: '预计签署', align: 'right', render: (contract) => contract.expectedSignedDate },
+            { key: 'updated', header: '更新时间', align: 'right', sortable: true, sortDirection: 'desc', render: (contract) => formatDate(contract.updatedAt) }
+          ]}
+          actions={(contract) => <div className="rowActions"><button className="rowAction" type="button" aria-label={`查看合同 ${contract.id}`} onClick={() => void selectContract(contract.id)}><ArrowRight size={16} aria-hidden="true" /></button><span className="rowAction" aria-hidden="true"><MoreHorizontal size={16} /></span></div>}
+        />
+      }
+      pagination={<CrudPagination slice={slice} onPageChange={setPage} onPageSizeChange={(next) => { setPageSize(next); setPage(1); }} />}
+    />
   );
+}
+
+function ContractFormRules() {
+  return <div className="sideCard"><h3>字段状态</h3><div className="rule"><span>1</span><p>合同保存时状态固定为待签署。</p></div><div className="rule"><span>2</span><p>金额与报价不一致时必须填写差异原因。</p></div></div>;
+}
+
+function contractTone(status: string): 'primary' | 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'Signed' || status === 'Active' || status === 'Completed') return 'success';
+  if (status === 'Terminated') return 'danger';
+  if (status === 'Pending Signature') return 'warning';
+  return 'neutral';
+}
+
+function money(value: string) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return value || '未填写';
+  return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(number);
+}
+
+function formatDate(value: string) {
+  if (!value) return '未更新';
+  return value.length > 10 ? value.slice(0, 10) : value;
 }

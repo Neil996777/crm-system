@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { LogOut } from 'lucide-react';
 import { useSession } from '../auth/SessionProvider';
 import { SignIn } from '../pages/SignIn';
 import { WorkOverview } from '../pages/WorkOverview';
@@ -21,6 +22,20 @@ import { appName, labelFor, roleLabel } from '../i18n/labels';
 export function Shell() {
   const { user, loading, logout } = useSession();
   const [view, setView] = useState<AppView>('overview');
+  const [focusMode, setFocusMode] = useState(false);
+
+  useEffect(() => {
+    if (view !== 'overview') {
+      setFocusMode(false);
+    }
+  }, [view]);
+
+  const selectView = (nextView: AppView) => {
+    setView(nextView);
+    if (nextView !== 'overview') {
+      setFocusMode(false);
+    }
+  };
 
   if (loading && !user) {
     return <div className="boot">加载中</div>;
@@ -31,22 +46,37 @@ export function Shell() {
   }
 
   return (
-    <div className="shell">
+    <div className={`shell ${focusMode && view === 'overview' ? 'focusMode' : ''}`}>
       <aside className="sidebar">
-        <div className="brand">{appName}</div>
-        <Nav role={user.role} activeView={view} onSelect={setView} />
+        <div className="brand">
+          <span className="brandMark" aria-hidden="true">
+            CRM
+          </span>
+          <span className="brandText">
+            <strong>{appName}</strong>
+            <span>{user.role === 'Sales' ? '个人销售工作区' : user.role === 'Sales Manager' ? '团队管理工作区' : '全局管理工作区'}</span>
+          </span>
+        </div>
+        <Nav role={user.role} activeView={view} onSelect={selectView} />
       </aside>
-      <div className="workspace">
+      <div className={`workspace ${focusMode && view === 'overview' ? 'focusWorkspace' : ''}`}>
         <header className="topbar">
-          <div>
-            <strong>{user.displayName}</strong>
-            <span>{labelFor(roleLabel, user.role)}</span>
+          <div className="topbarIdentity">
+            <span className="avatar" aria-hidden="true">
+              {user.displayName.slice(0, 1)}
+            </span>
+            <div>
+              <strong>{user.displayName}</strong>
+              <span>{labelFor(roleLabel, user.role)}</span>
+            </div>
           </div>
+          <div className="topbarSpacer" />
           <button className="secondaryButton" type="button" onClick={logout}>
+            <LogOut size={16} aria-hidden="true" />
             退出登录
           </button>
         </header>
-        {view === 'leads' ? <LeadList /> : view === 'accounts' ? <AccountList /> : view === 'contacts' ? <ContactList /> : view === 'opportunities' ? <OpportunityList /> : view === 'quotes' ? <QuoteList /> : view === 'contracts' ? <ContractList /> : view === 'payments' ? <PaymentList /> : view === 'tasks' ? <TaskList /> : view === 'reminders' ? <ReminderCenter /> : view === 'managerOverview' ? <ManagerOverview /> : view === 'importExport' ? <ImportExportPage /> : view === 'userManagement' ? <UserManagement /> : view === 'operationLogs' ? <OperationLogs /> : <WorkOverview user={user} />}
+        {view === 'leads' ? <LeadList /> : view === 'accounts' ? <AccountList /> : view === 'contacts' ? <ContactList /> : view === 'opportunities' ? <OpportunityList /> : view === 'quotes' ? <QuoteList /> : view === 'contracts' ? <ContractList /> : view === 'payments' ? <PaymentList /> : view === 'tasks' ? <TaskList /> : view === 'reminders' ? <ReminderCenter /> : view === 'managerOverview' ? <ManagerOverview /> : view === 'importExport' ? <ImportExportPage /> : view === 'userManagement' ? <UserManagement /> : view === 'operationLogs' ? <OperationLogs /> : <WorkOverview user={user} onFocusChange={setFocusMode} />}
       </div>
     </div>
   );

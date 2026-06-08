@@ -16,14 +16,24 @@ test('TEST-USER-ADMIN-001 creates user and changes role/status with confirmation
   const displayName = `User Admin Evidence ${suffix}`;
 
   await page.getByRole('button', { name: '管理：用户与角色' }).click();
-  await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '用户与角色' })).toBeVisible();
+  await expect(page.getByLabel('末位管理员保护')).toBeVisible();
+  await expect(page.getByLabel('分页')).toBeVisible();
+  await expect(page.getByText(/角色仅：管理员 \/ 销售经理 \/ 销售/)).toBeVisible();
 
-  await page.getByLabel('邮箱').fill(email);
-  await page.getByLabel('显示名称').fill(displayName);
-  await page.getByLabel('密码').fill(password);
-  await page.getByLabel('角色').selectOption('Sales');
+  await page.getByRole('button', { name: '新建用户' }).click();
+  const createForm = page.locator('form.createPanel');
+  await createForm.getByLabel('邮箱').fill(email);
+  await createForm.getByLabel('显示名称').fill(displayName);
+  await createForm.getByLabel('密码').fill(password);
+  await createForm.getByLabel('角色').selectOption('Sales');
   await page.getByRole('button', { name: '创建用户' }).click();
-  await expect(page.getByRole('row', { name: displayName })).toContainText('销售');
+  await page.getByPlaceholder('搜索显示名或邮箱').fill(displayName);
+  const createdRow = page.getByRole('row', { name: displayName });
+  await expect(createdRow).toContainText('销售');
+  await expect(createdRow.getByRole('button', { name: `编辑 ${displayName}` })).toBeVisible();
+  await expect(createdRow.getByRole('button', { name: `停用 ${displayName}` })).toBeVisible();
+  await expect(createdRow.getByRole('button', { name: `改角色 ${displayName}` })).toBeVisible();
 
   await page.getByRole('button', { name: `编辑 ${displayName}` }).click();
   await page.getByLabel('新角色').selectOption('Sales Manager');
@@ -45,9 +55,13 @@ test('TEST-USER-ADMIN-001 creates user and changes role/status with confirmation
 
 test('TEST-INV-LASTADMIN-001 blocks disabling or downgrading the last active Administrator', async ({ page }) => {
   await page.getByRole('button', { name: '管理：用户与角色' }).click();
+  await expect(page.getByLabel('末位管理员保护')).toContainText('唯一启用管理员');
+  await page.getByPlaceholder('搜索显示名或邮箱').fill('Seed Administrator');
+  await expect(page.getByRole('row', { name: 'Seed Administrator' }).getByRole('button', { name: '停用 Seed Administrator' })).toBeDisabled();
   await page.getByRole('button', { name: '编辑 Seed Administrator' }).click();
-  await page.getByLabel('新角色').selectOption('Sales');
-  await expect(page.getByText('不能变更最后一个启用的管理员。')).toBeVisible();
+  await expect(page.getByLabel('新角色').locator('option[value="Sales"]')).toHaveAttribute('disabled', '');
+  await expect(page.getByLabel('新状态').locator('option[value="Disabled"]')).toHaveAttribute('disabled', '');
+  await expect(page.getByText('末位启用管理员受保护，不能降级或停用。')).toBeVisible();
   await expect(page.getByRole('button', { name: '复核角色/状态变更' })).toBeDisabled();
 });
 

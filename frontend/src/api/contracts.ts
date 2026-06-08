@@ -14,6 +14,10 @@ export type Contract = {
   signedEffectiveDate?: string;
   amountDifferenceReason?: string;
   ownerId: string;
+  archived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
+  archiveReason?: string;
   version: number;
   updatedAt: string;
 };
@@ -22,8 +26,11 @@ function unwrap<T>(response: GatewayEnvelope<T>) {
   return response.data;
 }
 
-export async function listContracts(search: string) {
-  const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+export async function listContracts(search: string, includeArchived = false) {
+  const params = new URLSearchParams();
+  if (search.trim()) params.set('search', search.trim());
+  if (includeArchived) params.set('includeArchived', 'true');
+  const query = params.toString() ? `?${params.toString()}` : '';
   const response = await apiRequest<GatewayEnvelope<{ items: Contract[] }>>(`/api/contracts${query}`);
   return unwrap(response);
 }
@@ -54,6 +61,14 @@ export async function changeContractStatus(id: string, expectedVersion: number, 
   const response = await apiRequest<GatewayEnvelope<Contract>>(`/api/contracts/${id}/status`, {
     method: 'POST',
     body: JSON.stringify({ expectedVersion, toStatus, signedEffectiveDate })
+  });
+  return unwrap(response);
+}
+
+export async function archiveContract(contract: Contract, reason: string) {
+  const response = await apiRequest<GatewayEnvelope<Contract>>(`/api/contracts/${contract.id}/archive`, {
+    method: 'POST',
+    body: JSON.stringify({ expectedVersion: contract.version, reason })
   });
   return unwrap(response);
 }

@@ -37,7 +37,14 @@ export function Nav({ role, activeView, onSelect }: { role: UserRole; activeView
         .map((item) => {
           const Icon = item.icon;
           return (
-            <button className={`navItem ${activeView === item.view ? 'active' : ''}`} type="button" key={item.label} onClick={() => onSelect(item.view)}>
+            <button
+              aria-current={activeView === item.view ? 'page' : undefined}
+              aria-label={item.label}
+              className={`navItem ${activeView === item.view ? 'active' : ''}`}
+              type="button"
+              key={item.label}
+              onClick={() => onSelect(item.view)}
+            >
               <Icon size={18} />
               <span>{item.label}</span>
             </button>

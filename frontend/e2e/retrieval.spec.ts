@@ -21,7 +21,7 @@ test('TEST-NAV-RETRIEVE-001 lists and details contacts from the primary navigati
   await page.getByLabel('客户状态').fill('Prospect');
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存客户' }).click();
-  await page.getByRole('button', { name: companyName }).click();
+  await expect(page.getByLabel('客户详情').getByRole('heading', { name: companyName })).toBeVisible();
   await page.getByRole('button', { name: '添加联系人' }).click();
   await page.getByLabel('联系人姓名').fill(contactName);
   await page.getByLabel('邮箱').fill(`retrieval-${suffix}@example.com`);
@@ -32,8 +32,8 @@ test('TEST-NAV-RETRIEVE-001 lists and details contacts from the primary navigati
   await page.getByRole('navigation', { name: '主导航' }).getByRole('button', { name: '联系人', exact: true }).click();
   await expect(page.getByRole('heading', { name: '联系人' })).toBeVisible();
   await page.getByLabel('搜索').fill(contactName);
-  await page.getByRole('button', { name: '搜索' }).click();
-  await page.getByRole('button', { name: contactName }).click();
+  await page.getByRole('button', { name: '应用筛选' }).click();
+  await page.getByRole('button', { name: new RegExp(`查看 ${escapeRegExp(contactName)}`) }).click();
   await expect(page.getByLabel('联系人详情')).toContainText(contactName);
   await expect(page.getByLabel('联系人详情')).toContainText(companyName);
 });
@@ -41,8 +41,8 @@ test('TEST-NAV-RETRIEVE-001 lists and details contacts from the primary navigati
 test('TEST-NAV-RETRIEVE-003/004 shows empty state and invalid filter feedback', async ({ page }) => {
   await page.getByRole('button', { name: '线索', exact: true }).click();
   await page.getByLabel('搜索').fill(`missing-${Date.now()}`);
-  await page.getByRole('button', { name: '搜索' }).click();
-  await expect(page.getByText('暂无线索。')).toBeVisible();
+  await page.getByRole('button', { name: '应用筛选' }).click();
+  await expect(page.getByText('没有符合当前筛选条件的线索。')).toBeVisible();
 
   const invalid = await page.evaluate(async () => {
     const response = await fetch('/api/opportunities?stage=NotAStage', { credentials: 'include' });
@@ -64,14 +64,14 @@ test('TEST-NAV-RETRIEVE-005 hides unauthorized records from sales lists', async 
   await page.getByLabel('来源').fill('Website');
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存线索' }).click();
-  await expect(page.getByRole('button', { name: companyName })).toBeVisible();
+  await expect(page.getByLabel('线索详情').getByRole('heading', { name: companyName })).toBeVisible();
 
   await page.getByRole('button', { name: '退出登录' }).click();
   await signIn(page, salesEmail, salesPassword);
   await page.getByRole('button', { name: '线索', exact: true }).click();
   await page.getByLabel('搜索').fill(companyName);
-  await page.getByRole('button', { name: '搜索' }).click();
-  await expect(page.getByText('暂无线索。')).toBeVisible();
+  await page.getByRole('button', { name: '应用筛选' }).click();
+  await expect(page.getByText('没有符合当前筛选条件的线索。')).toBeVisible();
   await expect(page.getByText(companyName)).toHaveCount(0);
 });
 
@@ -91,4 +91,8 @@ async function createSalesUser(page: import('@playwright/test').Page, email: str
     });
     if (!response.ok) throw new Error(`create sales user failed: ${response.status}`);
   }, { email, password: salesPassword });
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

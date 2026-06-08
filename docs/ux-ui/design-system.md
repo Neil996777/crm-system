@@ -63,6 +63,9 @@
 
 All values **[EXTRACTED]** verbatim from the `:root` block, identical across all
 three locked files. No semantic label appears without a value. Do not recolor.
+DEC-UIUX-A5-001 appends a strictly bounded set of **text-only** contrast tokens;
+they are listed in Appendix A and do not change any extracted background, fill,
+border, icon, graph, brand, or soft-surface value.
 
 ### Brand
 
@@ -95,7 +98,7 @@ Solid = swatch/legend/accent dot; soft = icon-badge background and badge fill.
 |---|---|---|
 | `--text` | `#0F172A` | Primary text, h1, row titles, donut center number. |
 | `--muted` | `#475569` | Secondary text, labels, button text, nav idle, eyebrows, chart axis labels. |
-| `--subtle` | `#94A3B8` | Tertiary/de-emphasized text, meta, timestamps, placeholders, expand icon, donut caption. |
+| `--subtle` | `#94A3B8` | Decorative / non-text / disabled-only treatment after DEC-UIUX-A5-001: separators, ornamental marks, disabled affordance tint, and non-informational icon detail. Do not use for readable body, meta, timestamp, caption, or placeholder text; use `--muted` instead. |
 | `--border` | `#EDF0F6` | Hairline borders, dividers, chart gridlines, input/button outlines. |
 | `--card` | `#FFFFFF` | Card/panel/table surface. |
 | `--section` | `#F6F7FD` | Ghost track fill, idle rail icon bg, neutral badge bg, table header bg, donut track. |
@@ -105,9 +108,27 @@ Solid = swatch/legend/accent dot; soft = icon-badge background and badge fill.
 
 | Token | Value | Soft pairing | Usage |
 |---|---|---|---|
-| `--success` | `#16A34A` | `--mint-soft` `#E5F7F0` | Won/paid/positive delta text + money-arrived value; `badge.success`, `delta.up`. |
-| `--warning` | `#D97706` | `--peach-soft` `#FDEDE5` | Overdue/expiring/negotiation/pending-signature; `badge.warning`, `delta.warn`. |
-| `--danger` | `#DC2626` | `#FEE2E2` | Lost/overdue/invalid/denied; `badge.danger`, `delta.down`. **Danger soft fill `#FEE2E2`** is a literal hex in source (no `:root` var); treat as the canonical danger soft fill. |
+| `--success` | `#16A34A` | `--mint-soft` `#E5F7F0` | Locked success solid for swatches, legend dots, decorative accents, icons, and graph strokes. Readable success text uses `--success-ink`. |
+| `--warning` | `#D97706` | `--peach-soft` `#FDEDE5` | Locked warning solid for swatches, legend dots, decorative accents, icons, and graph strokes. Readable warning text uses `--warning-ink`. |
+| `--danger` | `#DC2626` | `#FEE2E2` | Locked danger solid for swatches, decorative accents, icons, graph strokes, borders, and rings. Readable danger text uses `--danger-ink`. **Danger soft fill `#FEE2E2`** is a literal hex in source (no `:root` var); treat as the canonical danger soft fill. |
+
+### Text-only contrast tokens (DEC-UIUX-A5-001)
+
+These values are **[DERIVED][DEC-UIUX-A5-001]**. They are the only new color
+tokens approved for this change, and they are **text-only**. They must never be
+used for fills, backgrounds, buttons, badge/chip backgrounds, borders, icons,
+graph strokes, legend dots, or shadows.
+
+| Token | Value | Source hue | Text usage only |
+|---|---|---|---|
+| `--success-ink` | `#11803A` | `--success` `#16A34A` | Readable success text on `--card`, `--section`, and `--mint-soft`. |
+| `--warning-ink` | `#A55A05` | `--warning` `#D97706` | Readable warning text on `--card`, `--section`, and `--peach-soft`. |
+| `--danger-ink` | `#CC2121` | `--danger` `#DC2626` | Readable danger text on `--card`, `--section`, and danger soft `#FEE2E2`. |
+| `--purple-ink` | `#7D4CE4` | `--purple` `#B79CF0` | Readable purple/accent text on `--card`, `--section`, and `--purple-soft`. |
+
+Readable secondary or low-emphasis text uses `--muted` `#475569`. There is no
+`--subtle-ink`: `--subtle` is intentionally non-text/decorative after
+DEC-UIUX-A5-001.
 
 ### Gradients
 
@@ -155,10 +176,10 @@ Solid = swatch/legend/accent dot; soft = icon-badge background and badge fill.
 | Body / base | 14px / 1.35 | 400–500 | `--text`/`--muted` | [EXTRACTED] |
 | Row title / value | 12–13px / 1.24–1.28 | 700 | `--text` | [EXTRACTED] |
 | Page subtitle, quicklink, nav, stage-sub | 13px | 500–700 | `--muted`/`--primary` | [EXTRACTED] |
-| Meta / panelMeta / updateMeta / timestamps | 12px | 500 | `--subtle` | [EXTRACTED] |
+| Meta / panelMeta / updateMeta / timestamps | 12px | 500 | `--muted` | [DEC-UIUX-A5-001] |
 | Badge / delta / segment | 12px | 700 | semantic | [EXTRACTED] |
 | Table header | 12px (sales 11px dense) | 600 | `--muted` | [EXTRACTED] |
-| Micro (manager dense row span, table cells) | 11px | 500–700 | `--subtle`/`--text` | [EXTRACTED] |
+| Micro (manager dense row span, table cells) | 11px | 500–700 | `--muted`/`--text` | [DEC-UIUX-A5-001] |
 
 Canonical scale: **24 / 17 / 16 / 15 / 14 / 13 / 12 / 11**. Weights in use:
 **800 / 700 / 600 / 500 / 400**. Do not introduce sizes/weights outside this set
@@ -294,7 +315,7 @@ reduced-motion) is owned by `interaction-spec.md` Part B / B-micro.
 `background:rgba(255,255,255,.92)`. Contents left→right:
 
 - **Search capsule**: 420px × 40px, `border-radius:999px`, 1px border, white,
-  placeholder `--subtle` ("搜索线索、客户、合同或负责人").
+  readable placeholder `--muted` ("搜索线索、客户、合同或负责人").
 - **Spacer** (`flex:1`).
 - **Quick links** (`新建线索`, `导出报表`): `--primary`, 13px/700.
 - **User menu**: capsule, 40px tall, 24px avatar circle (`#EAF1FF` bg) + name +
@@ -376,11 +397,11 @@ exact tokens.
 
 ### 7.2 Panel header (icon + title + meta + expand)
 
-- **Anatomy** [EXTRACTED]: `panelHeader` flex row, `min-height:38–40px`,
-  `margin-bottom:10–12px`. Left `titleGroup` = icon badge (40px) + stacked
-  (`panelTitle` 15–16px/600, `panelMeta` 12px/500 `--subtle`, optional live dot).
-  Right = `expand` button (30–32px circle, 1px border, white, `--subtle` icon,
-  `--badge-shadow`, expand-corners SVG).
+- **Anatomy** [EXTRACTED + DEC-UIUX-A5-001]: `panelHeader` flex row,
+  `min-height:38–40px`, `margin-bottom:10–12px`. Left `titleGroup` = icon badge
+  (40px) + stacked (`panelTitle` 15–16px/600, `panelMeta` 12px/500 `--muted`,
+  optional live dot). Right = `expand` button (30–32px circle, 1px border, white,
+  `--subtle` decorative icon, `--badge-shadow`, expand-corners SVG).
 - **Behavior**: expand triggers Card→focus (§10). Motion deferred to UX spec.
 
 ### 7.3 Capsule / ghost-track bar (funnel fill) (→ CMP-008 funnel viz)
@@ -396,12 +417,13 @@ exact tokens.
 
 ### 7.4 Blob / liquid donut (→ CMP-014 share viz)
 
-- **Anatomy** [EXTRACTED]: SVG `viewBox` 170 (manager) / 190 (sales). Base track
+- **Anatomy** [EXTRACTED + DEC-UIUX-A5-001]: SVG `viewBox` 170 (manager) / 190 (sales). Base track
   `circle stroke:#F6F7FD` (=`--section`), `stroke-width:24–26`. Segments =
   round-capped (`stroke-linecap:round`) arcs via `stroke-dasharray` /
   `stroke-dashoffset`, `transform:rotate(-90 …)`, in segment order lavender
   `#8B93F8` → mint `#5BC8A0` → peach `#F6A98A` → purple `#B79CF0`. Center
-  `donutCenter` text (22–24px/700 `--text`) + caption (`--subtle` 11–12px).
+  `donutCenter` text (22–24px/700 `--text`) + readable caption (`--muted`
+  11–12px).
 - **Legend** [EXTRACTED]: `donutWrap` grid `128–150px 1fr`. `legendItem` grid
   `swatch 22–24px / label / num`. Swatch = soft-tint circle (`*-soft`),
   `--badge-shadow`.
@@ -429,20 +451,22 @@ exact tokens.
   padding `0 8–10px`, 12px/700, `--badge-shadow`, `white-space:nowrap`.
 - **Variants** [EXTRACTED]:
   - `primary` → bg `#EAF1FF`, text `--primary`.
-  - `success` → bg `--mint-soft`, text `--success`.
-  - `warning` → bg `--peach-soft`, text `--warning`.
-  - `danger` → bg `#FEE2E2`, text `--danger`.
+  - `success` → bg `--mint-soft`, text `--success-ink`.
+  - `warning` → bg `--peach-soft`, text `--warning-ink`.
+  - `danger` → bg `#FEE2E2`, text `--danger-ink`.
   - `neutral` → bg `--section`, text `--muted`.
 - **Rule** (from `component-spec.md` CMP-007): badge text is explicit; color
   alone is never sufficient.
-- **Delta variant** (KPI): same pill; `up`→mint-soft/success, `down`→#FEE2E2/
-  danger, `warn`→peach-soft/warning; arrow glyph ▲/▼ inline.
+- **Delta variant** (KPI): same pill; `up`→mint-soft/`--success-ink`,
+  `down`→#FEE2E2/`--danger-ink`, `warn`→peach-soft/`--warning-ink`; arrow
+  glyph ▲/▼ inline.
 
 ### 7.7 Payment / flow row + compact list row (→ CMP-011 Reminder Row)
 
-- **List row** [EXTRACTED]: `row` grid `1fr auto`, `min-height:39–44px`, bottom
-  1px `--border`. Left = `strong` title (12–13px/700 `--text`, ellipsis) + `span`
-  subline (11–12px `--subtle`). Right = `badges` cluster (flex, gap 5–6px).
+- **List row** [EXTRACTED + DEC-UIUX-A5-001]: `row` grid `1fr auto`,
+  `min-height:39–44px`, bottom 1px `--border`. Left = `strong` title
+  (12–13px/700 `--text`, ellipsis) + `span` readable subline (11–12px
+  `--muted`). Right = `badges` cluster (flex, gap 5–6px).
 - **Payment row** [EXTRACTED]: grid `icon 22–24px / 1fr / auto`. `flowIcon`
   circle (`--lavender-soft`/`--primary`, `.pay`→`--peach-soft`/`--warning`).
   Right = `.money` value + status badge.
@@ -450,9 +474,9 @@ exact tokens.
   (`margin:0 -16/-18px; padding-left/right:16/18px`), bg `#EAF1FF`, left 2px
   `--primary` border. This is the canonical **selected/new-item visual** for
   rows.
-- **Payment summary pill** [EXTRACTED]: `paymentSummary` pill, height 24–26px,
-  bg `--mint-soft`, `--muted` label, `.money` in `--success`. Pinned bottom-right
-  via `footer{margin-top:auto}`.
+- **Payment summary pill** [EXTRACTED + DEC-UIUX-A5-001]: `paymentSummary` pill,
+  height 24–26px, bg `--mint-soft`, `--muted` label, `.money` in
+  `--success-ink`. Pinned bottom-right via `footer{margin-top:auto}`.
 
 ### 7.8 Compact strip-card (focus right strip) (→ CMP-014 compact)
 
@@ -483,9 +507,10 @@ dot in top row.
 
 - **Primary** [EXTRACTED]: 38px, capsule, bg `--primary`, border `--primary`,
   white, weight 700, padding `0 14px`. Hover → `--primary-hover` [DERIVED].
-- **Ghost / secondary** [EXTRACTED]: 38px (34px ghost in focus), capsule, white,
-  1px `--border`, `--muted`/700. Focus-stage `ghost`/`chip` add `--badge-shadow`;
-  `chip` = `--section` bg, `--subtle`, 12px (used for `Esc 返回` hint).
+- **Ghost / secondary** [EXTRACTED + DEC-UIUX-A5-001]: 38px (34px ghost in
+  focus), capsule, white, 1px `--border`, `--muted`/700. Focus-stage
+  `ghost`/`chip` add `--badge-shadow`; `chip` = `--section` bg, `--muted`, 12px
+  (used for readable `Esc 返回` hint).
 
 ### 7.12 KPI stat card (→ CMP-014 Metric Tile)
 
@@ -521,15 +546,16 @@ deferred to `interaction-spec.md` (Part B).** Reconcile names 1:1 with
 | **disabled** | `opacity:0.45`; remove `--badge-shadow`/lift; `cursor:not-allowed`; keep label legible (no color inversion). Disabled actions still explain the missing requirement per `screen-state-spec.md` where safe. | [DERIVED] |
 | **loading** | Skeleton: replace text/number with rounded (`999px` for pills, `--radius` for blocks) placeholder filled `--section` `#F6F7FD`; container keeps its size (layout-stable per `screen-state-spec.md`). Shimmer motion → UX spec. Inline action loading → spinner in `--primary` on white. | [DERIVED] |
 | **empty** | Card body shows a centered empty message in `--muted` + optional 40px `--lavender-soft` icon badge + an allowed next-action ghost button. Names the missing data type; no unauthorized action (per CMP-018). | [DERIVED] |
-| **error** | Inline/section alert: `#FEE2E2` bg, `--danger` text/icon, 1px ring `color-mix(in srgb, var(--danger) 30%, #fff)`, `--radius`. Field error: 1px `--danger` border + message below in `--danger` 12px. Safe summaries only (per CMP-010); never echo restricted values. | [DERIVED] (danger soft fill extracted) |
+| **error** | Inline/section alert: `#FEE2E2` bg, `--danger-ink` text, `--danger` icon, 1px ring `color-mix(in srgb, var(--danger) 30%, #fff)`, `--radius`. Field error: 1px `--danger` border + message below in `--danger-ink` 12px. Safe summaries only (per CMP-010); never echo restricted values. | [DERIVED + DEC-UIUX-A5-001] (danger soft fill extracted) |
 | **permission-denied** | `CMP-017` panel: neutral card, `--section` icon badge, `--muted` safe denial message, return ghost button. No restricted record name/existence, no danger styling (denial is not an error), no bypass action. | [DERIVED] |
-| **optimistic-update** | Show the projected value immediately at reduced emphasis: value at `opacity:0.65` (or `--subtle`), no success badge yet; the new row uses the `.arrived` highlight idiom. On confirm → success; on failure → error + revert. Static look only; transition timing → UX spec. | [DERIVED] |
-| **success** | Success pill/badge `--mint-soft` / `--success` (extracted); value resolves to full emphasis `--text`/`--success`; section success alert `--mint-soft` bg + `--success` text. Must identify the changed record (per `screen-state-spec.md`). | [EXTRACTED] base tokens |
+| **optimistic-update** | Show the projected value immediately at reduced emphasis using `--muted` for readable projected text; do not lower text opacity below AA. No success badge yet; the new row uses the `.arrived` highlight idiom. On confirm → success; on failure → error + revert. Static look only; transition timing → UX spec. | [DERIVED + DEC-UIUX-A5-001] |
+| **success** | Success pill/badge `--mint-soft` / `--success-ink` for text; success icons/graphs may keep `--success`. Value resolves to full emphasis `--text`/`--success-ink`; section success alert `--mint-soft` bg + `--success-ink` text. Must identify the changed record (per `screen-state-spec.md`). | [EXTRACTED base tokens + DEC-UIUX-A5-001] |
 
 Accessibility (carried from companion specs): focus indicator always visible;
 target ≥44px where practical; status conveyed by text + color, never color
-alone; contrast meets WCAG AA. The soft pastel-on-white badge fills already pair
-dark semantic text with light tints for legibility.
+alone; contrast meets WCAG AA. Readable colored text on soft pastel fills uses
+the `*-ink` text-only tokens in Appendix A; decorative icons, swatches, graph
+strokes, fills, and borders keep the locked source tokens.
 
 ---
 
@@ -596,8 +622,9 @@ there.
   rule, the overflow-safe panel recipe, and the data-viz decision table.
 - **Gate**: marked as the **G4c design-system deliverable**.
 - **Locked palette**: v4 premium soft-modern, APPROVED. No recolor; no new brand
-  colors. Any future color need must reuse an existing token or be raised as a
-  formal change.
+  colors. DEC-UIUX-A5-001 is the only approved exception and is limited to the
+  text-only `*-ink` tokens in Appendix A. Any future color need must reuse an
+  existing token or be raised as a formal change.
 
 ### Derived-value index (for spot-check)
 
@@ -608,7 +635,10 @@ Values **not** in the locked CSS, defined here consistently:
 - Focus ring `0 0 0 3px color-mix(... 35% ...)` (§8) — idiom borrowed from the
   live-dot halo.
 - `disabled opacity:0.45`, loading skeleton fill = `--section`, empty/error/
-  permission-denied/optimistic panel treatments (§8).
+  permission-denied/optimistic panel treatments (§8), revised by
+  DEC-UIUX-A5-001 where readable text is involved.
+- Text-only `*-ink` colors in Appendix A — contrast-only derivatives approved by
+  DEC-UIUX-A5-001.
 - Card/button hover-lift and primary-button `--primary-hover` on hover (§8) —
   table-row hover `#EAF1FF` is extracted; card/button hover is derived.
 - All mobile/tablet token specifics (§6.6) — desktop fidelity delivered;
@@ -620,3 +650,73 @@ hover, focused, selected/active, loading (skeleton shimmer + inline spinner
 spin), optimistic-update (projected→confirmed/revert transition), success
 (appearance), and the entire **Card→Focus** transition (collapse/expand/dim
 sequence). UI owns their static look; UX owns their timing/easing/sequence.
+
+---
+
+## Appendix A — Accessibility Token Exception (DEC-UIUX-A5-001)
+
+Decision date: 2026-06-07. This appendix records the approved A5/C6 resolution
+for BLK-UIUX-G9-001. It is binding for UIUX-001 and all downstream UI/UX
+implementation tasks.
+
+### A.1 Scope
+
+The locked palette remains unchanged for:
+
+- Backgrounds and soft surfaces: `--card`, `--section`, `--app`, `#EAF1FF`,
+  `--lavender-soft`, `--sky-soft`, `--mint-soft`, `--peach-soft`,
+  `--purple-soft`, `#FEE2E2`.
+- Solid fills, graph strokes, legend dots, swatches, and icon colors:
+  `--primary`, `--primary-hover`, `--lavender`, `--sky`, `--mint`, `--peach`,
+  `--purple`, `--success`, `--warning`, `--danger`.
+- Borders, shadows, radius, spacing, typography scale, and motion references.
+
+Only readable colored text may use the new `*-ink` tokens. They must not be used
+for any fill/background/button/chip background, border, icon, graph, legend, or
+decorative mark. Readable secondary text uses `--muted`; `--subtle` is
+non-text/decorative/disabled-only.
+
+### A.2 Derivation Method
+
+Each `*-ink` token keeps the source token's HSL hue and saturation, lowers only
+HSL lightness, then rounds to 8-bit sRGB hex. The selected hex is the first
+distinct rounded color that reaches WCAG AA normal-text contrast (4.5:1) against
+all intended backgrounds: `--card` `#FFFFFF`, `--section` `#F6F7FD`, and the
+corresponding soft surface. Large or bold text therefore also exceeds the 3:1
+AA threshold.
+
+### A.3 Approved Text-only Tokens
+
+| Token | Hex | Source | Previous lighter rounded hex | Previous min contrast | Selected min contrast |
+|---|---|---|---|---:|---:|
+| `--success-ink` | `#11803A` | `--success` `#16A34A` | `#11813A` | 4.47 | 4.53 |
+| `--warning-ink` | `#A55A05` | `--warning` `#D97706` | `#A55B05` | 4.49 | 4.53 |
+| `--danger-ink` | `#CC2121` | `--danger` `#DC2626` | `#CD2121` | 4.48 | 4.52 |
+| `--purple-ink` | `#7D4CE4` | `--purple` `#B79CF0` | `#7D4DE4` | 4.49 | 4.52 |
+
+### A.4 WCAG Contrast Table
+
+| Text token | On `--card` `#FFFFFF` | On `--section` `#F6F7FD` | On corresponding soft surface | Result |
+|---|---:|---:|---:|---|
+| `--success-ink` `#11803A` | 5.03 | 4.71 | 4.53 on `--mint-soft` `#E5F7F0` | Pass AA normal text |
+| `--warning-ink` `#A55A05` | 5.17 | 4.83 | 4.53 on `--peach-soft` `#FDEDE5` | Pass AA normal text |
+| `--danger-ink` `#CC2121` | 5.52 | 5.16 | 4.52 on danger soft `#FEE2E2` | Pass AA normal text |
+| `--purple-ink` `#7D4CE4` | 5.22 | 4.88 | 4.52 on `--purple-soft` `#F2ECFD` | Pass AA normal text |
+| `--muted` `#475569` | 7.58 | 7.09 | N/A | Pass AA normal text for secondary copy |
+
+### A.5 Token Diff
+
+Added tokens only:
+
+```css
+--success-ink: #11803A;
+--warning-ink: #A55A05;
+--danger-ink: #CC2121;
+--purple-ink: #7D4CE4;
+```
+
+No existing locked token value is modified. In particular, the failing original
+colors remain byte-for-byte unchanged for decorative/original roles:
+`--subtle #94A3B8`, `--success #16A34A`, `--warning #D97706`,
+`--danger #DC2626`, `--purple #B79CF0`, `--mint-soft #E5F7F0`,
+`--peach-soft #FDEDE5`, `#FEE2E2`, and `--purple-soft #F2ECFD`.

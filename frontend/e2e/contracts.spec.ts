@@ -65,7 +65,7 @@ test('TEST-CONTRACT-LIFECYCLE-002 rejects signing without signed effective date 
   await page.getByLabel('签署/生效日期').fill('2027-12-15');
   await page.getByRole('button', { name: '签署', exact: true }).click();
   await expect(page.getByText('状态：已签署')).toBeVisible();
-  await expect(page.getByText('2027-12-15')).toBeVisible();
+  await expect(page.locator('dl.detailGrid dd', { hasText: '2027-12-15' }).first()).toBeVisible();
 
   await page.getByRole('button', { name: '启用', exact: true }).click();
   await expect(page.getByText('状态：启用')).toBeVisible();

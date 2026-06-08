@@ -19,8 +19,8 @@ test('TEST-ARCHIVE-001/003/004 TEST-INV-ARCHIVEBLOCK-001 and TEST-ABUSE-ARCHIVED
 
   await page.getByRole('button', { name: '公司/客户' }).click();
   await page.getByLabel('搜索').fill(companyName);
-  await page.getByRole('button', { name: '搜索' }).click();
-  await page.getByRole('button', { name: companyName }).click();
+  await page.getByRole('button', { name: '应用筛选' }).click();
+  await page.getByRole('button', { name: new RegExp(`查看 ${escapeRegExp(companyName)}`) }).click();
 
   await page.getByRole('button', { name: '归档', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('仍有未完成事项');
@@ -29,11 +29,11 @@ test('TEST-ARCHIVE-001/003/004 TEST-INV-ARCHIVEBLOCK-001 and TEST-ABUSE-ARCHIVED
   await completeTask(page, task.id, task.version);
   await page.getByRole('button', { name: '归档', exact: true }).click();
   await page.getByRole('button', { name: '确认归档' }).click();
-  await expect(page.getByRole('button', { name: companyName })).toHaveCount(0);
+  await expect(page.getByRole('table', { name: '客户结果表' }).getByText(companyName)).toHaveCount(0);
 
   await page.getByLabel('包含已归档').check();
-  await page.getByRole('button', { name: '搜索' }).click();
-  await expect(page.getByRole('button', { name: companyName })).toBeVisible();
+  await page.getByRole('button', { name: '应用筛选' }).click();
+  await expect(page.getByRole('table', { name: '客户结果表' }).getByText(companyName)).toBeVisible();
 });
 
 async function createAccount(page: import('@playwright/test').Page, companyName: string) {
@@ -81,4 +81,8 @@ async function completeTask(page: import('@playwright/test').Page, taskId: strin
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(JSON.stringify(body));
   }, { taskId, expectedVersion });
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

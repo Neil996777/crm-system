@@ -20,7 +20,8 @@ test('TEST-DUPLICATE-WARN-001/005 account duplicate warning proceeds without mer
   await page.getByLabel('客户状态').fill('Prospect');
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存客户' }).click();
-  await expect(page.getByRole('button', { name: companyName })).toBeVisible();
+  await expect(page.getByLabel('客户详情').getByRole('heading', { name: companyName })).toBeVisible();
+  await page.getByRole('button', { name: '返回客户列表' }).click();
 
   await page.getByRole('button', { name: '新建客户' }).click();
   await page.getByLabel('公司名称').fill(`  ${companyName.toUpperCase()}  `);
@@ -30,7 +31,10 @@ test('TEST-DUPLICATE-WARN-001/005 account duplicate warning proceeds without mer
 
   await expect(page.getByRole('alert')).toContainText('可能重复');
   await page.getByRole('button', { name: '仍然创建' }).click();
-  await expect(page.getByRole('button', { name: companyName })).toHaveCount(2);
+  await page.getByRole('button', { name: '返回客户列表' }).click();
+  await page.getByLabel('搜索').fill(companyName);
+  await page.getByRole('button', { name: '应用筛选' }).click();
+  await expect(page.getByRole('table', { name: '客户结果表' }).getByText(new RegExp(companyName, 'i'))).toHaveCount(2);
 });
 
 test('TEST-DUPLICATE-WARN-004 lead duplicate warning and unique no-warning path', async ({ page }) => {
@@ -48,7 +52,8 @@ test('TEST-DUPLICATE-WARN-004 lead duplicate warning and unique no-warning path'
   await page.getByLabel('邮箱').fill(email.toUpperCase());
   await page.getByLabel('电话').fill(`+86 ${phone}`);
   await page.getByRole('button', { name: '保存线索' }).click();
-  await expect(page.getByRole('button', { name: companyName })).toBeVisible();
+  await expect(page.getByLabel('线索详情').getByRole('heading', { name: companyName })).toBeVisible();
+  await page.getByRole('button', { name: '返回线索列表' }).click();
 
   await page.getByRole('button', { name: '新建线索' }).click();
   await page.getByLabel('公司名称').fill(` ${companyName.toLowerCase()} `);
@@ -60,7 +65,10 @@ test('TEST-DUPLICATE-WARN-004 lead duplicate warning and unique no-warning path'
 
   await expect(page.getByRole('alert')).toContainText('可能重复');
   await page.getByRole('button', { name: '仍然创建' }).click();
-  await expect(page.getByRole('button', { name: companyName })).toHaveCount(2);
+  await page.getByRole('button', { name: '返回线索列表' }).click();
+  await page.getByLabel('搜索').fill(companyName);
+  await page.getByRole('button', { name: '应用筛选' }).click();
+  await expect(page.getByRole('table', { name: '线索结果表' }).getByText(new RegExp(companyName, 'i'))).toHaveCount(2);
 
   await page.getByRole('button', { name: '新建线索' }).click();
   await page.getByLabel('公司名称').fill(uniqueCompany);
@@ -68,5 +76,5 @@ test('TEST-DUPLICATE-WARN-004 lead duplicate warning and unique no-warning path'
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存线索' }).click();
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: uniqueCompany })).toBeVisible();
+  await expect(page.getByLabel('线索详情').getByRole('heading', { name: uniqueCompany })).toBeVisible();
 });

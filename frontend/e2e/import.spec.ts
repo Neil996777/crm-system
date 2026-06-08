@@ -27,9 +27,17 @@ test('TEST-CSV-IMPORT-001/002 imports valid CSV rows and shows row errors', asyn
   });
   await page.getByRole('button', { name: '开始导入' }).click();
 
-  await expect(page.getByText('已导入 1 / 2 行')).toBeVisible();
+  const importResult = page.getByRole('region', { name: '导入结果' });
+  await expect(importResult).toContainText('总行数');
+  await expect(importResult).toContainText('成功数');
+  await expect(importResult).toContainText('失败数');
+  await expect(page.getByLabel('导入结果字段')).toContainText('2');
+  await expect(page.getByRole('table', { name: '导入逐行错误表' })).toBeVisible();
   await expect(page.getByText('第 3 行')).toBeVisible();
+  await expect(page.getByLabel('审计与清理').first()).toContainText('审计记录状态');
+  await expect(page.getByLabel('审计与清理').first()).toContainText('清理状态');
+  await expect(page.getByLabel('审计与清理').first()).toContainText('保留至');
 
-  await page.getByRole('button', { name: '线索', exact: true }).click();
+  await page.getByLabel('主导航').getByRole('button', { name: '线索', exact: true }).click();
   await expect(page.getByText(companyName)).toBeVisible();
 });

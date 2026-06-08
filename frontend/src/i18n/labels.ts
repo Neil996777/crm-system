@@ -93,8 +93,23 @@ export const reminderTypeLabel: Record<string, string> = {
   payment_overdue: '回款逾期'
 };
 
+export const priorityLabel: Record<string, string> = {
+  P0: 'P0',
+  P1: 'P1',
+  P2: 'P2',
+  P3: 'P3'
+};
+
 export const objectTypeLabel: Record<string, string> = {
   lead: '线索',
+  opportunity: '商机',
+  account: '客户',
+  contact: '联系人',
+  contract: '合同',
+  quote: '报价',
+  payment: '回款',
+  task: '任务',
+  user: '用户',
   Lead: '线索',
   Opportunity: '商机',
   Account: '客户',
@@ -148,6 +163,12 @@ export const reportArchiveFilterLabel: Record<string, string> = {
   active_default: '默认仅活动记录',
   include_archived: '包含已归档',
   archived_only: '仅已归档'
+};
+
+export const fileSafetyLabel: Record<string, string> = {
+  dangerous_cells_prefixed: '危险单元格已安全前缀化',
+  safe: '安全',
+  Safe: '安全'
 };
 
 export const errorMessageZh: Record<string, string> = {

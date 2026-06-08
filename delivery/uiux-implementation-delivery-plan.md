@@ -1,10 +1,12 @@
 # UI/UX Implementation Delivery Plan
 
-Status: **G7/G8 task package produced for Claude G8 handoff audit**. No
-implementation has started.
+Status: **UI/UX G9 in progress — UIUX-001 DEC-UIUX-A5-001 token checkpoint
+returned for Claude token re-audit**. Full frontend implementation has not
+started beyond this token/documentation checkpoint.
 Date: 2026-06-06
-Owner platform: Codex (design/production task package).
-Next reviewer: Claude (independent G8 design/planning handoff audit).
+Owner platform: Codex (G9 execution).
+Next reviewer: Claude (DEC-UIUX-A5-001 token re-audit before remaining
+UIUX-001 foundation and downstream UIUX-002..014 work).
 
 ## Scope
 
@@ -54,7 +56,11 @@ Recommended file targets for G9:
   design-system app shell, not replaced with a new routing model.
 
 All values must be copied or directly derived from `docs/ux-ui/design-system.md`.
-Do not recolor, invent new visual tokens, or introduce an alternate theme.
+Do not recolor, invent new visual tokens, or introduce an alternate theme. The
+only approved color-token addition is DEC-UIUX-A5-001's text-only `*-ink`
+contrast set; it may be used for readable text only and never for fills,
+backgrounds, buttons, badge/chip backgrounds, borders, icons, graphs, or legend
+marks.
 
 ## Locked Constraints For Every Task
 
@@ -130,4 +136,3 @@ The implementation agent should run, at minimum:
 - Manual or browser evidence for representative desktop pages: 工作台, 商机列表
   manager and sales variants, 商机详情, 商机表单, 报表, 提醒中心, 导入/导出,
   用户与角色, 操作日志.
-

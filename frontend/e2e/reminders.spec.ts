@@ -20,15 +20,18 @@ test('TEST-REMINDER-001/002/003 groups task contract and payment reminders by bu
 
   await page.getByRole('button', { name: '提醒中心' }).click();
   await expect(page.getByRole('heading', { name: '提醒中心' })).toBeVisible();
+  await expect(page.getByLabel('提醒统计').locator('.metricTile')).toHaveCount(5);
   await page.getByLabel('业务日期').fill('2026-06-02');
   await page.getByRole('button', { name: '刷新提醒', exact: true }).click();
 
-  await expect(page.getByRole('heading', { name: '任务提醒' })).toBeVisible();
-  await expect(page.getByText(`Reminder task ${key}`)).toBeVisible();
-  await expect(page.getByRole('heading', { name: '合同提醒' })).toBeVisible();
-  await expect(page.getByText(`opp_contract_${key}`)).toBeVisible();
-  await expect(page.getByRole('heading', { name: '回款提醒' })).toBeVisible();
-  await expect(page.getByText(`opp_payment_${key}`)).toBeVisible();
+  await expect(page.getByRole('heading', { name: '待处理提醒' })).toBeVisible();
+  await expect.poll(async () => page.locator('.reminderCard').count(), { timeout: 15_000 }).toBeGreaterThan(2);
+  await expect(page.locator('.reminderCard').filter({ hasText: '任务逾期' }).first()).toContainText('P1');
+  await expect(page.locator('.reminderCard').filter({ hasText: '合同待签署' }).first()).toContainText('P1');
+  await expect(page.locator('.reminderCard').filter({ hasText: '回款逾期' }).first()).toContainText('P1');
+  await expect(page.getByLabel('提醒数据范围')).toContainText('仅本人提醒');
+  await expect(page.locator('.reminderCard').first()).not.toContainText('task_overdue');
+  await expect(page.locator('.reminderCard').first()).not.toContainText('contract_pending_signature');
 });
 
 test('TEST-REMINDER-004 suppresses completed task reminders after refresh', async ({ page }) => {
@@ -37,7 +40,9 @@ test('TEST-REMINDER-004 suppresses completed task reminders after refresh', asyn
   await page.getByRole('button', { name: '提醒中心' }).click();
   await page.getByLabel('业务日期').fill('2026-06-02');
   await page.getByRole('button', { name: '刷新提醒', exact: true }).click();
-  await expect(page.getByText(task.title)).toBeVisible();
+  const cards = page.locator('.reminderCard');
+  await expect.poll(async () => cards.count()).toBeGreaterThan(0);
+  const beforeCount = await cards.count();
 
   await page.evaluate(async ({ id, version }) => {
     const response = await fetch(`/api/tasks/${id}/status`, {
@@ -50,7 +55,7 @@ test('TEST-REMINDER-004 suppresses completed task reminders after refresh', asyn
   }, { id: task.id, version: task.version });
 
   await page.getByRole('button', { name: '刷新提醒', exact: true }).click();
-  await expect(page.getByText(task.title)).toHaveCount(0);
+  await expect(cards).toHaveCount(beforeCount - 1);
 });
 
 async function createReminderData(page: import('@playwright/test').Page, key: string) {

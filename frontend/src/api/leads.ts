@@ -16,6 +16,10 @@ export type Lead = {
   invalidReason: string;
   convertedAccountId: string;
   convertedOpportunityId: string;
+  archived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
+  archiveReason?: string;
   version: number;
   updatedAt: string;
 };
@@ -47,8 +51,11 @@ function unwrap<T>(response: GatewayEnvelope<T>) {
   return response.data;
 }
 
-export async function listLeads(search: string) {
-  const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+export async function listLeads(search: string, includeArchived = false) {
+  const params = new URLSearchParams();
+  if (search.trim()) params.set('search', search.trim());
+  if (includeArchived) params.set('includeArchived', 'true');
+  const query = params.toString() ? `?${params.toString()}` : '';
   const response = await apiRequest<GatewayEnvelope<{ items: Lead[] }>>(`/api/leads${query}`);
   return unwrap(response);
 }
@@ -118,6 +125,22 @@ export async function convertLead(lead: Lead, expectedAmount: string, expectedCl
         }
       }
     })
+  });
+  return unwrap(response);
+}
+
+export async function transferLeadOwner(lead: Lead, toOwnerId: string, reason: string) {
+  const response = await apiRequest<GatewayEnvelope<Lead>>(`/api/leads/${lead.id}/owner-transfer`, {
+    method: 'POST',
+    body: JSON.stringify({ expectedVersion: lead.version, toOwnerId, reason })
+  });
+  return unwrap(response);
+}
+
+export async function archiveLead(lead: Lead, reason: string) {
+  const response = await apiRequest<GatewayEnvelope<Lead>>(`/api/leads/${lead.id}/archive`, {
+    method: 'POST',
+    body: JSON.stringify({ expectedVersion: lead.version, reason })
   });
   return unwrap(response);
 }

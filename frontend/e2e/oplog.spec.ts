@@ -17,15 +17,20 @@ test('TEST-OPLOG-001/002/005 administrator sees read-only global operation logs'
   await page.getByRole('button', { name: '操作日志' }).click();
   await expect(page.getByRole('heading', { name: '操作日志' })).toBeVisible();
 
-  const logTable = page.getByLabel('操作日志表');
-  await expect(logTable).toContainText('EVT-USER-ADMIN-CHANGED');
-  await expect(logTable).toContainText('新建用户');
-  await expect(logTable).toContainText('usr_seed_admin');
-  await expect(logTable).toContainText('用户');
-  await expect(logTable).toContainText('成功');
-  await expect(logTable).toContainText('变更前');
-  await expect(logTable).toContainText('变更后');
-  await expect(logTable.getByRole('button', { name: /编辑|删除|保存|edit|delete|save/i })).toHaveCount(0);
+  const logList = page.getByLabel('只读审计列表');
+  await expect(logList).toContainText('EVT-USER-ADMIN-CHANGED');
+  await expect(logList).toContainText('新建用户');
+  await expect(logList).toContainText('用户');
+  await expect(logList).toContainText('成功');
+  await expect(logList).toContainText('安全摘要');
+  await expect(logList).toContainText('管理员执行新建用户');
+  await expect(logList).toContainText('事件哈希');
+  await expect(page.getByLabel('操作日志表')).toHaveCount(0);
+  await expect(logList).not.toContainText('变更前');
+  await expect(logList).not.toContainText('变更后');
+  await expect(logList.getByRole('button', { name: /编辑|删除|保存|edit|delete|save/i })).toHaveCount(0);
+  await expect(page.getByLabel('分页')).toBeVisible();
+  await expect(page.getByLabel('操作日志门控说明')).toContainText('不可编辑');
 });
 
 test('TEST-OPLOG-004 sales is denied global operation logs without leakage', async ({ page }) => {

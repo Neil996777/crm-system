@@ -36,7 +36,7 @@ test('TEST-QUOTE-LIFECYCLE-002 shows expired quote warning and blocks contract l
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存报价' }).click();
 
-  await page.getByRole('button', { name: opportunityId }).click();
+  await expect(page.getByLabel('报价详情').getByRole('heading', { name: opportunityId })).toBeVisible();
   await page.getByRole('button', { name: '标记过期', exact: true }).click();
 
   await expect(page.getByText('状态：已过期')).toBeVisible();
@@ -56,7 +56,7 @@ test('TEST-QUOTE-ACCEPT-001 creates sends and accepts a quote with contract link
   await page.getByLabel('负责人 ID').fill('sales-1');
   await page.getByRole('button', { name: '保存报价' }).click();
 
-  await page.getByRole('button', { name: opportunityId }).click();
+  await expect(page.getByLabel('报价详情').getByRole('heading', { name: opportunityId })).toBeVisible();
   await expect(page.getByText('状态：草稿')).toBeVisible();
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await expect(page.getByText('状态：已发送')).toBeVisible();

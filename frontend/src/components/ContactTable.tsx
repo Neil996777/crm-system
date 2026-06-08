@@ -6,7 +6,8 @@ export function ContactTable({ contacts }: { contacts: Contact[] }) {
   }
 
   return (
-    <table className="dataTable" aria-label="联系人">
+    <div className="tableWrap">
+      <table className="dataTable" aria-label="联系人">
       <thead>
         <tr>
           <th>姓名</th>
@@ -25,6 +26,7 @@ export function ContactTable({ contacts }: { contacts: Contact[] }) {
           </tr>
         ))}
       </tbody>
-    </table>
+      </table>
+    </div>
   );
 }

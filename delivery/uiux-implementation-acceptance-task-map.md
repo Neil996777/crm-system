@@ -1,6 +1,6 @@
 # UI/UX Implementation Acceptance → Task Map
 
-Status: **G7/G8 coverage proof for Claude G8 audit**.
+Status: **G9 coverage proof updated for DEC-UIUX-A5-001 token checkpoint**.
 Scope: UI/UX completion only. This map does not replace the historical
 `delivery/acceptance-task-map.md`; it adds the follow-on design-realization task
 coverage for ACC-018 and ACC-023 plus the UI/UX yardstick A1-A9/C1-C6.
@@ -20,7 +20,7 @@ backend/API/reporting semantics.
 
 | Yardstick | Requirement | Tasks | Objective audit hook |
 |---|---|---|---|
-| A1 | React design system from locked tokens/components | UIUX-001, UIUX-002, UIUX-003, UIUX-004, UIUX-005, UIUX-006, UIUX-007 | Token diff against `design-system.md`; pages use shared primitives; no new color token. |
+| A1 | React design system from locked tokens/components | UIUX-001, UIUX-002, UIUX-003, UIUX-004, UIUX-005, UIUX-006, UIUX-007 | Token diff against `design-system.md`; pages use shared primitives; no new color token except DEC-UIUX-A5-001 text-only `*-ink` additions. |
 | A2 | 14 nav pages mapped to 9 page types; 8 CRUD entities reuse patterns | UIUX-002, UIUX-003, UIUX-004, UIUX-005, UIUX-006, UIUX-007 | Page-by-page inspection against mockups and nav list. |
 | A3 | Canonical states implemented | UIUX-008 plus page tasks UIUX-002..007 | Representative state checks for loading/empty/error/disabled/selected/focused/hover/permission-denied/optimistic-update/success. |
 | A4 | Reviewed role/permission gates | UIUX-003, UIUX-004, UIUX-007, UIUX-009, UIUX-014 | Sales bulk actions hidden, terminal read-only, form terminal stages excluded, admin-only pages, last-admin disabled affordance. |
@@ -73,4 +73,3 @@ backend/API/reporting semantics.
 | UIUX-012 | A7 conservative motion/reduced-motion |
 | UIUX-013 | A8/A9 folded observations |
 | UIUX-014 | C5 e2e and final evidence |
-
