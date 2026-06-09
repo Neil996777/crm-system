@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'admin@example.com';
 const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'AdminChangeMe-001!';
@@ -46,7 +46,10 @@ test('TEST-UIUX-DASHBOARD-001 renders manager dashboard 8 cards and per-card foc
   await expect(page.getByLabel('管端工作台数据卡')).toContainText('团队最近活动');
   await expect(page.getByRole('button', { name: '专注模式' })).toHaveCount(0);
 
-  await page.getByRole('button', { name: '展开团队销售漏斗' }).click();
+  const managerFunnelCard = page.locator('[data-dashboard-card="funnel"]');
+  await expect(managerFunnelCard).toHaveAttribute('role', 'button');
+  await expect(managerFunnelCard).toHaveAttribute('tabindex', '0');
+  await managerFunnelCard.click();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('.shell.focusMode')).toBeVisible();
   await expect(page.getByRole('heading', { name: '团队销售漏斗' })).toBeVisible();
@@ -57,13 +60,21 @@ test('TEST-UIUX-DASHBOARD-001 renders manager dashboard 8 cards and per-card foc
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
   await expect(page.locator('.shell.focusMode')).toHaveCount(0);
-  await page.getByRole('button', { name: '展开团队最近活动' }).click();
+  await page.locator('[data-dashboard-card="activity"]').click();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await page.getByRole('button', { name: '返回' }).click();
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
 });
 
 test('TEST-UIUX-A6-001 dashboard remains stable on narrow desktop viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+  await expectDashboardCardsNotClipped(page);
+
+  await page.setViewportSize({ width: 1680, height: 900 });
+  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+  await expectDashboardCardsNotClipped(page);
+
   await page.setViewportSize({ width: 900, height: 720 });
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
   await expect(page.locator('section[aria-label="今日实时战报"]')).toBeVisible();
@@ -90,7 +101,7 @@ test('TEST-UIUX-DASHBOARD-002 renders sales personal dashboard variant without m
   await expect(page.getByLabel('销售工作台数据卡')).toContainText('我的最近活动');
   await expect(page.getByLabel('销售工作台数据卡')).not.toContainText('销售业绩榜');
 
-  await page.getByRole('button', { name: '展开我的销售漏斗' }).click();
+  await page.locator('[data-dashboard-card="funnel"]').click();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.getByRole('heading', { name: '我的销售漏斗' })).toBeVisible();
   await expect(page.getByLabel('折叠卡片').locator('.sideCard')).toHaveCount(5);
@@ -101,7 +112,10 @@ test('TEST-UIUX-DASHBOARD-002 renders sales personal dashboard variant without m
 test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps between states', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
-  await page.getByRole('button', { name: '展开团队回款到账' }).click();
+  const paymentsCard = page.locator('[data-dashboard-card="payments"]');
+  await paymentsCard.focus();
+  await expect(paymentsCard).toBeFocused();
+  await page.keyboard.press(' ');
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('.shell.focusMode')).toBeVisible();
   await expect(page.getByLabel('折叠卡片').locator('.sideCard')).toHaveCount(7);
@@ -121,6 +135,22 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('邮箱').fill(email);
   await page.getByLabel('密码').fill(password);
   await page.getByRole('button', { name: '登录' }).click();
+}
+
+async function expectDashboardCardsNotClipped(page: Page) {
+  const clippedCards = await page.locator('[data-dashboard-card]').evaluateAll((cards) => (
+    cards
+      .map((card) => {
+        const element = card as HTMLElement;
+        return {
+          key: element.dataset.dashboardCard ?? '',
+          verticalOverflow: element.scrollHeight - element.clientHeight,
+          horizontalOverflow: element.scrollWidth - element.clientWidth
+        };
+      })
+      .filter((card) => card.verticalOverflow > 1 || card.horizontalOverflow > 1)
+  ));
+  expect(clippedCards).toEqual([]);
 }
 
 async function createUser(page: import('@playwright/test').Page, email: string, displayName: string, role: 'Sales Manager' | 'Sales') {

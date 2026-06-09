@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
@@ -439,8 +439,22 @@ function dashboardCards(model: DashboardModel, isManagerView: boolean): Dashboar
 }
 
 function DashboardPanel({ card, onFocus }: { card: DashboardCard; onFocus: () => void }) {
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onFocus();
+  };
+
   return (
-    <article className="card dashboardPanel" data-dashboard-card={card.key} aria-label={card.title}>
+    <article
+      className="card dashboardPanel"
+      data-dashboard-card={card.key}
+      aria-label={`展开${card.title}`}
+      role="button"
+      tabIndex={0}
+      onClick={onFocus}
+      onKeyDown={handleKeyDown}
+    >
       <div className="dashboardPanelHeader">
         <div className="titleGroup">
           <span className={`panelIcon ${card.tone ?? ''}`}>{card.sideIcon}</span>
@@ -449,9 +463,9 @@ function DashboardPanel({ card, onFocus }: { card: DashboardCard; onFocus: () =>
             <div className="panelMeta">{card.meta}</div>
           </div>
         </div>
-        <button className="expand" type="button" aria-label={`展开${card.title}`} onClick={onFocus}>
+        <span className="expand" aria-hidden="true">
           <Expand size={16} aria-hidden="true" />
-        </button>
+        </span>
       </div>
       {card.children}
     </article>

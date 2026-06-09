@@ -9,6 +9,24 @@ Status values: `Open` / `In Review` / `Resolved` / `Formal Scope Change by User`
 No-downgrade rule applies: a blocker touching a P0/P1 acceptance may only move to
 `Resolved` (with the deciding source recorded) or `Formal Scope Change by User`.
 
+## UI/UX Post-G12 Spot-Fix — RESOLVED (release-owner live-use feedback, 2026-06-08→09)
+
+Found by the release owner on the live dashboard immediately after UI/UX G12 PASS.
+Both are genuine; the A6 clipping is a real miss in Claude's closing sweep (fidelity
+checked structure + Card→Focus, but not per-card content fit under the fixed row
+height). Frontend-only fix; both **Resolved** after Claude re-verification 2026-06-09
+(independent build + e2e 49/49 + 1440px dashboard screenshot). See gate-status
+Post-G12 spot-fix row = Gate Passed.
+
+| ID | Finding | Owner | Blocks | Touches | Status | Opened |
+|---|---|---|---|---|---|---|
+| BLK-UIUX-G12-004 | **Dashboard card content clipped (A6 no-overflow).** `frontend/src/styles/design-system.css` `.managerDashboardGrid { grid-auto-rows: 268px }` (and `.salesDashboardGrid { 308px }`) force a fixed row height while `.dashboardPanel { overflow: hidden }` crops anything taller — so 团队销售漏斗 (header + 5 funnel rows) and 团队商机阶段构成 (donut + 6-item legend) lose their last rows. Fix frontend-only: let cards size to content (e.g. `grid-auto-rows: minmax(268px, auto)` / `auto`, and/or drop the cropping `overflow:hidden`) so funnel and donut legend fully show without clipping; verify at 1440px and wider; keep visual rhythm. | Codex (execution) | UI/UX G12 re-confirm | A6, C6 | **Resolved** | 2026-06-08 |
+| | **Codex return (2026-06-09):** `.managerDashboardGrid` / `.salesDashboardGrid` now use content-adaptive `grid-auto-rows: minmax(..., auto)`; `.dashboardPanel`, `.pipelineViz`, `.dashboardList`, `.paymentRows`, and `.timeline` no longer crop dashboard content. `overview.spec.ts` adds 1440px and 1680px per-card scroll/client checks, plus the existing 900px no-horizontal-overflow check. Evidence: `delivery/uiux-g12-post-pass-spotfix-evidence-2026-06-09.md`. Pending Claude re-verification; Codex does not self-resolve. | | | | | |
+| | **Claude re-verification (2026-06-09): RESOLVED.** Independent re-audit: `npm run build` PASS (`index-rHR7gSrr.css`/`index-CsDtRBPy.js` — same hash as Codex → same source); full `npm run test:e2e` PASS 49/49, 0 skip. `TEST-UIUX-A6-001` now programmatically measures every card's `scrollHeight-clientHeight`/`scrollWidth-clientWidth` at 1440px and 1680px = 0 overflow (objective no-clip proof). Live 1440px manager screenshot confirms all 8 cards render full content — 团队销售漏斗 5 rows and 团队商机阶段构成 donut+legend no longer cut at card bottom. 0 backend/`shared`/root-`api` diff; CSS focus styling uses existing `--primary` (no new color). | | | | | |
+| BLK-UIUX-G12-005 | **Card→Focus trigger should be the whole card, not a corner button.** `frontend/src/pages/WorkOverview.tsx` `DashboardPanel` triggers focus only via the corner `button.expand` (`onClick={onFocus}`). Release-owner intent: clicking anywhere on the card block enters Card→Focus. Fix frontend-only: make the whole `.dashboardPanel` activate `onFocus` (clickable + keyboard-accessible — role/tabIndex + Enter/Space, or wrap as a button) while keeping the expand icon as a visual affordance; avoid nested-interactive a11y issues; terminal/read-only semantics unaffected. | Codex (execution) | UI/UX G12 re-confirm | A2, A5 (UX intent) | **Resolved** | 2026-06-08 |
+| | **Codex return (2026-06-09):** `DashboardPanel` itself is now the Card→Focus trigger (`role="button"`, `tabIndex=0`, click, Enter, Space); the expand glyph remains visual-only (`aria-hidden`) so there is no nested interactive control. `overview.spec.ts` now clicks whole cards for manager/sales focus and asserts keyboard Space activation. Evidence: `delivery/uiux-g12-post-pass-spotfix-evidence-2026-06-09.md`. Pending Claude re-verification; Codex does not self-resolve. | | | | | |
+| | **Claude re-verification (2026-06-09): RESOLVED.** Confirmed in source: `DashboardPanel` `<article>` carries `role="button"`+`tabIndex=0`+`onClick`+`onKeyDown` (Enter/Space), expand glyph downgraded to `<span aria-hidden>`; card children are pure data viz (FunnelOverview/StageOverview/…) with no nested button/link → no nested-interactive a11y issue. Live screenshot: clicking the funnel card **body** (not a corner button) enters Card→Focus — funnel expands to detail + `DataTable`, other 7 cards collapse to right `sideCards` strip (design-system §10). `TEST-UIUX-DASHBOARD-001/002` assert whole-card `role=button`+`tabindex`+click; `TEST-UIUX-A7-001` asserts keyboard Space activation — assertions strengthened, none weakened. | | | | | |
+
 ## Open UI/UX Execution Blockers
 
 These blockers are surfaced during the 2026-06-07 UI/UX completion G9 execution
