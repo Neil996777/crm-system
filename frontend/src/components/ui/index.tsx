@@ -839,7 +839,7 @@ export function FocusStage({
         {children}
       </section>
       {sideCards?.length ? (
-        <aside className="side" aria-label="折叠卡片">
+        <aside className="side" aria-label="看板选择器">
           {sideCards.map((card) => {
             const motionIndex = card.motionIndex ?? 0;
             const motionStyle = {
@@ -860,6 +860,7 @@ export function FocusStage({
             return card.onSelect ? (
               <button
                 className={cx('sideCard', card.selected && 'selected')}
+                aria-current={card.selected ? 'true' : undefined}
                 data-focus-side-card={card.key}
                 key={card.key}
                 style={motionStyle}
@@ -871,6 +872,7 @@ export function FocusStage({
             ) : (
               <article
                 className={cx('sideCard', card.selected && 'selected')}
+                aria-current={card.selected ? 'true' : undefined}
                 data-focus-side-card={card.key}
                 key={card.key}
                 style={motionStyle}

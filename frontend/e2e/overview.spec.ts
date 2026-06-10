@@ -3,6 +3,8 @@ import { expect, test, type Page } from '@playwright/test';
 const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'admin@example.com';
 const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'AdminChangeMe-001!';
 const dashboardPassword = 'Dashboard-001!';
+const managerFocusRailKeys = ['funnel', 'stage', 'trend', 'leaderboard', 'todo', 'payments', 'key-opportunities', 'activity'];
+const salesFocusRailKeys = ['funnel', 'todo', 'stage', 'trend', 'payments', 'activity'];
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -53,10 +55,14 @@ test('TEST-UIUX-DASHBOARD-001 renders manager dashboard 8 cards and per-card foc
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('.shell.focusMode')).toBeVisible();
   await expect(page.getByRole('heading', { name: '团队销售漏斗' })).toBeVisible();
-  await expect(page.getByLabel('折叠卡片').locator('.sideCard')).toHaveCount(7);
+  await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(8);
+  await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
+  await expectFocusRailSelection(page, 'funnel');
   await expect(page.getByRole('button', { name: /商机阶段构成/ })).toBeVisible();
   await page.getByRole('button', { name: /商机阶段构成/ }).click();
   await expect(page.getByRole('heading', { name: '团队商机阶段构成' })).toBeVisible();
+  await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
+  await expectFocusRailSelection(page, 'stage');
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
   await expect(page.locator('.shell.focusMode')).toHaveCount(0);
@@ -104,7 +110,9 @@ test('TEST-UIUX-DASHBOARD-002 renders sales personal dashboard variant without m
   await page.locator('[data-dashboard-card="funnel"]').click();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.getByRole('heading', { name: '我的销售漏斗' })).toBeVisible();
-  await expect(page.getByLabel('折叠卡片').locator('.sideCard')).toHaveCount(5);
+  await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(6);
+  await expect.poll(() => focusRailKeys(page)).toEqual(salesFocusRailKeys);
+  await expectFocusRailSelection(page, 'funnel');
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
 });
@@ -121,14 +129,19 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveAttribute('data-motion-mode', 'full');
   await expect(page.locator('.shell.focusMode')).toBeVisible();
-  await expect(page.getByLabel('折叠卡片').locator('.sideCard')).toHaveCount(7);
+  await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(8);
+  await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
+  await expectFocusRailSelection(page, 'payments');
   await expectDashboardAnimationStarted(page, 'dashboardStageEnter');
   await expectDashboardAnimationStarted(page, 'dashboardStripEnter');
   await expect(page.getByRole('heading', { name: '团队回款到账' })).toBeFocused({ timeout: 2_000 });
 
   await resetDashboardAnimationRecorder(page);
+  const railOrderBeforeSwitch = await focusRailKeys(page);
   await page.getByRole('button', { name: /商机阶段构成/ }).click();
   await expect(page.getByRole('heading', { name: '团队商机阶段构成' })).toBeVisible();
+  await expect.poll(() => focusRailKeys(page)).toEqual(railOrderBeforeSwitch);
+  await expectFocusRailSelection(page, 'stage');
   await expectDashboardAnimationStarted(page, 'dashboardStageSwitch');
   const switchAnimations = await dashboardAnimationNames(page);
   expect(switchAnimations).not.toContain('dashboardStageExit');
@@ -148,7 +161,9 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveAttribute('data-motion-mode', 'reduced');
   await expect(page.getByRole('heading', { name: '团队回款到账' })).toBeVisible();
-  await expect(page.getByLabel('折叠卡片').locator('.sideCard')).toHaveCount(7);
+  await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(8);
+  await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
+  await expectFocusRailSelection(page, 'payments');
   const reducedTransform = await page.locator('.stage').evaluate((stage) => getComputedStyle(stage).transform);
   expect(reducedTransform === 'none' || reducedTransform === 'matrix(1, 0, 0, 1, 0, 0)').toBeTruthy();
   const reducedAnimations = await dashboardAnimationNames(page);
@@ -218,6 +233,17 @@ async function dashboardAnimationNames(page: Page) {
 
 async function expectDashboardAnimationStarted(page: Page, animationName: string) {
   await expect.poll(() => dashboardAnimationNames(page), { timeout: 2_000 }).toContain(animationName);
+}
+
+async function focusRailKeys(page: Page) {
+  return page.getByLabel('看板选择器').locator('[data-focus-side-card]').evaluateAll((cards) => (
+    cards.map((card) => card.getAttribute('data-focus-side-card') ?? '')
+  ));
+}
+
+async function expectFocusRailSelection(page: Page, selectedKey: string) {
+  await expect(page.getByLabel('看板选择器').locator('[aria-current="true"]')).toHaveCount(1);
+  await expect(page.getByLabel('看板选择器').locator(`[data-focus-side-card="${selectedKey}"]`)).toHaveAttribute('aria-current', 'true');
 }
 
 async function createUser(page: import('@playwright/test').Page, email: string, displayName: string, role: 'Sales Manager' | 'Sales') {

@@ -11,7 +11,8 @@
 - Status: Accepted as Architecture Input; modern interaction layer (Part B)
   added 2026-06-06, grounded in the locked dashboard, pending re-acceptance.
   List Archetype (Part B8, 商机 exemplar) instantiated 2026-06-06 on the accepted
-  Part B + accepted decisions (DEC-UX-NAV-01 / DEC-UX-MOTION-02 / DEC-UX-LIVE-03).
+  Part B + accepted decisions (DEC-UX-NAV-01 / DEC-UX-MOTION-02 /
+  DEC-UX-LIVE-03 / DEC-UX-FOCUSRAIL-01).
 
 ## Reading Order
 
@@ -198,9 +199,15 @@ one screen (see B7 "inline drill-in").
   equal-card grid (`roleGrid`, 3 columns of equal-height panels). No scrim.
 - **Focus state:** left sidebar collapsed to a `72px` icon-only rail; content
   becomes a two-column `1fr / 300px` layout — the clicked panel expands to the
-  left **stage** (full detail: large funnel, data table, tools), the remaining
-  panels collapse into the right **rail of compact strip cards** (`92px` tall,
-  title + single key value + live dot, in original order); a subtle scrim
+  left **stage** (full detail: large funnel, data table, tools), and the right
+  column is a persistent **focus selector rail** of compact strip cards (`92px`
+  tall, title + single key value + live dot). Per DEC-UX-FOCUSRAIL-01, the rail
+  lists the full dashboard card set for the current workspace and never removes
+  or reorders items while focus changes. For the locked manager dashboard this is
+  all **8** cards including the currently-focused one; role-scoped variants list
+  their full authorized card set and must not introduce unauthorized manager-only
+  cards. The focused card has a visible selected state and `aria-current="true"`.
+  A subtle scrim
   (`rgba(15,23,42,.06)`) overlays the workspace area below the topbar to push the
   stage forward. Topbar persists unchanged.
 
@@ -222,9 +229,12 @@ elements are transformed from their overview positions into it.
    slot and its inner detail content crossfades from compact to full
    (`ease-standard`). The card is the same DOM object moving — object continuity,
    not a new element.
-3. **80–300ms (staggered 24ms step):** the other panels translate toward the
-   right rail and scale down to strip-card size, fading their dense internals to
-   the single key value. Stagger preserves their reading order top-to-bottom.
+3. **80–300ms (staggered 24ms step):** the dashboard card set translates toward
+   the right selector rail and scales down to strip-card size, fading dense
+   internals to the single key value. The rail includes the active card and
+   preserves the original dashboard order. Once focus mode is entered, the rail
+   remains stable: no item is added, removed, or reordered during in-focus
+   switching.
 4. **80–300ms:** the sidebar collapses 248→72px, expressed as a transform of the
    label column to opacity 0 + a rail width change driven by the grid track (the
    labels fade `motion-fast`; icons stay put — they do not move horizontally, so
@@ -244,11 +254,13 @@ elements are transformed from their overview positions into it.
 ### Entry/exit + keyboard
 
 - **Enter focus:** click/Enter/Space on a panel.
-- **Exit focus:** the `返回` button (always present, top-right of the stage), the
-  `Esc` key (global while in focus state), or activating a different rail strip
-  card (which swaps the stage to that panel via a quick crossfade on `motion-base`
-  rather than a full reverse+forward — switching focus is not "leave then
-  re-enter").
+- **Switch focus:** click/Enter/Space on any right-rail selector item. The left
+  stage swaps to that panel via a quick content crossfade on `motion-base`; the
+  rail item set and order do not change. The newly focused rail item receives the
+  selected treatment and `aria-current="true"`; the previous one clears it.
+- **Exit focus:** the `返回` button (always present, top-right of the stage) or
+  the `Esc` key (global while in focus state). Switching focus is not exit; it is
+  never modeled as a full reverse+forward.
 - The `Esc 返回` hint chip from the mockup is the discoverability affordance and
   stays visible in the stage header.
 - Only one focus stage exists at a time; focus is single-select.
@@ -981,6 +993,19 @@ gratuitous motion). All snap/disable under reduced-motion.
   recommended ~800ms–1s live-update coalescing and ~250–300ms search-keystroke
   debounce; final values remain a tuning decision to validate against real latency
   during execution. Owner: Architecture (tuning only; the behavior is fixed).
+- **DEC-UX-FOCUSRAIL-01 — Focus rail as persistent selector. ACCEPTED by release owner 2026-06-10: Option A.**
+  Source: release-owner direction recorded in `planning/blockers.md`
+  `BLK-UIUX-G12-007`. The previously locked B2 model used a "7 non-active cards"
+  rail, so switching focus caused the old active card to pop into the rail and the
+  clicked card to leave it. That behavior was spec-faithful but fatiguing in live
+  use. The binding revision is Option A: the focus rail is a persistent selector
+  that lists the full dashboard card set for the current workspace in fixed order
+  (locked manager dashboard = all 8 cards, including the current one; role-scoped
+  variants list their full authorized set). The current item shows the selected
+  treatment using existing locked tokens only and carries `aria-current="true"`.
+  Clicking/Enter/Space on any rail item changes only the left stage via the
+  existing calm content crossfade; the rail does not add/remove/reorder items.
+  BLK-UIUX-G12-006 hero enter/exit remains unchanged.
 - **SSE "已回款" push** remains a **parked future feature** (not new P0/P1 scope).
   Part B only defines how it would surface (B3) so it has a non-jarring landing;
   it must not be implemented as part of current scope without a formal scope

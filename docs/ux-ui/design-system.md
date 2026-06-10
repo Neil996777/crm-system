@@ -358,8 +358,13 @@ contract for any panel that lists rows in a height-capped card.
 - **Center stage**: `1fr`, `padding:28px`, `min-height:1010px`, `--shadow`.
   Holds the expanded artifact (e.g., funnel + detail table). Stage head =
   icon + title + live sub on the left, ghost `返回` + `Esc 返回` chip on the right.
-- **Right strip**: fixed **300px** column, `side` = `grid; gap:12px;
-  align-content:start` of compact strip-cards.
+- **Right focus selector rail**: fixed **300px** column, `side` =
+  `grid; gap:12px; align-content:start` of compact strip-cards. Per
+  `interaction-spec.md` DEC-UX-FOCUSRAIL-01, the rail is a persistent selector:
+  it lists the full dashboard card set for the current workspace in fixed order
+  and does not add/remove/reorder items while focus changes. The locked manager
+  dashboard rail contains all **8** cards including the focused one; role-scoped
+  variants list their full authorized card set.
 - **Strip-card**: fixed **92px** height [EXTRACTED], `padding:10px 16px`,
   `flex-direction:column; justify-content:center; overflow:hidden`. Top row
   `grid-template-columns:36px 1fr auto` (icon / title / optional live dot);
@@ -482,7 +487,9 @@ exact tokens.
 
 See §6.5 for full anatomy. 92px fixed, 36px icon, ellipsis title + value;
 `sideValue strong` = `--primary` 16px, `.plain` = `--text` 14px, optional live
-dot in top row.
+dot in top row. In the focus selector rail, the current strip-card uses the
+existing selected treatment with `--primary` as the accent and carries
+`aria-current="true"` in implementation. No new color token is introduced.
 
 ### 7.9 Nav item (expanded) + rail icon (collapsed) (→ CMP-001 App Shell)
 
@@ -595,14 +602,21 @@ there.
   - The activated panel becomes the **center stage** (`1fr`, 28px pad,
     `min-height:1010px`, full artifact: e.g. larger funnel rows + a detail
     table).
-  - The other panels collapse into the **300px right strip** of **92px
-    strip-cards** (icon + title + value, ellipsis).
+  - The **300px right strip** becomes a persistent selector rail of **92px
+    strip-cards** (icon + title + value, ellipsis). It lists the full dashboard
+    card set in fixed order, including the currently focused card. The selected
+    item uses existing locked tokens only (`--primary` accent + existing selected
+    tint) and is exposed as `aria-current="true"`.
   - The sidebar collapses **248px → 72px icon rail**.
   - The workspace behind the stage **dims** (`rgba(15,23,42,.06)` overlay under
     the topbar) to spotlight the stage.
   - Exit affordances: `返回` ghost button + `Esc 返回` chip in the stage head.
-- **Reverse**: strip-cards re-expand to the grid; rail re-expands to 248px; dim
-  clears. Mutually-exclusive nav rule (§6.1) holds throughout.
+- **Switch within focus**: clicking/Enter/Space on a selector rail item changes
+  only the center stage content via the UX-defined calm crossfade. The rail
+  itself does not pop, remove, insert, or reorder cards.
+- **Reverse**: selector rail cards re-expand to the grid with the approved hero
+  exit; nav rail re-expands to 248px; dim clears. Mutually-exclusive nav rule
+  (§6.1) holds throughout.
 
 ---
 

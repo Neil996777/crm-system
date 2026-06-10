@@ -330,13 +330,13 @@ export function WorkOverview({
 
   if (active) {
     const sideCards: FocusSideCard[] = cards
-      .filter((card) => card.key !== active.key)
       .map((card, index) => ({
         key: card.key,
         title: card.title,
         metric: card.metric,
         meta: card.meta,
         icon: card.sideIcon,
+        selected: card.key === active.key,
         motionIndex: index,
         onSelect: () => switchFocus(card.key)
       }));

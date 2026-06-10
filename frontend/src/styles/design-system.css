@@ -3416,6 +3416,11 @@ button.sideCard {
   background: var(--primary-soft);
 }
 
+.sideCard.selected {
+  border-color: var(--primary);
+  box-shadow: inset 4px 0 0 var(--primary), var(--badge-shadow);
+}
+
 .sideCard .panelIcon {
   width: 36px;
   height: 36px;
