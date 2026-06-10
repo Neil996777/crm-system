@@ -75,20 +75,28 @@ test('TEST-UIUX-DASHBOARD-001 renders manager dashboard 8 cards and per-card foc
 });
 
 test('TEST-UIUX-A6-001 dashboard remains stable on narrow desktop viewport', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
-  await expectDashboardCardsNotClipped(page);
+  const dashboardWidths = [
+    { width: 1680, height: 900 },
+    { width: 1440, height: 900 },
+    { width: 1280, height: 900 },
+    { width: 1180, height: 900 },
+    { width: 1024, height: 768 },
+    { width: 900, height: 720 }
+  ];
 
-  await page.setViewportSize({ width: 1680, height: 900 });
-  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
-  await expectDashboardCardsNotClipped(page);
-
-  await page.setViewportSize({ width: 900, height: 720 });
-  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
-  await expect(page.locator('section[aria-label="今日实时战报"]')).toBeVisible();
-  await expect(page.locator('[data-dashboard-card]')).toHaveCount(8);
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow).toBeLessThanOrEqual(1);
+  for (const viewport of dashboardWidths) {
+    await page.setViewportSize(viewport);
+    await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+    await expect(page.locator('section[aria-label="今日实时战报"]')).toBeVisible();
+    await expect(page.locator('[data-dashboard-card]')).toHaveCount(8);
+    await expectDashboardCardsNotClipped(page);
+    await expectDashboardInlineContentStable(page);
+    const overflow = await page.evaluate(() => Math.max(
+      document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      document.body.scrollWidth - document.body.clientWidth
+    ));
+    expect(overflow).toBeLessThanOrEqual(1);
+  }
 });
 
 test('TEST-UIUX-DASHBOARD-002 renders sales personal dashboard variant without manager cards', async ({ page }) => {
@@ -263,12 +271,13 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
 }
 
 async function expectDashboardCardsNotClipped(page: Page) {
-  const clippedCards = await page.locator('[data-dashboard-card]').evaluateAll((cards) => (
+  const clippedCards = await page.locator('[data-dashboard-card], .dashboardKpis .metricTile').evaluateAll((cards) => (
     cards
       .map((card) => {
         const element = card as HTMLElement;
         return {
-          key: element.dataset.dashboardCard ?? '',
+          key: element.dataset.dashboardCard ?? element.textContent?.trim().slice(0, 24) ?? '',
+          viewportWidth: window.innerWidth,
           verticalOverflow: element.scrollHeight - element.clientHeight,
           horizontalOverflow: element.scrollWidth - element.clientWidth
         };
@@ -276,6 +285,37 @@ async function expectDashboardCardsNotClipped(page: Page) {
       .filter((card) => card.verticalOverflow > 1 || card.horizontalOverflow > 1)
   ));
   expect(clippedCards).toEqual([]);
+}
+
+async function expectDashboardInlineContentStable(page: Page) {
+  const layoutIssues = await page.evaluate(() => {
+    const issues: Array<{ type: string; text: string }> = [];
+    document.querySelectorAll<HTMLElement>('.dashboardKpis .metricTile').forEach((tile) => {
+      const icon = tile.querySelector<HTMLElement>('.metricIcon');
+      const value = tile.querySelector<HTMLElement>('strong');
+      if (!icon || !value) return;
+      const iconRect = icon.getBoundingClientRect();
+      const valueRect = value.getBoundingClientRect();
+      const overlapsX = valueRect.right > iconRect.left - 1 && iconRect.right > valueRect.left - 1;
+      const overlapsY = valueRect.bottom > iconRect.top - 1 && iconRect.bottom > valueRect.top - 1;
+      if (overlapsX && overlapsY) {
+        issues.push({ type: 'metric-icon-overlap', text: tile.textContent?.trim() ?? '' });
+      }
+    });
+
+    document.querySelectorAll<HTMLElement>('[data-dashboard-card] .legendItem span:not(.legendSwatch)').forEach((label) => {
+      const style = window.getComputedStyle(label);
+      const rect = label.getBoundingClientRect();
+      const fontSize = Number.parseFloat(style.fontSize) || 12;
+      const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.2;
+      if (style.whiteSpace !== 'nowrap' || rect.height > lineHeight * 1.5) {
+        issues.push({ type: 'legend-wrap', text: label.textContent?.trim() ?? '' });
+      }
+    });
+
+    return issues;
+  });
+  expect(layoutIssues).toEqual([]);
 }
 
 async function installDashboardAnimationRecorder(page: Page) {

@@ -663,6 +663,10 @@ textarea::placeholder {
   padding: 18px;
 }
 
+.metricTile > div {
+  min-width: 0;
+}
+
 .metric span,
 .metricTile span,
 .eyebrow {
@@ -674,10 +678,13 @@ textarea::placeholder {
 .metric strong,
 .metricTile strong,
 .metricValue {
+  display: block;
+  min-width: 0;
   color: var(--text);
   font-size: 30px;
   line-height: 1;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .metricIcon,
@@ -695,6 +702,7 @@ textarea::placeholder {
 .panelIcon {
   width: 40px;
   height: 40px;
+  flex: 0 0 auto;
   background: var(--lavender-soft);
   color: var(--primary);
 }
@@ -1462,6 +1470,17 @@ textarea::placeholder {
   align-items: center;
   color: var(--muted);
   font-size: 12px;
+}
+
+.legendItem span:not(.legendSwatch) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendItem strong {
+  white-space: nowrap;
 }
 
 .legendSwatch {
@@ -2940,6 +2959,25 @@ tbody tr:hover td {
   grid-auto-rows: minmax(308px, auto);
 }
 
+@media (max-width: 1439px) {
+  .dashboardKpis {
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+  }
+
+  .managerDashboardGrid,
+  .salesDashboardGrid {
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
+  }
+}
+
+@media (max-width: 1079px) {
+  .dashboardKpis,
+  .managerDashboardGrid,
+  .salesDashboardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .dashboardPanel {
   min-width: 0;
   display: flex;
@@ -3065,6 +3103,12 @@ tbody tr:hover td {
   border-bottom: 1px solid var(--border);
 }
 
+.dashboardRow > div,
+.paymentRow > div,
+.event > div {
+  min-width: 0;
+}
+
 .dashboardRow {
   min-height: 39px;
   display: grid;
@@ -3099,10 +3143,12 @@ tbody tr:hover td {
   line-height: 1.28;
 }
 
-.dashboardRow span,
+.dashboardRow > div > span,
 .paymentRow small,
 .event small,
 .eventTime {
+  min-width: 0;
+  display: block;
   overflow: hidden;
   color: var(--muted);
   font-size: 11px;
@@ -3110,7 +3156,7 @@ tbody tr:hover td {
   white-space: nowrap;
 }
 
-.salesDashboardGrid .dashboardRow span,
+.salesDashboardGrid .dashboardRow > div > span,
 .salesDashboardGrid .paymentRow small,
 .salesDashboardGrid .event small,
 .salesDashboardGrid .eventTime {
