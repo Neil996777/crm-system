@@ -1,5 +1,5 @@
-import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   Bell,
@@ -48,6 +48,13 @@ import {
 
 type DashboardCardKey = 'funnel' | 'stage' | 'trend' | 'leaderboard' | 'todo' | 'payments' | 'key-opportunities' | 'activity';
 type AccentTone = 'sky' | 'mint' | 'peach' | 'purple';
+type DashboardMotionPhase = 'idle' | 'entering' | 'exiting' | 'switching' | 'reduced-entering' | 'reduced-exiting' | 'reduced-switching';
+type DashboardRect = { left: number; top: number; width: number; height: number };
+
+const focusEnterMs = 320;
+const focusExitMs = 220;
+const focusSwitchMs = 220;
+const focusReducedMs = 80;
 
 type DashboardSnapshot = {
   overview: ManagerOverviewData | null;
@@ -116,8 +123,16 @@ export function WorkOverview({
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeCard, setActiveCard] = useState<DashboardCardKey | null>(null);
+  const [motionPhase, setMotionPhase] = useState<DashboardMotionPhase>('idle');
+  const [motionRects, setMotionRects] = useState<Partial<Record<DashboardCardKey, DashboardRect>>>({});
+  const [liveMessage, setLiveMessage] = useState('');
+  const focusRootRef = useRef<HTMLElement | null>(null);
+  const motionTimerRef = useRef<number | null>(null);
+  const restoreCardKeyRef = useRef<DashboardCardKey | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const isManagerView = user.role !== 'Sales';
   const model = useMemo(() => (snapshot ? buildModel(snapshot, user) : null), [snapshot, user]);
+  const cards = useMemo(() => (model ? dashboardCards(model, isManagerView) : []), [model, isManagerView]);
 
   useEffect(() => {
     void refresh();
@@ -132,12 +147,77 @@ export function WorkOverview({
     if (!activeCard) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setActiveCard(null);
+        requestExitFocus();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeCard]);
+  }, [activeCard, motionPhase, prefersReducedMotion]);
+
+  useLayoutEffect(() => {
+    if (!activeCard || !focusRootRef.current) return;
+    const root = focusRootRef.current;
+    const stage = root.querySelector<HTMLElement>('.stage');
+    const activeRect = motionRects[activeCard];
+    if (stage && activeRect) {
+      applyMotionOrigin(stage, activeRect, stage, 'hero');
+    }
+
+    root.querySelectorAll<HTMLElement>('[data-focus-side-card]').forEach((sideCard) => {
+      const key = sideCard.dataset.focusSideCard as DashboardCardKey | undefined;
+      if (!key) return;
+      const originRect = motionRects[key];
+      if (!originRect) return;
+      applyMotionOrigin(sideCard, originRect, sideCard, 'strip');
+    });
+  }, [activeCard, motionPhase, motionRects]);
+
+  useEffect(() => {
+    if (!activeCard || motionPhase === 'idle') return;
+    if (motionTimerRef.current) {
+      window.clearTimeout(motionTimerRef.current);
+      motionTimerRef.current = null;
+    }
+
+    const isReducedPhase = motionPhase.startsWith('reduced');
+    const duration = isReducedPhase
+      ? focusReducedMs
+      : motionPhase === 'entering'
+        ? focusEnterMs
+        : motionPhase === 'exiting'
+          ? focusExitMs
+          : focusSwitchMs;
+
+    motionTimerRef.current = window.setTimeout(() => {
+      motionTimerRef.current = null;
+      if (motionPhase === 'exiting' || motionPhase === 'reduced-exiting') {
+        const restoreKey = restoreCardKeyRef.current;
+        setActiveCard(null);
+        setMotionPhase('idle');
+        setMotionRects({});
+        window.requestAnimationFrame(() => {
+          if (!restoreKey) return;
+          document.querySelector<HTMLElement>(`[data-dashboard-card="${restoreKey}"]`)?.focus();
+        });
+        return;
+      }
+      setMotionPhase('idle');
+      focusStageHeading();
+    }, duration);
+
+    return () => {
+      if (motionTimerRef.current) {
+        window.clearTimeout(motionTimerRef.current);
+        motionTimerRef.current = null;
+      }
+    };
+  }, [activeCard, motionPhase]);
+
+  useEffect(() => () => {
+    if (motionTimerRef.current) {
+      window.clearTimeout(motionTimerRef.current);
+    }
+  }, []);
 
   async function refresh() {
     setLoading(true);
@@ -194,6 +274,40 @@ export function WorkOverview({
     setLoading(false);
   }
 
+  function beginCardFocus(cardKey: DashboardCardKey, sourceElement: HTMLElement) {
+    const rects = captureDashboardRects();
+    rects[cardKey] = rectFromDom(sourceElement);
+    restoreCardKeyRef.current = cardKey;
+    setMotionRects(rects);
+    setActiveCard(cardKey);
+    setMotionPhase(prefersReducedMotion ? 'reduced-entering' : 'entering');
+    const targetCard = cards.find((card) => card.key === cardKey);
+    setLiveMessage(`已进入${targetCard?.title ?? '卡片'}聚焦视图。`);
+  }
+
+  function switchFocus(cardKey: DashboardCardKey) {
+    if (cardKey === activeCard) return;
+    restoreCardKeyRef.current = cardKey;
+    setActiveCard(cardKey);
+    setMotionPhase(prefersReducedMotion ? 'reduced-switching' : 'switching');
+    const targetCard = cards.find((card) => card.key === cardKey);
+    setLiveMessage(`已切换到${targetCard?.title ?? '卡片'}聚焦视图。`);
+  }
+
+  function requestExitFocus() {
+    if (!activeCard || motionPhase === 'exiting' || motionPhase === 'reduced-exiting') return;
+    const targetCard = cards.find((card) => card.key === activeCard);
+    restoreCardKeyRef.current = activeCard;
+    setMotionPhase(prefersReducedMotion ? 'reduced-exiting' : 'exiting');
+    setLiveMessage(`已返回工作台，焦点回到${targetCard?.title ?? '原卡片'}。`);
+  }
+
+  function focusStageHeading() {
+    window.requestAnimationFrame(() => {
+      focusRootRef.current?.querySelector<HTMLElement>('[data-focus-heading]')?.focus();
+    });
+  }
+
   if (loading && !snapshot) {
     return (
       <main className="content dashboardPage" data-uiux="dashboard">
@@ -212,35 +326,51 @@ export function WorkOverview({
     );
   }
 
-  const cards = dashboardCards(model, isManagerView);
   const active = activeCard ? cards.find((card) => card.key === activeCard) : null;
 
   if (active) {
     const sideCards: FocusSideCard[] = cards
       .filter((card) => card.key !== active.key)
-      .map((card) => ({
+      .map((card, index) => ({
         key: card.key,
         title: card.title,
         metric: card.metric,
         meta: card.meta,
         icon: card.sideIcon,
-        onSelect: () => setActiveCard(card.key)
+        motionIndex: index,
+        onSelect: () => switchFocus(card.key)
       }));
+    const focusClassName = [
+      'content',
+      'dashboardFocusPage',
+      focusTransitionClass(motionPhase),
+      prefersReducedMotion ? 'dashboardMotionReduced' : 'dashboardMotionFull'
+    ].filter(Boolean).join(' ');
 
     return (
-      <main className="content dashboardFocusPage" data-uiux="dashboard-focus">
+      <main
+        className={focusClassName}
+        data-motion-mode={prefersReducedMotion ? 'reduced' : 'full'}
+        data-transition-phase={motionPhase}
+        data-uiux="dashboard-focus"
+        ref={focusRootRef}
+        style={focusRootStyle(motionPhase)}
+      >
         <FocusStage
           title={active.title}
           subtitle={<><span className="liveDot livePulse" aria-hidden="true" />实时 · {active.focusSubtitle}</>}
           icon={active.sideIcon}
           sideCards={sideCards}
-          onBack={() => setActiveCard(null)}
+          onBack={requestExitFocus}
           backLabel="返回"
           escapeHint="Esc 返回"
           tools={<Badge tone="primary">{model.scopeBadge}</Badge>}
         >
-          {active.focus}
+          <div className="dashboardStageContent" key={active.key}>
+            {active.focus}
+          </div>
         </FocusStage>
+        <span className="srOnly" role="status" aria-live="polite">{liveMessage}</span>
       </main>
     );
   }
@@ -258,11 +388,69 @@ export function WorkOverview({
       </section>
       <section className={isManagerView ? 'roleGrid managerDashboardGrid' : 'roleGrid salesDashboardGrid'} aria-label={isManagerView ? '管端工作台数据卡' : '销售工作台数据卡'}>
         {cards.map((card) => (
-          <DashboardPanel card={card} key={card.key} onFocus={() => setActiveCard(card.key)} />
+          <DashboardPanel card={card} key={card.key} onFocus={(element) => beginCardFocus(card.key, element)} />
         ))}
       </section>
+      <span className="srOnly" role="status" aria-live="polite">{liveMessage}</span>
     </main>
   );
+}
+
+function captureDashboardRects(): Partial<Record<DashboardCardKey, DashboardRect>> {
+  const rects: Partial<Record<DashboardCardKey, DashboardRect>> = {};
+  document.querySelectorAll<HTMLElement>('[data-dashboard-card]').forEach((element) => {
+    const key = element.dataset.dashboardCard as DashboardCardKey | undefined;
+    if (!key) return;
+    rects[key] = rectFromDom(element);
+  });
+  return rects;
+}
+
+function rectFromDom(element: HTMLElement): DashboardRect {
+  const rect = element.getBoundingClientRect();
+  return {
+    left: rect.left,
+    top: rect.top,
+    width: rect.width,
+    height: rect.height
+  };
+}
+
+function applyMotionOrigin(element: HTMLElement, origin: DashboardRect, target: HTMLElement, prefix: 'hero' | 'strip') {
+  const targetRect = target.getBoundingClientRect();
+  const safeWidth = Math.max(1, targetRect.width);
+  const safeHeight = Math.max(1, targetRect.height);
+  element.style.setProperty(`--${prefix}-start-x`, `${origin.left - targetRect.left}px`);
+  element.style.setProperty(`--${prefix}-start-y`, `${origin.top - targetRect.top}px`);
+  element.style.setProperty(`--${prefix}-start-scale-x`, `${Math.max(0.08, origin.width / safeWidth).toFixed(4)}`);
+  element.style.setProperty(`--${prefix}-start-scale-y`, `${Math.max(0.08, origin.height / safeHeight).toFixed(4)}`);
+}
+
+function focusTransitionClass(phase: DashboardMotionPhase) {
+  if (phase === 'entering' || phase === 'reduced-entering') return 'dashboardTransitionEntering';
+  if (phase === 'exiting' || phase === 'reduced-exiting') return 'dashboardTransitionExiting';
+  if (phase === 'switching' || phase === 'reduced-switching') return 'dashboardTransitionSwitching';
+  return 'dashboardTransitionIdle';
+}
+
+function focusRootStyle(phase: DashboardMotionPhase): CSSProperties {
+  return {
+    '--dashboard-transition-reverse': phase === 'exiting' || phase === 'reduced-exiting' ? 'reverse' : 'normal'
+  } as CSSProperties;
+}
+
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReduced(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, []);
+
+  return reduced;
 }
 
 function DashboardHeader({
@@ -438,11 +626,11 @@ function dashboardCards(model: DashboardModel, isManagerView: boolean): Dashboar
   ];
 }
 
-function DashboardPanel({ card, onFocus }: { card: DashboardCard; onFocus: () => void }) {
+function DashboardPanel({ card, onFocus }: { card: DashboardCard; onFocus: (element: HTMLElement) => void }) {
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    onFocus();
+    onFocus(event.currentTarget);
   };
 
   return (
@@ -452,7 +640,7 @@ function DashboardPanel({ card, onFocus }: { card: DashboardCard; onFocus: () =>
       aria-label={`展开${card.title}`}
       role="button"
       tabIndex={0}
-      onClick={onFocus}
+      onClick={(event) => onFocus(event.currentTarget)}
       onKeyDown={handleKeyDown}
     >
       <div className="dashboardPanelHeader">

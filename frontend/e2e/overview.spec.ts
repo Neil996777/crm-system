@@ -110,17 +110,51 @@ test('TEST-UIUX-DASHBOARD-002 renders sales personal dashboard variant without m
 });
 
 test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps between states', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await installDashboardAnimationRecorder(page);
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
   const paymentsCard = page.locator('[data-dashboard-card="payments"]');
   await paymentsCard.focus();
   await expect(paymentsCard).toBeFocused();
+  await resetDashboardAnimationRecorder(page);
   await page.keyboard.press(' ');
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
+  await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveAttribute('data-motion-mode', 'full');
   await expect(page.locator('.shell.focusMode')).toBeVisible();
   await expect(page.getByLabel('折叠卡片').locator('.sideCard')).toHaveCount(7);
+  await expectDashboardAnimationStarted(page, 'dashboardStageEnter');
+  await expectDashboardAnimationStarted(page, 'dashboardStripEnter');
+  await expect(page.getByRole('heading', { name: '团队回款到账' })).toBeFocused({ timeout: 2_000 });
+
+  await resetDashboardAnimationRecorder(page);
+  await page.getByRole('button', { name: /商机阶段构成/ }).click();
+  await expect(page.getByRole('heading', { name: '团队商机阶段构成' })).toBeVisible();
+  await expectDashboardAnimationStarted(page, 'dashboardStageSwitch');
+  const switchAnimations = await dashboardAnimationNames(page);
+  expect(switchAnimations).not.toContain('dashboardStageExit');
+
+  await resetDashboardAnimationRecorder(page);
   await page.keyboard.press('Escape');
+  await expectDashboardAnimationStarted(page, 'dashboardStageExit');
+  await expectDashboardAnimationStarted(page, 'dashboardStripExit');
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+  await expect(page.locator('[data-dashboard-card="stage"]')).toBeFocused();
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await resetDashboardAnimationRecorder(page);
+  const reducedPaymentsCard = page.locator('[data-dashboard-card="payments"]');
+  await reducedPaymentsCard.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
+  await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveAttribute('data-motion-mode', 'reduced');
+  await expect(page.getByRole('heading', { name: '团队回款到账' })).toBeVisible();
+  await expect(page.getByLabel('折叠卡片').locator('.sideCard')).toHaveCount(7);
+  const reducedTransform = await page.locator('.stage').evaluate((stage) => getComputedStyle(stage).transform);
+  expect(reducedTransform === 'none' || reducedTransform === 'matrix(1, 0, 0, 1, 0, 0)').toBeTruthy();
+  const reducedAnimations = await dashboardAnimationNames(page);
+  expect(reducedAnimations).toContain('dashboardReducedFocusAppear');
+  expect(reducedAnimations).not.toContain('dashboardStageEnter');
+  expect(reducedAnimations).not.toContain('dashboardStripEnter');
 });
 
 test('TEST-UIUX-A5-001 main navigation is keyboard reachable', async ({ page }) => {
@@ -151,6 +185,39 @@ async function expectDashboardCardsNotClipped(page: Page) {
       .filter((card) => card.verticalOverflow > 1 || card.horizontalOverflow > 1)
   ));
   expect(clippedCards).toEqual([]);
+}
+
+async function installDashboardAnimationRecorder(page: Page) {
+  await page.evaluate(() => {
+    const global = window as Window & {
+      __dashboardAnimationNames?: string[];
+      __dashboardAnimationRecorderInstalled?: boolean;
+    };
+    global.__dashboardAnimationNames = [];
+    if (global.__dashboardAnimationRecorderInstalled) return;
+    document.addEventListener('animationstart', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const isDashboardFocus = target.matches('[data-uiux="dashboard-focus"]') || Boolean(target.closest('[data-uiux="dashboard-focus"]'));
+      if (!isDashboardFocus) return;
+      global.__dashboardAnimationNames?.push((event as AnimationEvent).animationName);
+    }, true);
+    global.__dashboardAnimationRecorderInstalled = true;
+  });
+}
+
+async function resetDashboardAnimationRecorder(page: Page) {
+  await page.evaluate(() => {
+    (window as Window & { __dashboardAnimationNames?: string[] }).__dashboardAnimationNames = [];
+  });
+}
+
+async function dashboardAnimationNames(page: Page) {
+  return page.evaluate(() => (window as Window & { __dashboardAnimationNames?: string[] }).__dashboardAnimationNames ?? []);
+}
+
+async function expectDashboardAnimationStarted(page: Page, animationName: string) {
+  await expect.poll(() => dashboardAnimationNames(page), { timeout: 2_000 }).toContain(animationName);
 }
 
 async function createUser(page: import('@playwright/test').Page, email: string, displayName: string, role: 'Sales Manager' | 'Sales') {

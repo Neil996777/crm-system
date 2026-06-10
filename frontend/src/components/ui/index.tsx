@@ -790,6 +790,7 @@ export type FocusSideCard = {
   meta?: ReactNode;
   icon?: ReactNode;
   selected?: boolean;
+  motionIndex?: number;
   onSelect?: () => void;
 };
 
@@ -821,7 +822,7 @@ export function FocusStage({
           <div className="titleBlock">
             {icon ? <span className="panelIcon">{icon}</span> : null}
             <div>
-              <h1>{title}</h1>
+              <h1 data-focus-heading tabIndex={-1}>{title}</h1>
               {subtitle ? <div className="stageSub">{subtitle}</div> : null}
             </div>
           </div>
@@ -840,6 +841,12 @@ export function FocusStage({
       {sideCards?.length ? (
         <aside className="side" aria-label="折叠卡片">
           {sideCards.map((card) => {
+            const motionIndex = card.motionIndex ?? 0;
+            const motionStyle = {
+              '--strip-index': motionIndex,
+              '--strip-enter-delay': `${80 + motionIndex * 24}ms`,
+              '--strip-exit-delay': `${motionIndex * 16}ms`
+            } as CSSProperties;
             const content = (
               <>
                 {card.icon ? <span className="panelIcon">{card.icon}</span> : null}
@@ -851,11 +858,23 @@ export function FocusStage({
               </>
             );
             return card.onSelect ? (
-              <button className={cx('sideCard', card.selected && 'selected')} key={card.key} type="button" onClick={card.onSelect}>
+              <button
+                className={cx('sideCard', card.selected && 'selected')}
+                data-focus-side-card={card.key}
+                key={card.key}
+                style={motionStyle}
+                type="button"
+                onClick={card.onSelect}
+              >
                 {content}
               </button>
             ) : (
-              <article className={cx('sideCard', card.selected && 'selected')} key={card.key}>
+              <article
+                className={cx('sideCard', card.selected && 'selected')}
+                data-focus-side-card={card.key}
+                key={card.key}
+                style={motionStyle}
+              >
                 {content}
               </article>
             );

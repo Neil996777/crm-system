@@ -1,10 +1,13 @@
 :root {
-  --motion-fast: 120ms;
-  --motion-medium: 180ms;
-  --motion-slow: 240ms;
-  --ease-decelerate: cubic-bezier(.16, 1, .3, 1);
+  --motion-instant: 80ms;
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --motion-medium: var(--motion-base);
+  --motion-slow: 320ms;
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);
   --ease-standard: cubic-bezier(.2, 0, 0, 1);
-  --ease-accelerate: cubic-bezier(.32, 0, .67, 0);
+  --ease-accelerate: cubic-bezier(.4, 0, 1, 1);
+  --ease-emphasis: cubic-bezier(.2, 0, 0, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -19,7 +22,7 @@
 }
 
 .motionFadeIn {
-  animation: uiFadeIn var(--motion-medium) var(--ease-decelerate);
+  animation: uiFadeIn var(--motion-base) var(--ease-decelerate);
 }
 
 .livePulse {
