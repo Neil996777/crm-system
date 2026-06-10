@@ -842,7 +842,7 @@ export function FocusStage({
             const motionIndex = card.motionIndex ?? 0;
             const motionStyle = {
               '--strip-index': motionIndex,
-              '--strip-enter-delay': `${80 + motionIndex * 24}ms`,
+              '--strip-enter-delay': `${96 + motionIndex * 30}ms`,
               '--strip-exit-delay': `${motionIndex * 16}ms`
             } as CSSProperties;
             const content = (

@@ -3369,7 +3369,7 @@ tbody tr:hover td {
 }
 
 .dashboardTransitionExiting::before {
-  animation: dashboardScrimOut var(--motion-base) var(--ease-accelerate) both;
+  animation: dashboardScrimOut var(--motion-hero-exit) var(--ease-accelerate) both;
 }
 
 .focus {
@@ -3445,19 +3445,19 @@ tbody tr:hover td {
 }
 
 .dashboardTransitionEntering .stage {
-  animation: dashboardStageEnter calc(var(--motion-slow) - 40ms) var(--ease-standard) 40ms both;
+  animation: dashboardStageEnter calc(var(--motion-hero) - 40ms) var(--ease-standard) 40ms both;
 }
 
 .dashboardTransitionEntering .dashboardStageContent {
-  animation: dashboardStageContentIn calc(var(--motion-slow) - 40ms) var(--ease-standard) 40ms both;
+  animation: dashboardStageContentIn calc(var(--motion-hero) - 40ms) var(--ease-standard) 40ms both;
 }
 
 .dashboardTransitionExiting .stage {
-  animation: dashboardStageExit var(--motion-base) var(--ease-standard) both;
+  animation: dashboardStageExit var(--motion-hero-exit) var(--ease-standard) both;
 }
 
 .dashboardTransitionExiting .dashboardStageContent {
-  animation: dashboardStageContentOut var(--motion-base) var(--ease-standard) both;
+  animation: dashboardStageContentOut var(--motion-hero-exit) var(--ease-standard) both;
 }
 
 .dashboardTransitionSwitching .dashboardStageContent {
@@ -3527,12 +3527,12 @@ tbody tr:hover td {
 }
 
 .dashboardTransitionEntering .sideCard {
-  animation: dashboardStripEnter calc(var(--motion-base) - 140ms) var(--ease-standard) both;
-  animation-delay: var(--strip-enter-delay, 80ms);
+  animation: dashboardStripEnter calc(var(--motion-hero) - 306ms) var(--ease-standard) both;
+  animation-delay: var(--strip-enter-delay, 96ms);
 }
 
 .dashboardTransitionExiting .sideCard {
-  animation: dashboardStripExit var(--motion-base) var(--ease-standard) both;
+  animation: dashboardStripExit calc(var(--motion-hero-exit) - 112ms) var(--ease-standard) both;
   animation-delay: var(--strip-exit-delay, 0ms);
 }
 

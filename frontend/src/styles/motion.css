@@ -4,6 +4,8 @@
   --motion-base: 220ms;
   --motion-medium: var(--motion-base);
   --motion-slow: 320ms;
+  --motion-hero: 450ms;
+  --motion-hero-exit: 310ms;
   --ease-decelerate: cubic-bezier(0, 0, 0, 1);
   --ease-standard: cubic-bezier(.2, 0, 0, 1);
   --ease-accelerate: cubic-bezier(.4, 0, 1, 1);

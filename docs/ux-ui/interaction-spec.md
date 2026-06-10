@@ -13,7 +13,7 @@
   List Archetype (Part B8, 商机 exemplar) instantiated 2026-06-06 on the accepted
   Part B + accepted decisions (DEC-UX-NAV-01 / DEC-UX-MOTION-02 /
   DEC-UX-LIVE-03 / DEC-UX-LIVE-04 / DEC-UX-FOCUSRAIL-01 /
-  DEC-UX-FOCUSEXIT-01).
+  DEC-UX-FOCUSEXIT-01 / DEC-UX-HEROTIME-01).
 
 ## Reading Order
 
@@ -166,6 +166,12 @@ Rule: if a motion would need longer than `motion-slow`, it is too big — split 
 or remove it. Stagger (sequencing several elements) uses a 24–40ms step, capped
 so the whole staggered group still completes within its token budget.
 
+Exception: per DEC-UX-HEROTIME-01, the Card→Focus hero transition keeps the B1
+scale intact but uses dedicated hero timing values for this one signature motion:
+enter ~450ms and reverse ~310ms. `motion-base` remains 220ms for focus-rail
+switching and all standard/micro transitions; `motion-slow` remains 320ms and is
+not globally redefined.
+
 ### Easing Curves
 
 | Token | Curve | Use for |
@@ -219,24 +225,24 @@ one screen (see B7 "inline drill-in").
   affordance). Each panel is a real button/`role="button"`, focusable, with an
   accessible name like `展开「我的销售漏斗」`.
 
-### Motion choreography (total ≤ `motion-slow` 320ms, `ease-standard`)
+### Motion choreography (total ~450ms per DEC-UX-HEROTIME-01, `ease-standard`)
 
 Expressed as transform/opacity only; the focus layout is pre-computed and
 elements are transformed from their overview positions into it.
 
 1. **0–80ms:** scrim fades in (opacity 0→1, `ease-decelerate`); the clicked card
    lifts (shadow elevates, `motion-instant`) to signal "this one is chosen".
-2. **40–320ms (overlaps):** the clicked card translates/scales toward the stage
+2. **40–450ms (overlaps):** the clicked card translates/scales toward the stage
    slot and its inner detail content crossfades from compact to full
    (`ease-standard`). The card is the same DOM object moving — object continuity,
    not a new element.
-3. **80–300ms (staggered 24ms step):** the dashboard card set translates toward
+3. **~96–450ms (staggered ~30ms step):** the dashboard card set translates toward
    the right selector rail and scales down to strip-card size, fading dense
    internals to the single key value. The rail includes the active card and
    preserves the original dashboard order. Once focus mode is entered, the rail
    remains stable: no item is added, removed, or reordered during in-focus
    switching.
-4. **80–300ms:** the sidebar collapses 248→72px, expressed as a transform of the
+4. **~96–450ms:** the sidebar collapses 248→72px, expressed as a transform of the
    label column to opacity 0 + a rail width change driven by the grid track (the
    labels fade `motion-fast`; icons stay put — they do not move horizontally, so
    the eye keeps anchor).
@@ -246,11 +252,11 @@ elements are transformed from their overview positions into it.
 
 ### Reverse (返回 / Esc)
 
-- Symmetric reverse on `motion-base` (220ms, slightly faster than entry, which is
-  a standard "exit is quicker than enter" feel), `ease-standard`. Scrim fades out
-  `ease-accelerate`. Strip cards expand back to grid panels in original
-  positions; sidebar re-expands; focus returns to the grid panel that was opened
-  (focus restoration, B5).
+- Symmetric reverse on the dedicated hero-exit timing (~310ms, still faster than
+  entry and preserving the standard "exit is quicker than enter" feel),
+  `ease-standard`. Scrim fades out `ease-accelerate`. Strip cards expand back to
+  grid panels in original positions; sidebar re-expands; focus returns to the
+  grid panel that was opened (focus restoration, B5).
 
 ### Entry/exit + keyboard
 
@@ -981,7 +987,7 @@ gratuitous motion). All snap/disable under reduced-motion.
 | Value count-up | KPI/total on refresh | ≤ `motion-base`, `ease-decelerate` | ACCEPTED (DEC-UX-MOTION-02, 2026-06-06): ON but conservative — only on meaningful metric changes, not every tick; snaps on reduced-motion. |
 | Skeleton shimmer | Loading regions | loop, `motion-base`-paced | Static placeholder under reduced-motion. |
 | Toast in/out | Success/bg-error | in `motion-fast` `ease-decelerate`, out `ease-accelerate` | Auto-dismiss success ~3–4s. |
-| Stage transition | Card→focus | `motion-slow` in / `motion-base` out, `ease-standard` | The one hero motion (B2). |
+| Stage transition | Card→focus | Dedicated hero timing per DEC-UX-HEROTIME-01: ~450ms in / ~310ms out, `ease-standard` | The one hero motion (B2). In-focus selector switching still uses `motion-base` (220ms). |
 
 ## Decisions — Resolved / Flagged
 
@@ -1031,6 +1037,15 @@ gratuitous motion). All snap/disable under reduced-motion.
   keyboard operability, but the stage header no longer displays an `Esc` hint
   chip or other visible `Esc` text. Data-scope badges, BLK-UIUX-G12-006 hero
   enter/exit motion, and BLK-UIUX-G12-007 selector rail behavior are unchanged.
+- **DEC-UX-HEROTIME-01 — Card→Focus hero timing is slower than the B1 slow token. ACCEPTED by release owner 2026-06-10.**
+  Source: release-owner direction recorded in `planning/blockers.md`
+  `BLK-UIUX-G12-012`. The B2 hero transition behavior remains approved, but its
+  original `motion-slow` 320ms entry felt too fast in review. This binding
+  revision raises only the Card→Focus hero timing to a dedicated enter duration
+  of ~450ms and a proportional reverse duration of ~310ms. The B1 base scale is
+  not globally changed: `motion-base` remains 220ms for in-focus selector
+  switching and other standard transitions; reduced-motion remains the
+  `motion-instant` opacity-only snap; no other motion inherits the hero timing.
 - **SSE "已回款" push** remains a **parked future feature** (not new P0/P1 scope).
   Part B only defines how it would surface (B3) so it has a non-jarring landing;
   it must not be implemented as part of current scope without a formal scope

@@ -616,6 +616,9 @@ there.
   - Exit affordance: one `返回` ghost button with back-chevron icon in the stage
     head. DEC-UX-FOCUSEXIT-01 supersedes the mockup's visible Esc hint chip; Esc
     remains a keyboard shortcut only.
+- **Motion timing**: per `interaction-spec.md` DEC-UX-HEROTIME-01, the Card→Focus
+  hero uses dedicated timing (~450ms enter / ~310ms reverse). This does not
+  redefine the global B1 scale and does not affect selector switching.
 - **Switch within focus**: clicking/Enter/Space on a selector rail item changes
   only the center stage content via the UX-defined calm crossfade. The rail
   itself does not pop, remove, insert, or reorder cards.

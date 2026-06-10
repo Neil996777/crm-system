@@ -223,6 +223,7 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
   await expectFocusRailSelection(page, 'payments');
   await expectDashboardAnimationStarted(page, 'dashboardStageEnter');
+  await expectDashboardAnimationTotal(page, 'dashboardStageEnter', 450);
   await expectDashboardAnimationStarted(page, 'dashboardStripEnter');
   await expect(page.getByRole('heading', { name: '团队回款到账' })).toBeFocused({ timeout: 2_000 });
 
@@ -233,12 +234,14 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await expect.poll(() => focusRailKeys(page)).toEqual(railOrderBeforeSwitch);
   await expectFocusRailSelection(page, 'stage');
   await expectDashboardAnimationStarted(page, 'dashboardStageSwitch');
+  await expectDashboardAnimationTotal(page, 'dashboardStageSwitch', 220);
   const switchAnimations = await dashboardAnimationNames(page);
   expect(switchAnimations).not.toContain('dashboardStageExit');
 
   await resetDashboardAnimationRecorder(page);
   await page.keyboard.press('Escape');
   await expectDashboardAnimationStarted(page, 'dashboardStageExit');
+  await expectDashboardAnimationTotal(page, 'dashboardStageExit', 310);
   await expectDashboardAnimationStarted(page, 'dashboardStripExit');
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
   await expect(page.locator('[data-dashboard-card="stage"]')).toBeFocused();
@@ -394,18 +397,37 @@ async function expectDashboardFlowRowsDoNotOverlap(page: Page) {
 
 async function installDashboardAnimationRecorder(page: Page) {
   await page.evaluate(() => {
+    type DashboardAnimationRecord = { name: string; duration: number | null; delay: number | null; total: number | null };
     const global = window as Window & {
       __dashboardAnimationNames?: string[];
+      __dashboardAnimationRecords?: DashboardAnimationRecord[];
       __dashboardAnimationRecorderInstalled?: boolean;
     };
     global.__dashboardAnimationNames = [];
+    global.__dashboardAnimationRecords = [];
     if (global.__dashboardAnimationRecorderInstalled) return;
     document.addEventListener('animationstart', (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
       const isDashboardFocus = target.matches('[data-uiux="dashboard-focus"]') || Boolean(target.closest('[data-uiux="dashboard-focus"]'));
       if (!isDashboardFocus) return;
-      global.__dashboardAnimationNames?.push((event as AnimationEvent).animationName);
+      const animationName = (event as AnimationEvent).animationName;
+      const timing = target
+        .getAnimations()
+        .find((animation) => (
+          'animationName' in animation && (animation as CSSAnimation).animationName === animationName
+        ))
+        ?.effect
+        ?.getTiming();
+      const duration = typeof timing?.duration === 'number' ? timing.duration : null;
+      const delay = typeof timing?.delay === 'number' ? timing.delay : null;
+      global.__dashboardAnimationNames?.push(animationName);
+      global.__dashboardAnimationRecords?.push({
+        name: animationName,
+        duration,
+        delay,
+        total: duration !== null && delay !== null ? duration + delay : null
+      });
     }, true);
     global.__dashboardAnimationRecorderInstalled = true;
   });
@@ -413,7 +435,12 @@ async function installDashboardAnimationRecorder(page: Page) {
 
 async function resetDashboardAnimationRecorder(page: Page) {
   await page.evaluate(() => {
-    (window as Window & { __dashboardAnimationNames?: string[] }).__dashboardAnimationNames = [];
+    const global = window as Window & {
+      __dashboardAnimationNames?: string[];
+      __dashboardAnimationRecords?: Array<{ name: string; duration: number | null; delay: number | null; total: number | null }>;
+    };
+    global.__dashboardAnimationNames = [];
+    global.__dashboardAnimationRecords = [];
   });
 }
 
@@ -423,6 +450,24 @@ async function dashboardAnimationNames(page: Page) {
 
 async function expectDashboardAnimationStarted(page: Page, animationName: string) {
   await expect.poll(() => dashboardAnimationNames(page), { timeout: 2_000 }).toContain(animationName);
+}
+
+async function dashboardAnimationRecords(page: Page) {
+  return page.evaluate(() => (
+    (window as Window & {
+      __dashboardAnimationRecords?: Array<{ name: string; duration: number | null; delay: number | null; total: number | null }>;
+    }).__dashboardAnimationRecords ?? []
+  ));
+}
+
+async function expectDashboardAnimationTotal(page: Page, animationName: string, expectedMs: number, toleranceMs = 24) {
+  await expect.poll(async () => {
+    const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
+    return record?.total ?? 0;
+  }, { timeout: 2_000 }).toBeGreaterThan(0);
+  const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
+  expect(record?.total).toBeGreaterThanOrEqual(expectedMs - toleranceMs);
+  expect(record?.total).toBeLessThanOrEqual(expectedMs + toleranceMs);
 }
 
 async function focusRailKeys(page: Page) {

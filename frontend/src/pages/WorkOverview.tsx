@@ -52,8 +52,8 @@ type AccentTone = 'sky' | 'mint' | 'peach' | 'purple';
 type DashboardMotionPhase = 'idle' | 'entering' | 'exiting' | 'switching' | 'reduced-entering' | 'reduced-exiting' | 'reduced-switching';
 type DashboardRect = { left: number; top: number; width: number; height: number };
 
-const focusEnterMs = 320;
-const focusExitMs = 220;
+const focusEnterMs = 450;
+const focusExitMs = 310;
 const focusSwitchMs = 220;
 const focusReducedMs = 80;
 const dashboardLivePollMs = 10_000;
@@ -648,7 +648,9 @@ function focusTransitionClass(phase: DashboardMotionPhase) {
 
 function focusRootStyle(phase: DashboardMotionPhase): CSSProperties {
   return {
-    '--dashboard-transition-reverse': phase === 'exiting' || phase === 'reduced-exiting' ? 'reverse' : 'normal'
+    '--dashboard-transition-reverse': phase === 'exiting' || phase === 'reduced-exiting' ? 'reverse' : 'normal',
+    '--motion-hero': `${focusEnterMs}ms`,
+    '--motion-hero-exit': `${focusExitMs}ms`
   } as CSSProperties;
 }
 
