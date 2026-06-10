@@ -76,7 +76,10 @@ test('TEST-UIUX-DASHBOARD-001 renders manager dashboard 8 cards and per-card foc
 
 test('TEST-UIUX-A6-001 dashboard remains stable on narrow desktop viewport', async ({ page }) => {
   const dashboardWidths = [
+    { width: 1700, height: 900 },
     { width: 1680, height: 900 },
+    { width: 1600, height: 900 },
+    { width: 1512, height: 900 },
     { width: 1440, height: 900 },
     { width: 1280, height: 900 },
     { width: 1180, height: 900 },
@@ -91,6 +94,10 @@ test('TEST-UIUX-A6-001 dashboard remains stable on narrow desktop viewport', asy
     await expect(page.locator('[data-dashboard-card]')).toHaveCount(8);
     await expectDashboardCardsNotClipped(page);
     await expectDashboardInlineContentStable(page);
+    if (viewport.width >= 1024) {
+      await expectDashboardReadableTextNotTruncated(page);
+      await expectDashboardFlowRowsDoNotOverlap(page);
+    }
     const overflow = await page.evaluate(() => Math.max(
       document.documentElement.scrollWidth - document.documentElement.clientWidth,
       document.body.scrollWidth - document.body.clientWidth
@@ -316,6 +323,73 @@ async function expectDashboardInlineContentStable(page: Page) {
     return issues;
   });
   expect(layoutIssues).toEqual([]);
+}
+
+async function expectDashboardReadableTextNotTruncated(page: Page) {
+  const truncated = await page.evaluate(() => {
+    const selectors = [
+      '[data-dashboard-card="payments"] .paymentRow small',
+      '[data-dashboard-card="payments"] .paymentRight .money',
+      '[data-dashboard-card="payments"] .paymentRight .badge',
+      '[data-dashboard-card="stage"] .legendItem span:not(.legendSwatch)',
+      '[data-dashboard-card="activity"] .event p',
+      '[data-dashboard-card="activity"] .event small',
+      '[data-dashboard-card="activity"] .eventTime'
+    ];
+
+    return selectors.flatMap((selector) => (
+      Array.from(document.querySelectorAll<HTMLElement>(selector))
+        .map((element) => ({
+          selector,
+          text: element.textContent?.trim() ?? '',
+          viewportWidth: window.innerWidth,
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth
+        }))
+        .filter((item) => item.text.length > 0 && item.scrollWidth > item.clientWidth + 1)
+    ));
+  });
+  expect(truncated).toEqual([]);
+}
+
+async function expectDashboardFlowRowsDoNotOverlap(page: Page) {
+  const overlaps = await page.evaluate(() => {
+    const intersects = (a: DOMRect, b: DOMRect) => (
+      a.right > b.left + 1
+      && b.right > a.left + 1
+      && a.bottom > b.top + 1
+      && b.bottom > a.top + 1
+    );
+
+    const describeRect = (rect: DOMRect) => ({
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height)
+    });
+
+    return Array.from(document.querySelectorAll<HTMLElement>(
+      '[data-dashboard-card="payments"] .paymentRow, [data-dashboard-card="activity"] .event'
+    )).flatMap((row) => {
+      const icon = row.querySelector<HTMLElement>('.flowIcon');
+      if (!icon) return [];
+      const iconRect = icon.getBoundingClientRect();
+      return Array.from(row.children)
+        .filter((child): child is HTMLElement => child instanceof HTMLElement && !child.classList.contains('flowIcon'))
+        .map((element) => ({
+          card: row.closest<HTMLElement>('[data-dashboard-card]')?.dataset.dashboardCard ?? '',
+          rowClass: row.className,
+          text: element.textContent?.trim() ?? '',
+          viewportWidth: window.innerWidth,
+          gridColumns: window.getComputedStyle(row).gridTemplateColumns,
+          icon: describeRect(iconRect),
+          textRect: describeRect(element.getBoundingClientRect()),
+          overlaps: intersects(iconRect, element.getBoundingClientRect())
+        }))
+        .filter((item) => item.text.length > 0 && item.overlaps);
+    });
+  });
+  expect(overlaps).toEqual([]);
 }
 
 async function installDashboardAnimationRecorder(page: Page) {

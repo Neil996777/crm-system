@@ -3183,7 +3183,7 @@ tbody tr:hover td {
 .paymentRow {
   min-height: 38px;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   transition: background-color var(--motion-base) var(--ease-standard), border-color var(--motion-base) var(--ease-standard);
@@ -3191,7 +3191,7 @@ tbody tr:hover td {
 
 .salesDashboardGrid .paymentRow {
   min-height: 44px;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   gap: 10px;
 }
 
@@ -3245,7 +3245,7 @@ tbody tr:hover td {
 .event {
   min-height: 58px;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   padding: 5px 0;
@@ -3254,9 +3254,70 @@ tbody tr:hover td {
 
 .salesDashboardGrid .event {
   min-height: 62px;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   gap: 10px;
   padding: 6px 0;
+}
+
+@media (min-width: 1024px) {
+  .dashboardPanel .legendItem span:not(.legendSwatch),
+  .dashboardRow strong,
+  .paymentRow strong,
+  .event p,
+  .dashboardRow > div > span,
+  .paymentRow small,
+  .event small,
+  .eventTime {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboardPanel .legendItem span:not(.legendSwatch),
+  .dashboardPanel .legendItem strong {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1699px) {
+  .dashboardPanel .donutShell {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 10px;
+  }
+
+  .dashboardPanel .legend {
+    width: 100%;
+    justify-items: start;
+  }
+
+  .dashboardPanel .legendItem {
+    grid-template-columns: 22px max-content auto;
+    justify-content: start;
+  }
+
+  .paymentRow,
+  .event {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .salesDashboardGrid .paymentRow,
+  .salesDashboardGrid .event {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .paymentRight,
+  .eventTime {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .paymentRight {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
 }
 
 .dashboardTrendChart {
