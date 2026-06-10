@@ -357,7 +357,10 @@ contract for any panel that lists rows in a height-capped card.
 - `focus` = `grid-template-columns:1fr 300px; gap:20px; padding:24px`.
 - **Center stage**: `1fr`, `padding:28px`, `min-height:1010px`, `--shadow`.
   Holds the expanded artifact (e.g., funnel + detail table). Stage head =
-  icon + title + live sub on the left, ghost `返回` + `Esc 返回` chip on the right.
+  icon + title + live sub on the left, a single ghost `返回` button with back
+  chevron on the right. Per `interaction-spec.md` DEC-UX-FOCUSEXIT-01, the
+  visible `Esc 退出` / `Esc 返回` hint chip from the mockup is removed; the Esc
+  keyboard shortcut remains functional.
 - **Right focus selector rail**: fixed **300px** column, `side` =
   `grid; gap:12px; align-content:start` of compact strip-cards. Per
   `interaction-spec.md` DEC-UX-FOCUSRAIL-01, the rail is a persistent selector:
@@ -515,9 +518,9 @@ existing selected treatment with `--primary` as the accent and carries
 - **Primary** [EXTRACTED]: 38px, capsule, bg `--primary`, border `--primary`,
   white, weight 700, padding `0 14px`. Hover → `--primary-hover` [DERIVED].
 - **Ghost / secondary** [EXTRACTED + DEC-UIUX-A5-001]: 38px (34px ghost in
-  focus), capsule, white, 1px `--border`, `--muted`/700. Focus-stage
-  `ghost`/`chip` add `--badge-shadow`; `chip` = `--section` bg, `--muted`, 12px
-  (used for readable `Esc 返回` hint).
+  focus), capsule, white, 1px `--border`, `--muted`/700. Focus-stage `返回`
+  button is the single visible exit control and keeps the back-chevron icon.
+  Generic `chip` = `--section` bg, `--muted`, 12px for non-exit metadata.
 
 ### 7.12 KPI stat card (→ CMP-014 Metric Tile)
 
@@ -610,7 +613,9 @@ there.
   - The sidebar collapses **248px → 72px icon rail**.
   - The workspace behind the stage **dims** (`rgba(15,23,42,.06)` overlay under
     the topbar) to spotlight the stage.
-  - Exit affordances: `返回` ghost button + `Esc 返回` chip in the stage head.
+  - Exit affordance: one `返回` ghost button with back-chevron icon in the stage
+    head. DEC-UX-FOCUSEXIT-01 supersedes the mockup's visible Esc hint chip; Esc
+    remains a keyboard shortcut only.
 - **Switch within focus**: clicking/Enter/Space on a selector rail item changes
   only the center stage content via the UX-defined calm crossfade. The rail
   itself does not pop, remove, insert, or reorder cards.

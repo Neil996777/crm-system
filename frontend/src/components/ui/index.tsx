@@ -802,8 +802,7 @@ export function FocusStage({
   children,
   sideCards,
   onBack,
-  backLabel = '返回总览',
-  escapeHint = 'Esc 退出聚焦'
+  backLabel = '返回总览'
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -813,7 +812,6 @@ export function FocusStage({
   sideCards?: FocusSideCard[];
   onBack?: () => void;
   backLabel?: string;
-  escapeHint?: ReactNode;
 }) {
   return (
     <div className="focus">
@@ -827,10 +825,10 @@ export function FocusStage({
             </div>
           </div>
           <div className="stageTools">
-            {escapeHint ? <span className="chip">{escapeHint}</span> : null}
             {tools}
             {onBack ? (
-              <button className="secondaryButton" type="button" onClick={onBack}>
+              <button className="secondaryButton" type="button" onClick={onBack} aria-label={backLabel}>
+                <ChevronLeft size={15} aria-hidden="true" />
                 {backLabel}
               </button>
             ) : null}

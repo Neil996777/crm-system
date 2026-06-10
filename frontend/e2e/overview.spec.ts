@@ -55,6 +55,7 @@ test('TEST-UIUX-DASHBOARD-001 renders manager dashboard 8 cards and per-card foc
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('.shell.focusMode')).toBeVisible();
   await expect(page.getByRole('heading', { name: '团队销售漏斗' })).toBeVisible();
+  await expectSingleFocusExitControl(page);
   await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(8);
   await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
   await expectFocusRailSelection(page, 'funnel');
@@ -68,6 +69,7 @@ test('TEST-UIUX-DASHBOARD-001 renders manager dashboard 8 cards and per-card foc
   await expect(page.locator('.shell.focusMode')).toHaveCount(0);
   await page.locator('[data-dashboard-card="activity"]').click();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
+  await expectSingleFocusExitControl(page);
   await page.getByRole('button', { name: '返回' }).click();
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
 });
@@ -110,6 +112,7 @@ test('TEST-UIUX-DASHBOARD-002 renders sales personal dashboard variant without m
   await page.locator('[data-dashboard-card="funnel"]').click();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.getByRole('heading', { name: '我的销售漏斗' })).toBeVisible();
+  await expectSingleFocusExitControl(page);
   await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(6);
   await expect.poll(() => focusRailKeys(page)).toEqual(salesFocusRailKeys);
   await expectFocusRailSelection(page, 'funnel');
@@ -129,6 +132,7 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveAttribute('data-motion-mode', 'full');
   await expect(page.locator('.shell.focusMode')).toBeVisible();
+  await expectSingleFocusExitControl(page);
   await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(8);
   await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
   await expectFocusRailSelection(page, 'payments');
@@ -161,6 +165,7 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveAttribute('data-motion-mode', 'reduced');
   await expect(page.getByRole('heading', { name: '团队回款到账' })).toBeVisible();
+  await expectSingleFocusExitControl(page);
   await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(8);
   await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
   await expectFocusRailSelection(page, 'payments');
@@ -244,6 +249,13 @@ async function focusRailKeys(page: Page) {
 async function expectFocusRailSelection(page: Page, selectedKey: string) {
   await expect(page.getByLabel('看板选择器').locator('[aria-current="true"]')).toHaveCount(1);
   await expect(page.getByLabel('看板选择器').locator(`[data-focus-side-card="${selectedKey}"]`)).toHaveAttribute('aria-current', 'true');
+}
+
+async function expectSingleFocusExitControl(page: Page) {
+  const focusStage = page.getByLabel('聚焦舞台');
+  await expect(focusStage.locator('.stageTools').getByRole('button')).toHaveCount(1);
+  await expect(focusStage.getByRole('button', { name: '返回', exact: true })).toHaveCount(1);
+  await expect(focusStage.getByText(/Esc/)).toHaveCount(0);
 }
 
 async function createUser(page: import('@playwright/test').Page, email: string, displayName: string, role: 'Sales Manager' | 'Sales') {

@@ -363,7 +363,6 @@ export function WorkOverview({
           sideCards={sideCards}
           onBack={requestExitFocus}
           backLabel="返回"
-          escapeHint="Esc 返回"
           tools={<Badge tone="primary">{model.scopeBadge}</Badge>}
         >
           <div className="dashboardStageContent" key={active.key}>

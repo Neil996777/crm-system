@@ -12,7 +12,7 @@
   added 2026-06-06, grounded in the locked dashboard, pending re-acceptance.
   List Archetype (Part B8, 商机 exemplar) instantiated 2026-06-06 on the accepted
   Part B + accepted decisions (DEC-UX-NAV-01 / DEC-UX-MOTION-02 /
-  DEC-UX-LIVE-03 / DEC-UX-FOCUSRAIL-01).
+  DEC-UX-LIVE-03 / DEC-UX-FOCUSRAIL-01 / DEC-UX-FOCUSEXIT-01).
 
 ## Reading Order
 
@@ -258,11 +258,12 @@ elements are transformed from their overview positions into it.
   stage swaps to that panel via a quick content crossfade on `motion-base`; the
   rail item set and order do not change. The newly focused rail item receives the
   selected treatment and `aria-current="true"`; the previous one clears it.
-- **Exit focus:** the `返回` button (always present, top-right of the stage) or
-  the `Esc` key (global while in focus state). Switching focus is not exit; it is
-  never modeled as a full reverse+forward.
-- The `Esc 返回` hint chip from the mockup is the discoverability affordance and
-  stays visible in the stage header.
+- **Exit focus:** a single `返回` button (always present, top-right of the stage,
+  with the back-chevron icon) or the `Esc` key (global while in focus state).
+  Switching focus is not exit; it is never modeled as a full reverse+forward.
+- Per DEC-UX-FOCUSEXIT-01, the visible `Esc 退出` / `Esc 返回` hint chip from the
+  mockup is removed. The keyboard shortcut remains functional, but no screen
+  text advertises it in the stage header.
 - Only one focus stage exists at a time; focus is single-select.
 
 ### States this transition must honor
@@ -1006,6 +1007,16 @@ gratuitous motion). All snap/disable under reduced-motion.
   Clicking/Enter/Space on any rail item changes only the left stage via the
   existing calm content crossfade; the rail does not add/remove/reorder items.
   BLK-UIUX-G12-006 hero enter/exit remains unchanged.
+- **DEC-UX-FOCUSEXIT-01 — Focus header has one visible exit control. ACCEPTED by release owner 2026-06-10.**
+  Source: release-owner direction recorded in `planning/blockers.md`
+  `BLK-UIUX-G12-008`. The locked focus mockup showed a `返回` button plus a
+  visible `Esc 退出`/`Esc 返回` hint chip; implementation further duplicated the
+  word "返回". The binding revision supersedes that mockup chip: the focus stage
+  header shows exactly one visible exit control, the `返回` button with its
+  back-chevron icon. The `Esc` key remains a global focus-exit shortcut for B6
+  keyboard operability, but the stage header no longer displays an `Esc` hint
+  chip or other visible `Esc` text. Data-scope badges, BLK-UIUX-G12-006 hero
+  enter/exit motion, and BLK-UIUX-G12-007 selector rail behavior are unchanged.
 - **SSE "已回款" push** remains a **parked future feature** (not new P0/P1 scope).
   Part B only defines how it would surface (B3) so it has a non-jarring landing;
   it must not be implemented as part of current scope without a formal scope
