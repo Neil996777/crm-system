@@ -521,8 +521,8 @@ export function BulkActionBar({ children }: { children: ReactNode }) {
 export function LiveToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
   return (
     <button className="secondaryButton" type="button" aria-pressed={active} onClick={onToggle}>
-      <span className={cx('liveDot', active && 'livePulse')} aria-hidden="true" />
-      {active ? '实时开启' : '实时暂停'}
+      <span className={cx('liveDot', active ? 'livePulse' : 'paused')} aria-hidden="true" />
+      {active ? '实时更新' : '暂停'}
     </button>
   );
 }

@@ -12,7 +12,8 @@
   added 2026-06-06, grounded in the locked dashboard, pending re-acceptance.
   List Archetype (Part B8, 商机 exemplar) instantiated 2026-06-06 on the accepted
   Part B + accepted decisions (DEC-UX-NAV-01 / DEC-UX-MOTION-02 /
-  DEC-UX-LIVE-03 / DEC-UX-FOCUSRAIL-01 / DEC-UX-FOCUSEXIT-01).
+  DEC-UX-LIVE-03 / DEC-UX-LIVE-04 / DEC-UX-FOCUSRAIL-01 /
+  DEC-UX-FOCUSEXIT-01).
 
 ## Reading Order
 
@@ -332,6 +333,9 @@ reminder counts inherit it).
 - The interaction contract is defined now so the future push path has a landing,
   but the feature itself stays parked (do not implement; this is UX intent for
   Architecture/Domain to note, not a new P0/P1 scope item).
+- Per DEC-UX-LIVE-04, dashboard live behavior is implemented in the current
+  frontend via client-side polling of existing GET endpoints. This is the
+  transition mechanism until a future server-push/SSE path is formally scoped.
 - A server-pushed event (e.g. a payment "已回款") surfaces **exactly like a poll
   update**: it patches the relevant row/value in place and triggers the single
   `arrived` highlight. It does NOT pop a modal, does NOT reorder beyond the
@@ -994,6 +998,16 @@ gratuitous motion). All snap/disable under reduced-motion.
   recommended ~800ms–1s live-update coalescing and ~250–300ms search-keystroke
   debounce; final values remain a tuning decision to validate against real latency
   during execution. Owner: Architecture (tuning only; the behavior is fixed).
+- **DEC-UX-LIVE-04 — Dashboard live transition mechanism. ACCEPTED by release owner 2026-06-10.**
+  Source: release-owner direction recorded in `planning/blockers.md`
+  `BLK-UIUX-G12-009`. Because true server-push/SSE remains a parked future path
+  and C1 forbids backend/API/shared changes in this spot-fix, the current
+  dashboard B3 live layer is implemented via client-side polling of the same
+  existing GET endpoints already used by dashboard refresh. Polling uses the B3
+  patch-in-place model, the DEC-UX-LIVE-03 coalescing window, change-driven
+  `arrived` highlights, and the functional `实时更新` / `暂停` pause buffer. This
+  replaces static/dead live UI and does not alter the future SSE interaction
+  contract.
 - **DEC-UX-FOCUSRAIL-01 — Focus rail as persistent selector. ACCEPTED by release owner 2026-06-10: Option A.**
   Source: release-owner direction recorded in `planning/blockers.md`
   `BLK-UIUX-G12-007`. The previously locked B2 model used a "7 non-active cards"

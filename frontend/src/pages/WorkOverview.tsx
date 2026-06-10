@@ -31,6 +31,7 @@ import {
   FocusStage,
   FunnelBars,
   Leaderboard,
+  LiveToggle,
   MetricCard,
   SkeletonBlock,
   StageDonut
@@ -55,6 +56,9 @@ const focusEnterMs = 320;
 const focusExitMs = 220;
 const focusSwitchMs = 220;
 const focusReducedMs = 80;
+const dashboardLivePollMs = 10_000;
+const dashboardLiveCoalesceMs = 900;
+const dashboardLiveHighlightMs = 1_600;
 
 type DashboardSnapshot = {
   overview: ManagerOverviewData | null;
@@ -81,6 +85,8 @@ type StageAggregate = {
 };
 
 type DashboardModel = {
+  changedKeys: ReadonlySet<string>;
+  livePaused: boolean;
   scopeWord: '团队' | '我的';
   scopeDescription: string;
   scopeBadge: string;
@@ -126,17 +132,61 @@ export function WorkOverview({
   const [motionPhase, setMotionPhase] = useState<DashboardMotionPhase>('idle');
   const [motionRects, setMotionRects] = useState<Partial<Record<DashboardCardKey, DashboardRect>>>({});
   const [liveMessage, setLiveMessage] = useState('');
+  const [livePaused, setLivePaused] = useState(false);
+  const [pendingLiveCount, setPendingLiveCount] = useState(0);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [refreshNotice, setRefreshNotice] = useState('');
+  const [changedKeys, setChangedKeys] = useState<Set<string>>(() => new Set());
   const focusRootRef = useRef<HTMLElement | null>(null);
   const motionTimerRef = useRef<number | null>(null);
+  const livePollTimerRef = useRef<number | null>(null);
+  const liveCoalesceTimerRef = useRef<number | null>(null);
+  const highlightTimerRef = useRef<number | null>(null);
+  const snapshotRef = useRef<DashboardSnapshot | null>(null);
+  const livePausedRef = useRef(false);
+  const pendingLiveSnapshotRef = useRef<DashboardSnapshot | null>(null);
+  const pendingLiveKeysRef = useRef<Set<string>>(new Set());
+  const queuedLiveSnapshotRef = useRef<DashboardSnapshot | null>(null);
+  const queuedLiveKeysRef = useRef<Set<string>>(new Set());
+  const manualFeedbackUntilRef = useRef(0);
   const restoreCardKeyRef = useRef<DashboardCardKey | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const isManagerView = user.role !== 'Sales';
-  const model = useMemo(() => (snapshot ? buildModel(snapshot, user) : null), [snapshot, user]);
+  const model = useMemo(() => (snapshot ? buildModel(snapshot, user, changedKeys, livePaused) : null), [changedKeys, livePaused, snapshot, user]);
   const cards = useMemo(() => (model ? dashboardCards(model, isManagerView) : []), [model, isManagerView]);
 
   useEffect(() => {
-    void refresh();
+    resetLiveState();
+    void loadInitialSnapshot();
   }, [user.id, user.role]);
+
+  useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
+
+  useEffect(() => {
+    livePausedRef.current = livePaused;
+  }, [livePaused]);
+
+  useEffect(() => {
+    if (!snapshot) return;
+    let disposed = false;
+    const schedule = () => {
+      livePollTimerRef.current = window.setTimeout(() => {
+        void pollDashboardLive().finally(() => {
+          if (!disposed) schedule();
+        });
+      }, dashboardLivePollDelay());
+    };
+    schedule();
+    return () => {
+      disposed = true;
+      if (livePollTimerRef.current) {
+        window.clearTimeout(livePollTimerRef.current);
+        livePollTimerRef.current = null;
+      }
+    };
+  }, [Boolean(snapshot), user.id, user.role]);
 
   useEffect(() => {
     onFocusChange(Boolean(activeCard));
@@ -217,10 +267,43 @@ export function WorkOverview({
     if (motionTimerRef.current) {
       window.clearTimeout(motionTimerRef.current);
     }
+    if (livePollTimerRef.current) {
+      window.clearTimeout(livePollTimerRef.current);
+    }
+    if (liveCoalesceTimerRef.current) {
+      window.clearTimeout(liveCoalesceTimerRef.current);
+    }
+    if (highlightTimerRef.current) {
+      window.clearTimeout(highlightTimerRef.current);
+    }
   }, []);
 
-  async function refresh() {
+  function resetLiveState() {
+    snapshotRef.current = null;
+    livePausedRef.current = false;
+    pendingLiveSnapshotRef.current = null;
+    pendingLiveKeysRef.current = new Set();
+    queuedLiveSnapshotRef.current = null;
+    queuedLiveKeysRef.current = new Set();
+    setSnapshot(null);
     setLoading(true);
+    setLivePaused(false);
+    setPendingLiveCount(0);
+    setManualRefreshing(false);
+    setRefreshNotice('');
+    setChangedKeys(new Set());
+    manualFeedbackUntilRef.current = 0;
+    if (liveCoalesceTimerRef.current) {
+      window.clearTimeout(liveCoalesceTimerRef.current);
+      liveCoalesceTimerRef.current = null;
+    }
+    if (highlightTimerRef.current) {
+      window.clearTimeout(highlightTimerRef.current);
+      highlightTimerRef.current = null;
+    }
+  }
+
+  async function fetchDashboardSnapshot() {
     const errors: string[] = [];
     const businessDate = today();
     const safe = async <T,>(label: string, promise: Promise<T>, fallback: T): Promise<T> => {
@@ -256,7 +339,7 @@ export function WorkOverview({
       safe('最近活动', listActivities('', '').then((response) => response.items), [] as WorkActivity[])
     ]);
 
-    setSnapshot({
+    return {
       overview,
       report,
       opportunities,
@@ -270,8 +353,129 @@ export function WorkOverview({
       errors,
       loadedAt: new Date(),
       businessDate
-    });
+    };
+  }
+
+  async function loadInitialSnapshot() {
+    setLoading(true);
+    const next = await fetchDashboardSnapshot();
+    applyDashboardSnapshot(next, new Set(), '');
     setLoading(false);
+  }
+
+  async function refresh() {
+    setManualRefreshing(true);
+    setRefreshNotice('正在刷新数据...');
+    try {
+      const next = await fetchDashboardSnapshot();
+      const keys = computeLiveChangeKeys(snapshotRef.current, next, user);
+      clearBufferedLive();
+      applyDashboardSnapshot(next, keys, keys.size ? `已刷新数据，应用 ${keys.size} 条变化。` : '已刷新数据。');
+      manualFeedbackUntilRef.current = Date.now() + 2_000;
+      setRefreshNotice(`已刷新 · ${formatClock(next.loadedAt)}`);
+    } finally {
+      setManualRefreshing(false);
+    }
+  }
+
+  async function pollDashboardLive() {
+    if (!snapshotRef.current) return;
+    const next = await fetchDashboardSnapshot();
+    const base = pendingLiveSnapshotRef.current ?? snapshotRef.current;
+    const keys = computeLiveChangeKeys(base, next, user);
+    queueLiveSnapshot(next, keys);
+  }
+
+  function queueLiveSnapshot(next: DashboardSnapshot, keys: Set<string>) {
+    queuedLiveSnapshotRef.current = next;
+    keys.forEach((key) => queuedLiveKeysRef.current.add(key));
+    if (liveCoalesceTimerRef.current) {
+      window.clearTimeout(liveCoalesceTimerRef.current);
+    }
+    liveCoalesceTimerRef.current = window.setTimeout(() => {
+      liveCoalesceTimerRef.current = null;
+      flushQueuedLiveSnapshot();
+    }, dashboardLiveCoalesceDelay());
+  }
+
+  function flushQueuedLiveSnapshot() {
+    const next = queuedLiveSnapshotRef.current;
+    if (!next) return;
+    const keys = new Set(queuedLiveKeysRef.current);
+    queuedLiveSnapshotRef.current = null;
+    queuedLiveKeysRef.current = new Set();
+
+    if (livePausedRef.current) {
+      if (keys.size === 0) return;
+      pendingLiveSnapshotRef.current = next;
+      keys.forEach((key) => pendingLiveKeysRef.current.add(key));
+      setPendingLiveCount(pendingLiveKeysRef.current.size);
+      setRefreshNotice(`已暂停 · ${pendingLiveKeysRef.current.size} 条新更新待处理`);
+      return;
+    }
+
+    applyDashboardSnapshot(next, keys, keys.size ? `已自动应用 ${keys.size} 条新更新。` : '');
+    if (keys.size) {
+      setLiveRefreshNotice(`实时更新 · ${formatClock(next.loadedAt)}`);
+    }
+  }
+
+  function applyDashboardSnapshot(next: DashboardSnapshot, keys: Set<string>, message: string) {
+    snapshotRef.current = next;
+    setSnapshot(next);
+    if (keys.size) {
+      showLiveHighlights(keys);
+    }
+    if (message) {
+      setLiveMessage(message);
+    }
+  }
+
+  function showLiveHighlights(keys: Set<string>) {
+    setChangedKeys(new Set(keys));
+    if (highlightTimerRef.current) {
+      window.clearTimeout(highlightTimerRef.current);
+    }
+    highlightTimerRef.current = window.setTimeout(() => {
+      highlightTimerRef.current = null;
+      setChangedKeys(new Set());
+    }, dashboardLiveHighlightMs);
+  }
+
+  function clearBufferedLive() {
+    pendingLiveSnapshotRef.current = null;
+    pendingLiveKeysRef.current = new Set();
+    setPendingLiveCount(0);
+  }
+
+  function toggleLiveUpdates() {
+    if (livePausedRef.current) {
+      setLivePaused(false);
+      livePausedRef.current = false;
+      applyBufferedLive(true);
+      return;
+    }
+    setLivePaused(true);
+    livePausedRef.current = true;
+    setRefreshNotice(`已暂停 · 更新于 ${snapshotRef.current ? formatClock(snapshotRef.current.loadedAt) : '加载中'}`);
+  }
+
+  function applyBufferedLive(resume: boolean) {
+    const next = pendingLiveSnapshotRef.current;
+    const keys = new Set(pendingLiveKeysRef.current);
+    clearBufferedLive();
+    if (resume) {
+      setLivePaused(false);
+      livePausedRef.current = false;
+    }
+    if (!next) return;
+    applyDashboardSnapshot(next, keys, keys.size ? `已应用 ${keys.size} 条新更新。` : '');
+    setRefreshNotice(`${resume ? '实时更新' : '已应用'} · ${formatClock(next.loadedAt)}`);
+  }
+
+  function setLiveRefreshNotice(message: string) {
+    if (Date.now() < manualFeedbackUntilRef.current) return;
+    setRefreshNotice(message);
   }
 
   function beginCardFocus(cardKey: DashboardCardKey, sourceElement: HTMLElement) {
@@ -311,7 +515,7 @@ export function WorkOverview({
   if (loading && !snapshot) {
     return (
       <main className="content dashboardPage" data-uiux="dashboard">
-        <DashboardHeader isManagerView={isManagerView} loadedAt={null} onRefresh={() => void refresh()} />
+      <DashboardHeader isManagerView={isManagerView} loadedAt={null} onRefresh={() => void refresh()} />
         <SkeletonBlock lines={8} label="加载工作台" />
       </main>
     );
@@ -358,7 +562,7 @@ export function WorkOverview({
       >
         <FocusStage
           title={active.title}
-          subtitle={<><span className="liveDot livePulse" aria-hidden="true" />实时 · {active.focusSubtitle}</>}
+          subtitle={<><span className={livePaused ? 'liveDot paused' : 'liveDot livePulse'} aria-hidden="true" />实时 · {active.focusSubtitle}</>}
           icon={active.sideIcon}
           sideCards={sideCards}
           onBack={requestExitFocus}
@@ -376,7 +580,17 @@ export function WorkOverview({
 
   return (
     <main className="content dashboardPage motionFadeIn" data-uiux="dashboard">
-      <DashboardHeader isManagerView={isManagerView} loadedAt={snapshot.loadedAt} onRefresh={() => void refresh()} />
+      <DashboardHeader
+        isManagerView={isManagerView}
+        loadedAt={snapshot.loadedAt}
+        livePaused={livePaused}
+        manualRefreshing={manualRefreshing}
+        pendingLiveCount={pendingLiveCount}
+        refreshNotice={refreshNotice}
+        onApplyBuffered={() => applyBufferedLive(false)}
+        onRefresh={() => void refresh()}
+        onToggleLive={toggleLiveUpdates}
+      />
       {snapshot.errors.length ? <ErrorState className="dashboardError">{snapshot.errors.join('；')}</ErrorState> : null}
       <LiveReport model={model} />
       <section className="dashboardKpis" aria-label={isManagerView ? '团队关键指标' : '个人关键指标'}>
@@ -452,32 +666,58 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
+function dashboardLivePollDelay() {
+  const override = (window as Window & { __dashboardLivePollMs?: number }).__dashboardLivePollMs;
+  return typeof override === 'number' && override >= 250 ? override : dashboardLivePollMs;
+}
+
+function dashboardLiveCoalesceDelay() {
+  const override = (window as Window & { __dashboardLiveCoalesceMs?: number }).__dashboardLiveCoalesceMs;
+  return typeof override === 'number' && override >= 0 ? override : dashboardLiveCoalesceMs;
+}
+
 function DashboardHeader({
   isManagerView,
   loadedAt,
-  onRefresh
+  livePaused = false,
+  manualRefreshing = false,
+  pendingLiveCount = 0,
+  refreshNotice = '',
+  onApplyBuffered,
+  onRefresh,
+  onToggleLive
 }: {
   isManagerView: boolean;
   loadedAt: Date | null;
+  livePaused?: boolean;
+  manualRefreshing?: boolean;
+  pendingLiveCount?: number;
+  refreshNotice?: string;
+  onApplyBuffered?: () => void;
   onRefresh: () => void;
+  onToggleLive?: () => void;
 }) {
+  const updateText = loadedAt ? formatClock(loadedAt) : '加载中';
   return (
     <section className="dashboardTitle">
       <div>
         <h1>{isManagerView ? '团队工作台' : '我的工作台'}</h1>
-        <p>{currentMonthLabel()} · {isManagerView ? '团队销售运营总览' : '我的销售工作台'} · 数据更新时间 {loadedAt ? formatClock(loadedAt) : '加载中'}</p>
+        <p>{currentMonthLabel()} · {isManagerView ? '团队销售运营总览' : '我的销售工作台'} · 数据更新时间 {updateText}</p>
       </div>
       <div className="dashboardActions">
-        <Button>本月</Button>
-        <Button variant="primary" onClick={onRefresh}>
-          <RefreshCcw size={16} aria-hidden="true" />
-          刷新数据
+        <Button variant="primary" onClick={onRefresh} disabled={manualRefreshing} aria-busy={manualRefreshing}>
+          <RefreshCcw className={manualRefreshing ? 'spinIcon' : undefined} size={16} aria-hidden="true" />
+          {manualRefreshing ? '刷新中' : '刷新数据'}
         </Button>
-        <div className="liveSegment" aria-label="实时更新状态">
-          <span className="segmentOn"><span className="liveDot livePulse" aria-hidden="true" />实时更新</span>
-          <span className="segmentOff">自动合并</span>
-        </div>
-        <span className="updateMeta">更新于 {loadedAt ? formatClock(loadedAt) : '加载中'}</span>
+        {onToggleLive ? <LiveToggle active={!livePaused} onToggle={onToggleLive} /> : null}
+        {pendingLiveCount > 0 && onApplyBuffered ? (
+          <button className="liveBufferPill" type="button" onClick={onApplyBuffered}>
+            有 {pendingLiveCount} 条新更新 · 点击刷新
+          </button>
+        ) : null}
+        <span className="updateMeta" aria-live="polite">
+          {refreshNotice || `${livePaused ? '已暂停 · ' : ''}更新于 ${updateText}`}
+        </span>
       </div>
     </section>
   );
@@ -487,7 +727,7 @@ function LiveReport({ model }: { model: DashboardModel }) {
   return (
     <section className="liveReport" aria-label="今日实时战报">
       <div className="reportLead">
-        <span className="liveDot livePulse" aria-hidden="true" />
+        <span className={model.livePaused ? 'liveDot paused' : 'liveDot livePulse'} aria-hidden="true" />
         今日实时战报
       </div>
       <ReportItem label="今日活跃线索" value={model.live.leadCount} tone="lavender" />
@@ -569,7 +809,7 @@ function dashboardCards(model: DashboardModel, isManagerView: boolean): Dashboar
     {
       key: 'payments',
       title: `${scope}回款到账`,
-      meta: <><span className="liveDot" aria-hidden="true" />实时</>,
+      meta: <><span className={model.livePaused ? 'liveDot paused' : 'liveDot'} aria-hidden="true" />实时</>,
       metric: formatMoney(model.metrics.paymentAmount, model.currency),
       sideIcon: <CreditCard size={18} aria-hidden="true" />,
       focusSubtitle: '回款状态 · 授权记录',
@@ -580,7 +820,7 @@ function dashboardCards(model: DashboardModel, isManagerView: boolean): Dashboar
     {
       key: 'activity',
       title: `${scope}最近活动`,
-      meta: <><span className="liveDot" aria-hidden="true" />更新于 {formatClock(new Date())}</>,
+      meta: <><span className={model.livePaused ? 'liveDot paused' : 'liveDot'} aria-hidden="true" />更新于 {formatClock(new Date())}</>,
       metric: model.activities.length ? formatTime(model.activities[0].occurredAt) : '暂无',
       sideIcon: <ListChecks size={18} aria-hidden="true" />,
       focusSubtitle: '动态 · 最近更新',
@@ -838,8 +1078,8 @@ function PaymentsOverview({ model }: { model: DashboardModel }) {
   return (
     <>
       <div className="paymentRows">
-        {model.paymentRows.slice(0, 3).map((row, index) => (
-          <div className={index === 0 ? 'paymentRow arrived' : 'paymentRow'} key={row.id}>
+        {model.paymentRows.slice(0, 3).map((row) => (
+          <div className={model.changedKeys.has(paymentChangeKey(row)) ? 'paymentRow arrived' : 'paymentRow'} key={row.id}>
             <span className="flowIcon pay" aria-hidden="true"><CreditCard size={13} /></span>
             <div>
               <strong>{row.title}</strong>
@@ -898,8 +1138,8 @@ function ActivityOverview({ model }: { model: DashboardModel }) {
   if (model.activities.length === 0) return <EmptyState>暂无最近活动。</EmptyState>;
   return (
     <div className="timeline">
-      {model.activities.slice(0, 4).map((activity, index) => (
-        <div className={index === 0 ? 'event arrived' : 'event'} key={activity.id}>
+      {model.activities.slice(0, 4).map((activity) => (
+        <div className={model.changedKeys.has(activityChangeKey(activity)) ? 'event arrived' : 'event'} key={activity.id}>
           <span className="flowIcon" aria-hidden="true"><Activity size={13} /></span>
           <div>
             <p>{activity.content || '动态已记录'}</p>
@@ -960,7 +1200,79 @@ function OpportunityTable({ rows, caption }: { rows: Opportunity[]; caption: str
   );
 }
 
-function buildModel(snapshot: DashboardSnapshot, user: CurrentUser): DashboardModel {
+function computeLiveChangeKeys(previous: DashboardSnapshot | null, next: DashboardSnapshot, user: CurrentUser) {
+  const keys = new Set<string>();
+  if (!previous) return keys;
+
+  const previousModel = buildModel(previous, user);
+  const nextModel = buildModel(next, user);
+  addChangedRowKeys(previousModel.paymentRows, nextModel.paymentRows, paymentChangeKey, paymentSignature, keys);
+  addChangedRowKeys(previousModel.activities, nextModel.activities, activityChangeKey, activitySignature, keys);
+  addChangedMetricKeys(previousModel, nextModel, keys);
+  return keys;
+}
+
+function addChangedRowKeys<T>(
+  previousRows: T[],
+  nextRows: T[],
+  keyFor: (row: T) => string,
+  signatureFor: (row: T) => string,
+  keys: Set<string>
+) {
+  const previousSignatures = new Map(previousRows.map((row) => [keyFor(row), signatureFor(row)]));
+  for (const row of nextRows) {
+    const key = keyFor(row);
+    if (previousSignatures.get(key) !== signatureFor(row)) {
+      keys.add(key);
+    }
+  }
+}
+
+function addChangedMetricKeys(previousModel: DashboardModel, nextModel: DashboardModel, keys: Set<string>) {
+  const metricEntries: Array<[string, string | number]> = [
+    ['monthLeadCount', nextModel.metrics.monthLeadCount],
+    ['activeOpportunityAmount', nextModel.metrics.activeOpportunityAmount],
+    ['monthWonCount', nextModel.metrics.monthWonCount],
+    ['taskCount', nextModel.metrics.taskCount],
+    ['opportunityCount', nextModel.metrics.opportunityCount],
+    ['paymentAmount', nextModel.metrics.paymentAmount],
+    ['liveLeadCount', nextModel.live.leadCount],
+    ['liveOpportunityCount', nextModel.live.opportunityCount],
+    ['livePaymentAmount', nextModel.live.paymentAmount],
+    ['liveTaskCount', nextModel.live.taskCount]
+  ];
+  for (const [key, nextValue] of metricEntries) {
+    const previousValue = key.startsWith('live')
+      ? previousModel.live[liveMetricName(key) as keyof DashboardModel['live']]
+      : previousModel.metrics[key as keyof DashboardModel['metrics']];
+    if (previousValue !== nextValue) {
+      keys.add(`value:${key}`);
+    }
+  }
+}
+
+function liveMetricName(key: string) {
+  const raw = key.replace(/^live/, '');
+  return `${raw.charAt(0).toLowerCase()}${raw.slice(1)}`;
+}
+
+function paymentChangeKey(row: DashboardModel['paymentRows'][number]) {
+  return `payment:${row.id}`;
+}
+
+function paymentSignature(row: DashboardModel['paymentRows'][number]) {
+  return JSON.stringify([row.title, row.meta, row.amount, row.status, row.tone]);
+}
+
+function activityChangeKey(activity: WorkActivity) {
+  return `activity:${activity.id}`;
+}
+
+function activitySignature(activity: WorkActivity) {
+  return JSON.stringify([activity.content, activity.relatedType, activity.relatedId, activity.ownerId, activity.occurredAt]);
+}
+
+function buildModel(snapshot: DashboardSnapshot, user: CurrentUser, changedKeys: ReadonlySet<string> = new Set(), livePaused = false): DashboardModel {
   const scopeWord = user.role === 'Sales' ? '我的' : '团队';
   const scopeDescription = user.role === 'Administrator' ? '全局 CRM 范围' : user.role === 'Sales Manager' ? '团队范围' : '本人负责和分配范围';
   const scopeBadge = user.role === 'Administrator' ? '全部' : user.role === 'Sales Manager' ? '团队' : '本人';
@@ -992,6 +1304,8 @@ function buildModel(snapshot: DashboardSnapshot, user: CurrentUser): DashboardMo
   const paymentAmount = paymentRows.reduce((sum, row) => sum + row.amount, 0);
 
   return {
+    changedKeys,
+    livePaused,
     scopeWord,
     scopeDescription,
     scopeBadge,

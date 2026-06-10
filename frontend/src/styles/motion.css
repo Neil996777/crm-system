@@ -29,6 +29,10 @@
   animation: livePulse 1600ms var(--ease-standard) infinite;
 }
 
+.spinIcon {
+  animation: dashboardIconSpin var(--motion-base) linear infinite;
+}
+
 .skeleton {
   overflow: hidden;
   position: relative;
@@ -51,6 +55,10 @@
 @keyframes livePulse {
   0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, #fff); }
   50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 18%, #fff); }
+}
+
+@keyframes dashboardIconSpin {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes skeletonSweep {

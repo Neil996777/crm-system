@@ -120,6 +120,77 @@ test('TEST-UIUX-DASHBOARD-002 renders sales personal dashboard variant without m
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
 });
 
+test('TEST-UIUX-B3-001 dashboard live polling applies buffered updates without full reload', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as Window & { __dashboardLivePollMs?: number; __dashboardLiveCoalesceMs?: number }).__dashboardLivePollMs = 1_000;
+    (window as Window & { __dashboardLivePollMs?: number; __dashboardLiveCoalesceMs?: number }).__dashboardLiveCoalesceMs = 100;
+  });
+
+  let activityVersion = 0;
+  let delayNextActivities = false;
+  await page.route('**/api/activities*', async (route) => {
+    if (delayNextActivities) {
+      delayNextActivities = false;
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    }
+    const response = await route.fetch();
+    const body = await response.json();
+    const items = body.data?.items;
+    if (Array.isArray(items) && activityVersion > 0) {
+      body.data.items = [
+        {
+          id: `e2e-live-activity-${activityVersion}`,
+          relatedType: 'Opportunity',
+          relatedId: `OPP-LIVE-${activityVersion}`,
+          activityType: 'note',
+          content: `轮询动态 ${activityVersion}`,
+          ownerId: 'live-e2e',
+          occurredAt: new Date(Date.now() + activityVersion * 1_000).toISOString()
+        },
+        ...items.filter((item: { id?: string }) => !item.id?.startsWith('e2e-live-activity-'))
+      ];
+    }
+    await route.fulfill({ response, json: body });
+  });
+
+  await page.reload();
+  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+  await expect(page.getByRole('button', { name: '本月' })).toHaveCount(0);
+  await expect(page.getByText('自动合并')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '实时更新' })).toHaveAttribute('aria-pressed', 'true');
+  const activityCard = page.locator('[data-dashboard-card="activity"]');
+  await expect(activityCard.locator('.event.arrived')).toHaveCount(0);
+  await page.evaluate(() => {
+    sessionStorage.setItem('__dashboardReloaded', 'false');
+    window.addEventListener('beforeunload', () => sessionStorage.setItem('__dashboardReloaded', 'true'));
+  });
+
+  activityVersion = 1;
+  await expect(activityCard).toContainText('轮询动态 1', { timeout: 4_000 });
+  await expect(activityCard.locator('.event.arrived')).toHaveCount(1);
+  await expect(activityCard.locator('.event.arrived')).toContainText('轮询动态 1');
+  expect(await page.evaluate(() => sessionStorage.getItem('__dashboardReloaded'))).toBe('false');
+
+  await page.getByRole('button', { name: '实时更新' }).click();
+  await expect(page.getByRole('button', { name: '暂停' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.reportLead .liveDot.paused')).toBeVisible();
+  activityVersion = 2;
+  await expect(page.getByRole('button', { name: /有 \d+ 条新更新 · 点击刷新/ })).toBeVisible({ timeout: 4_000 });
+  await expect(activityCard).not.toContainText('轮询动态 2');
+  await page.getByRole('button', { name: '暂停' }).click();
+  await expect(page.getByRole('button', { name: '实时更新' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(activityCard).toContainText('轮询动态 2');
+  await expect(activityCard.locator('.event.arrived')).toHaveCount(1);
+  await expect(activityCard.locator('.event.arrived')).toContainText('轮询动态 2');
+
+  activityVersion = 3;
+  delayNextActivities = true;
+  await page.getByRole('button', { name: '刷新数据' }).click();
+  await expect(page.getByRole('button', { name: '刷新中' })).toBeVisible();
+  await expect(page.locator('.updateMeta')).toContainText(/已刷新/, { timeout: 4_000 });
+  await expect(activityCard).toContainText('轮询动态 3');
+});
+
 test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps between states', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await installDashboardAnimationRecorder(page);
@@ -171,8 +242,8 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await expectFocusRailSelection(page, 'payments');
   const reducedTransform = await page.locator('.stage').evaluate((stage) => getComputedStyle(stage).transform);
   expect(reducedTransform === 'none' || reducedTransform === 'matrix(1, 0, 0, 1, 0, 0)').toBeTruthy();
+  await expectDashboardAnimationStarted(page, 'dashboardReducedFocusAppear');
   const reducedAnimations = await dashboardAnimationNames(page);
-  expect(reducedAnimations).toContain('dashboardReducedFocusAppear');
   expect(reducedAnimations).not.toContain('dashboardStageEnter');
   expect(reducedAnimations).not.toContain('dashboardStripEnter');
 });
