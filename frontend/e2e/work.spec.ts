@@ -1,8 +1,15 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'admin@example.com';
 const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'AdminChangeMe-001!';
 const timelineRefreshTimeoutMs = 15_000;
+
+type E2EWorkTask = {
+  id: string;
+  title: string;
+  status: string;
+  version: number;
+};
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -39,16 +46,17 @@ test('TEST-TASK-LIFECYCLE-002 creates task and completes it from standalone list
   await page.getByLabel('任务标题').fill(taskTitle);
   await expect(page.getByLabel('任务到期日')).toHaveClass(/dateControl/);
   await page.getByLabel('任务到期日').fill('2027-03-01');
-  await page.getByRole('button', { name: '保存任务', exact: true }).click();
+  const createdTask = await waitForTaskCreate(page, () => page.getByRole('button', { name: '保存任务', exact: true }).click());
+  expect(createdTask.title).toBe(taskTitle);
   await expect(page.getByLabel('活动时间线').getByText(taskTitle)).toBeVisible({ timeout: timelineRefreshTimeoutMs });
   await expect(page.getByLabel('活动时间线').getByText('待处理')).toBeVisible({ timeout: timelineRefreshTimeoutMs });
 
-  await page.getByRole('button', { name: '任务', exact: true }).click();
+  await waitForTaskListContaining(page, createdTask.id, taskTitle, () => page.getByRole('button', { name: '任务', exact: true }).click());
   await expect(page.getByRole('heading', { name: '任务', exact: true })).toBeVisible();
   await expect(page.getByLabel('任务列表')).toBeVisible();
   await page.getByLabel('搜索任务、关联记录或负责人').fill(taskTitle);
   await expect(page.getByRole('button', { name: '应用筛选' })).toBeVisible();
-  await page.getByRole('button', { name: '应用筛选' }).click();
+  await waitForTaskListContaining(page, createdTask.id, taskTitle, () => page.getByRole('button', { name: '应用筛选' }).click());
   await expect(page.getByText('已筛选')).toBeVisible();
   const table = page.getByRole('table', { name: '任务结果表' });
   await expect(table).toBeVisible();
@@ -60,8 +68,14 @@ test('TEST-TASK-LIFECYCLE-002 creates task and completes it from standalone list
   await expect(page.getByLabel('选择全部')).toBeVisible();
   await expect(page.locator('.bulkBar')).toContainText('已选择 0 条');
   await expect(page.getByRole('navigation', { name: '分页' })).toBeVisible();
-  await page.getByRole('button', { name: `查看任务 ${taskTitle}` }).click();
-  await page.getByRole('button', { name: '完成任务', exact: true }).click();
+  const viewTaskButton = page.getByRole('button', { name: `查看任务 ${taskTitle}` });
+  await expect(viewTaskButton).toBeVisible();
+  await expect(viewTaskButton).toBeEnabled();
+  await viewTaskButton.click();
+  await expect(page.getByRole('heading', { name: taskTitle })).toBeVisible();
+  await expect(page.getByRole('button', { name: '完成任务', exact: true })).toBeEnabled();
+  const completedTask = await waitForTaskCompletion(page, createdTask.id, () => page.getByRole('button', { name: '完成任务', exact: true }).click());
+  expect(completedTask.status).toBe('Completed');
   await expect(page.getByRole('heading', { name: taskTitle })).toBeVisible();
   await expect(page.getByLabel('任务详情').getByText('已完成').first()).toBeVisible();
 });
@@ -77,4 +91,51 @@ async function createOpportunity(page: import('@playwright/test').Page, title: s
   await page.getByLabel('预计关闭日期').fill('2027-06-30');
   await page.getByRole('button', { name: '保存商机' }).click();
   await expect(page.getByLabel('商机详情').getByRole('heading', { name: title })).toBeVisible();
+}
+
+async function waitForTaskCreate(page: Page, action: () => Promise<unknown>) {
+  const responsePromise = page.waitForResponse((response) => (
+    new URL(response.url()).pathname === '/api/tasks'
+    && response.request().method() === 'POST'
+  ));
+  await action();
+  const response = await responsePromise;
+  expect(response.status()).toBeGreaterThanOrEqual(200);
+  expect(response.status()).toBeLessThan(300);
+  const body = await response.json();
+  return body.data as E2EWorkTask;
+}
+
+async function waitForTaskListContaining(page: Page, taskId: string, taskTitle: string, action: () => Promise<unknown>) {
+  let matchedTask: E2EWorkTask | undefined;
+  const responsePromise = page.waitForResponse(async (response) => {
+    if (new URL(response.url()).pathname !== '/api/tasks' || response.request().method() !== 'GET') return false;
+    if (response.status() < 200 || response.status() >= 300) return false;
+    const body = await response.json().catch(() => null);
+    const items = body?.data?.items;
+    if (!Array.isArray(items)) return false;
+    matchedTask = items.find((task: E2EWorkTask) => task.id === taskId || task.title === taskTitle);
+    return Boolean(matchedTask);
+  });
+  await action();
+  await responsePromise;
+  expect(matchedTask).toBeTruthy();
+  return matchedTask as E2EWorkTask;
+}
+
+async function waitForTaskCompletion(page: Page, taskId: string, action: () => Promise<unknown>) {
+  let completedTask: E2EWorkTask | undefined;
+  const responsePromise = page.waitForResponse(async (response) => {
+    if (new URL(response.url()).pathname !== `/api/tasks/${taskId}/status` || response.request().method() !== 'POST') return false;
+    if (response.status() < 200 || response.status() >= 300) return false;
+    const body = await response.json().catch(() => null);
+    const task = body?.data as E2EWorkTask | undefined;
+    if (task?.id !== taskId || task.status !== 'Completed') return false;
+    completedTask = task;
+    return true;
+  });
+  await action();
+  await responsePromise;
+  expect(completedTask).toBeTruthy();
+  return completedTask as E2EWorkTask;
 }

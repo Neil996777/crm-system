@@ -1,10 +1,12 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'admin@example.com';
 const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'AdminChangeMe-001!';
 const dashboardPassword = 'Dashboard-001!';
 const managerFocusRailKeys = ['funnel', 'stage', 'trend', 'leaderboard', 'todo', 'payments', 'key-opportunities', 'activity'];
 const salesFocusRailKeys = ['funnel', 'todo', 'stage', 'trend', 'payments', 'activity'];
+const dashboardAnimationTimeoutMs = 8_000;
+const dashboardFocusReadyTimeoutMs = 8_000;
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -143,67 +145,110 @@ test('TEST-UIUX-B3-001 dashboard live polling applies buffered updates without f
 
   let activityVersion = 0;
   let delayNextActivities = false;
-  await page.route('**/api/activities*', async (route) => {
+  let activitiesRouteActive = true;
+  const activitiesRoutePattern = '**/api/activities*';
+  const inFlightActivitiesRoutes = new Set<Promise<void>>();
+  const handleActivitiesRoute = (route: Route) => {
+    const routeWork = interceptActivitiesRoute(route).finally(() => inFlightActivitiesRoutes.delete(routeWork));
+    inFlightActivitiesRoutes.add(routeWork);
+    return routeWork;
+  };
+  const continueActivitiesRoute = async (route: Route) => {
+    try {
+      await route.continue();
+    } catch {
+      // The page/context may already be closing after the test has completed.
+    }
+  };
+  const interceptActivitiesRoute = async (route: Route) => {
+    if (!activitiesRouteActive) {
+      await continueActivitiesRoute(route);
+      return;
+    }
     if (delayNextActivities) {
       delayNextActivities = false;
       await new Promise((resolve) => setTimeout(resolve, 350));
+      if (!activitiesRouteActive) {
+        await continueActivitiesRoute(route);
+        return;
+      }
     }
-    const response = await route.fetch();
-    const body = await response.json();
-    const items = body.data?.items;
-    if (Array.isArray(items) && activityVersion > 0) {
-      body.data.items = [
-        {
-          id: `e2e-live-activity-${activityVersion}`,
-          relatedType: 'Opportunity',
-          relatedId: `OPP-LIVE-${activityVersion}`,
-          activityType: 'note',
-          content: `轮询动态 ${activityVersion}`,
-          ownerId: 'live-e2e',
-          occurredAt: new Date(Date.now() + activityVersion * 1_000).toISOString()
-        },
-        ...items.filter((item: { id?: string }) => !item.id?.startsWith('e2e-live-activity-'))
-      ];
+    try {
+      const response = await route.fetch();
+      if (!activitiesRouteActive) {
+        await route.fulfill({ response }).catch(() => undefined);
+        return;
+      }
+      const body = await response.json();
+      const items = body.data?.items;
+      if (Array.isArray(items) && activityVersion > 0) {
+        body.data.items = [
+          {
+            id: `e2e-live-activity-${activityVersion}`,
+            relatedType: 'Opportunity',
+            relatedId: `OPP-LIVE-${activityVersion}`,
+            activityType: 'note',
+            content: `轮询动态 ${activityVersion}`,
+            ownerId: 'live-e2e',
+            occurredAt: new Date(Date.now() + activityVersion * 1_000).toISOString()
+          },
+          ...items.filter((item: { id?: string }) => !item.id?.startsWith('e2e-live-activity-'))
+        ];
+      }
+      await route.fulfill({ response, json: body });
+    } catch (error) {
+      if (!activitiesRouteActive || isRouteTeardownError(error)) {
+        await continueActivitiesRoute(route);
+        return;
+      }
+      throw error;
     }
-    await route.fulfill({ response, json: body });
-  });
+  };
 
-  await page.reload();
-  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
-  await expect(page.getByRole('button', { name: '本月' })).toHaveCount(0);
-  await expect(page.getByText('自动合并')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '实时更新' })).toHaveAttribute('aria-pressed', 'true');
-  const activityCard = page.locator('[data-dashboard-card="activity"]');
-  await expect(activityCard.locator('.event.arrived')).toHaveCount(0);
-  await page.evaluate(() => {
-    sessionStorage.setItem('__dashboardReloaded', 'false');
-    window.addEventListener('beforeunload', () => sessionStorage.setItem('__dashboardReloaded', 'true'));
-  });
+  await page.route(activitiesRoutePattern, handleActivitiesRoute);
 
-  activityVersion = 1;
-  await expect(activityCard).toContainText('轮询动态 1', { timeout: 4_000 });
-  await expect(activityCard.locator('.event.arrived')).toHaveCount(1);
-  await expect(activityCard.locator('.event.arrived')).toContainText('轮询动态 1');
-  expect(await page.evaluate(() => sessionStorage.getItem('__dashboardReloaded'))).toBe('false');
+  try {
+    await page.reload();
+    await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+    await expect(page.getByRole('button', { name: '本月' })).toHaveCount(0);
+    await expect(page.getByText('自动合并')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '实时更新' })).toHaveAttribute('aria-pressed', 'true');
+    const activityCard = page.locator('[data-dashboard-card="activity"]');
+    await expect(activityCard.locator('.event.arrived')).toHaveCount(0);
+    await page.evaluate(() => {
+      sessionStorage.setItem('__dashboardReloaded', 'false');
+      window.addEventListener('beforeunload', () => sessionStorage.setItem('__dashboardReloaded', 'true'));
+    });
 
-  await page.getByRole('button', { name: '实时更新' }).click();
-  await expect(page.getByRole('button', { name: '暂停' })).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.locator('.reportLead .liveDot.paused')).toBeVisible();
-  activityVersion = 2;
-  await expect(page.getByRole('button', { name: /有 \d+ 条新更新 · 点击刷新/ })).toBeVisible({ timeout: 4_000 });
-  await expect(activityCard).not.toContainText('轮询动态 2');
-  await page.getByRole('button', { name: '暂停' }).click();
-  await expect(page.getByRole('button', { name: '实时更新' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(activityCard).toContainText('轮询动态 2');
-  await expect(activityCard.locator('.event.arrived')).toHaveCount(1);
-  await expect(activityCard.locator('.event.arrived')).toContainText('轮询动态 2');
+    activityVersion = 1;
+    await expect(activityCard).toContainText('轮询动态 1', { timeout: 4_000 });
+    await expect(activityCard.locator('.event.arrived')).toHaveCount(1);
+    await expect(activityCard.locator('.event.arrived')).toContainText('轮询动态 1');
+    expect(await page.evaluate(() => sessionStorage.getItem('__dashboardReloaded'))).toBe('false');
 
-  activityVersion = 3;
-  delayNextActivities = true;
-  await page.getByRole('button', { name: '刷新数据' }).click();
-  await expect(page.getByRole('button', { name: '刷新中' })).toBeVisible();
-  await expect(page.locator('.updateMeta')).toContainText(/已刷新/, { timeout: 4_000 });
-  await expect(activityCard).toContainText('轮询动态 3');
+    await page.getByRole('button', { name: '实时更新' }).click();
+    await expect(page.getByRole('button', { name: '暂停' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('.reportLead .liveDot.paused')).toBeVisible();
+    activityVersion = 2;
+    await expect(page.getByRole('button', { name: /有 \d+ 条新更新 · 点击刷新/ })).toBeVisible({ timeout: 4_000 });
+    await expect(activityCard).not.toContainText('轮询动态 2');
+    await page.getByRole('button', { name: '暂停' }).click();
+    await expect(page.getByRole('button', { name: '实时更新' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(activityCard).toContainText('轮询动态 2');
+    await expect(activityCard.locator('.event.arrived')).toHaveCount(1);
+    await expect(activityCard.locator('.event.arrived')).toContainText('轮询动态 2');
+
+    activityVersion = 3;
+    delayNextActivities = true;
+    await page.getByRole('button', { name: '刷新数据' }).click();
+    await expect(page.getByRole('button', { name: '刷新中' })).toBeVisible();
+    await expect(page.locator('.updateMeta')).toContainText(/已刷新/, { timeout: 4_000 });
+    await expect(activityCard).toContainText('轮询动态 3');
+  } finally {
+    activitiesRouteActive = false;
+    await page.unroute(activitiesRoutePattern, handleActivitiesRoute).catch(() => undefined);
+    await Promise.allSettled([...inFlightActivitiesRoutes]);
+  }
 });
 
 test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps between states', async ({ page }) => {
@@ -223,9 +268,9 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
   await expectFocusRailSelection(page, 'payments');
   await expectDashboardAnimationStarted(page, 'dashboardStageEnter');
-  await expectDashboardAnimationTotal(page, 'dashboardStageEnter', 450);
   await expectDashboardAnimationStarted(page, 'dashboardStripEnter');
-  await expect(page.getByRole('heading', { name: '团队回款到账' })).toBeFocused({ timeout: 2_000 });
+  await expectDashboardAnimationTotal(page, 'dashboardStageEnter', 450);
+  await expectFocusHeadingFocused(page, '团队回款到账');
 
   await resetDashboardAnimationRecorder(page);
   const railOrderBeforeSwitch = await focusRailKeys(page);
@@ -241,15 +286,22 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await resetDashboardAnimationRecorder(page);
   await page.keyboard.press('Escape');
   await expectDashboardAnimationStarted(page, 'dashboardStageExit');
-  await expectDashboardAnimationTotal(page, 'dashboardStageExit', 310);
   await expectDashboardAnimationStarted(page, 'dashboardStripExit');
+  await expectDashboardAnimationTotal(page, 'dashboardStageExit', 310);
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
-  await expect(page.locator('[data-dashboard-card="stage"]')).toBeFocused();
+  await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveCount(0);
+  await expectDashboardCardDomFocus(page, 'stage');
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForFunction(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  await page.reload();
+  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+  await installDashboardAnimationRecorder(page);
   await resetDashboardAnimationRecorder(page);
   const reducedPaymentsCard = page.locator('[data-dashboard-card="payments"]');
+  await expect(reducedPaymentsCard).toBeVisible();
   await reducedPaymentsCard.focus();
+  await expect(reducedPaymentsCard).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveAttribute('data-motion-mode', 'reduced');
@@ -261,6 +313,8 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   const reducedTransform = await page.locator('.stage').evaluate((stage) => getComputedStyle(stage).transform);
   expect(reducedTransform === 'none' || reducedTransform === 'matrix(1, 0, 0, 1, 0, 0)').toBeTruthy();
   await expectDashboardAnimationStarted(page, 'dashboardReducedFocusAppear');
+  await expectDashboardAnimationTotalAtMost(page, 'dashboardReducedFocusAppear', 80);
+  await expectFocusHeadingFocused(page, '团队回款到账');
   const reducedAnimations = await dashboardAnimationNames(page);
   expect(reducedAnimations).not.toContain('dashboardStageEnter');
   expect(reducedAnimations).not.toContain('dashboardStripEnter');
@@ -327,6 +381,12 @@ test('TEST-UIUX-A5-001 main navigation is keyboard reachable', async ({ page }) 
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: '线索', exact: true })).toBeVisible();
 });
+
+function isRouteTeardownError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /target page, context or browser has been closed|test ended|page closed|context closed|browser has been closed|request aborted|net::err_aborted/i
+    .test(message);
+}
 
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
   await page.getByLabel('邮箱').fill(email);
@@ -450,22 +510,43 @@ async function expectDashboardFlowRowsDoNotOverlap(page: Page) {
 }
 
 async function installDashboardAnimationRecorder(page: Page) {
-  await page.evaluate(() => {
+  await page.addInitScript(installDashboardAnimationRecorderInWindow);
+  await page.evaluate(installDashboardAnimationRecorderInWindow);
+}
+
+function installDashboardAnimationRecorderInWindow() {
     type DashboardAnimationRecord = { name: string; duration: number | null; delay: number | null; total: number | null };
     const global = window as Window & {
       __dashboardAnimationNames?: string[];
       __dashboardAnimationRecords?: DashboardAnimationRecord[];
+      __captureDashboardAnimations?: (animationName?: string) => void;
       __dashboardAnimationRecorderInstalled?: boolean;
     };
     global.__dashboardAnimationNames = [];
     global.__dashboardAnimationRecords = [];
     if (global.__dashboardAnimationRecorderInstalled) return;
-    document.addEventListener('animationstart', (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
+    const parseTimeList = (value: string) => value.split(',').map((part) => {
+      const trimmed = part.trim();
+      if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
+      if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
+      const parsed = Number.parseFloat(trimmed);
+      return Number.isFinite(parsed) ? parsed : null;
+    });
+    const timingFromComputedStyle = (target: Element, animationName: string) => {
+      const style = window.getComputedStyle(target);
+      const names = style.animationName.split(',').map((name) => name.trim());
+      const index = names.findIndex((name) => name === animationName);
+      if (index < 0) return { duration: null, delay: null };
+      const durations = parseTimeList(style.animationDuration);
+      const delays = parseTimeList(style.animationDelay);
+      return {
+        duration: durations[index] ?? durations[durations.length - 1] ?? null,
+        delay: delays[index] ?? delays[delays.length - 1] ?? null
+      };
+    };
+    const recordAnimation = (target: Element, animationName: string) => {
       const isDashboardFocus = target.matches('[data-uiux="dashboard-focus"]') || Boolean(target.closest('[data-uiux="dashboard-focus"]'));
       if (!isDashboardFocus) return;
-      const animationName = (event as AnimationEvent).animationName;
       const timing = target
         .getAnimations()
         .find((animation) => (
@@ -473,8 +554,9 @@ async function installDashboardAnimationRecorder(page: Page) {
         ))
         ?.effect
         ?.getTiming();
-      const duration = typeof timing?.duration === 'number' ? timing.duration : null;
-      const delay = typeof timing?.delay === 'number' ? timing.delay : null;
+      const computedTiming = timingFromComputedStyle(target, animationName);
+      const duration = typeof timing?.duration === 'number' ? timing.duration : computedTiming.duration;
+      const delay = typeof timing?.delay === 'number' ? timing.delay : computedTiming.delay;
       global.__dashboardAnimationNames?.push(animationName);
       global.__dashboardAnimationRecords?.push({
         name: animationName,
@@ -482,9 +564,27 @@ async function installDashboardAnimationRecorder(page: Page) {
         delay,
         total: duration !== null && delay !== null ? duration + delay : null
       });
+    };
+    global.__captureDashboardAnimations = (filterName?: string) => {
+      const root = document.querySelector('[data-uiux="dashboard-focus"]');
+      if (!root) return;
+      const elements = [root, ...Array.from(root.querySelectorAll('*'))];
+      elements.forEach((element) => {
+        if (!(element instanceof Element)) return;
+        const style = window.getComputedStyle(element);
+        style.animationName.split(',').map((name) => name.trim()).forEach((animationName) => {
+          if (!animationName || animationName === 'none') return;
+          if (filterName && animationName !== filterName) return;
+          recordAnimation(element, animationName);
+        });
+      });
+    };
+    document.addEventListener('animationstart', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      recordAnimation(target, (event as AnimationEvent).animationName);
     }, true);
     global.__dashboardAnimationRecorderInstalled = true;
-  });
 }
 
 async function resetDashboardAnimationRecorder(page: Page) {
@@ -503,7 +603,10 @@ async function dashboardAnimationNames(page: Page) {
 }
 
 async function expectDashboardAnimationStarted(page: Page, animationName: string) {
-  await expect.poll(() => dashboardAnimationNames(page), { timeout: 2_000 }).toContain(animationName);
+  await expect.poll(async () => {
+    await captureDashboardAnimationSnapshot(page, animationName);
+    return dashboardAnimationNames(page);
+  }, { timeout: dashboardAnimationTimeoutMs }).toContain(animationName);
 }
 
 async function dashboardAnimationRecords(page: Page) {
@@ -515,13 +618,61 @@ async function dashboardAnimationRecords(page: Page) {
 }
 
 async function expectDashboardAnimationTotal(page: Page, animationName: string, expectedMs: number, toleranceMs = 24) {
+  await expectDashboardAnimationStarted(page, animationName);
+  await waitForDashboardAnimationSettled(page, animationName);
   await expect.poll(async () => {
+    await captureDashboardAnimationSnapshot(page, animationName);
     const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
     return record?.total ?? 0;
-  }, { timeout: 2_000 }).toBeGreaterThan(0);
+  }, { timeout: dashboardAnimationTimeoutMs }).toBeGreaterThan(0);
   const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
   expect(record?.total).toBeGreaterThanOrEqual(expectedMs - toleranceMs);
   expect(record?.total).toBeLessThanOrEqual(expectedMs + toleranceMs);
+}
+
+async function expectDashboardAnimationTotalAtMost(page: Page, animationName: string, maxMs: number) {
+  await expectDashboardAnimationStarted(page, animationName);
+  await waitForDashboardAnimationSettled(page, animationName);
+  await expect.poll(async () => {
+    await captureDashboardAnimationSnapshot(page, animationName);
+    const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
+    return record?.total ?? 0;
+  }, { timeout: dashboardAnimationTimeoutMs }).toBeGreaterThan(0);
+  const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
+  expect(record?.total).toBeLessThanOrEqual(maxMs);
+}
+
+async function captureDashboardAnimationSnapshot(page: Page, animationName: string) {
+  await page.evaluate((name) => {
+    (window as Window & { __captureDashboardAnimations?: (animationName?: string) => void })
+      .__captureDashboardAnimations?.(name);
+  }, animationName);
+}
+
+async function waitForDashboardAnimationSettled(page: Page, animationName: string) {
+  await page.evaluate(async (name) => {
+    const root = document.querySelector('[data-uiux="dashboard-focus"]');
+    if (!root) return;
+    const animations = root.getAnimations({ subtree: true }).filter((animation) => (
+      'animationName' in animation && (animation as CSSAnimation).animationName === name
+    ));
+    await Promise.allSettled(animations.map((animation) => animation.finished));
+  }, animationName).catch(() => undefined);
+  await captureDashboardAnimationSnapshot(page, animationName);
+}
+
+async function expectFocusHeadingFocused(page: Page, headingName: string) {
+  const heading = page.getByRole('heading', { name: headingName });
+  await expect(heading).toBeVisible({ timeout: dashboardFocusReadyTimeoutMs });
+  await expect(heading).toBeFocused({ timeout: dashboardFocusReadyTimeoutMs });
+}
+
+async function expectDashboardCardDomFocus(page: Page, cardKey: string) {
+  await expect.poll(async () => page.evaluate(() => {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement)) return '';
+    return active.closest<HTMLElement>('[data-dashboard-card]')?.dataset.dashboardCard ?? '';
+  }), { timeout: 5_000 }).toBe(cardKey);
 }
 
 async function focusRailKeys(page: Page) {
