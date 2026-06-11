@@ -266,12 +266,29 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   expect(reducedAnimations).not.toContain('dashboardStripEnter');
 });
 
+test('TEST-UIUX-FOCUS-LAYOUT-001 focus stage keeps real desktop width after rail collapse', async ({ page }) => {
+  const desktopFocusWidths = [1280, 1366, 1440];
+
+  for (const width of desktopFocusWidths) {
+    await page.setViewportSize({ width, height: 900 });
+    if (await page.locator('[data-uiux="dashboard-focus"]').count() === 0) {
+      await page.locator('[data-dashboard-card="funnel"]').click();
+      await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
+    }
+
+    await expectFocusStageRealWidth(page, 500);
+    await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(8);
+    await expectFocusRailSelection(page, 'funnel');
+  }
+});
+
 test('TEST-UIUX-NAV-01 focus rail keeps nav reachable and flyout above the stage', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
   await page.locator('[data-dashboard-card="funnel"]').click();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expect(page.locator('.shell.focusMode')).toBeVisible();
+  await expectFocusStageRealWidth(page, 500);
   await expectFocusNavIconsReachable(page, 14);
 
   const contactNav = page.getByLabel('主导航').getByRole('button', { name: '联系人' });
@@ -299,6 +316,7 @@ test('TEST-UIUX-NAV-01 focus rail keeps nav reachable and flyout above the stage
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.locator('[data-dashboard-card="funnel"]').click();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
+  await expectFocusStageRealWidth(page, 500);
   await expectFocusNavIconsReachable(page, 14);
 });
 
@@ -515,6 +533,56 @@ async function focusRailKeys(page: Page) {
 async function expectFocusRailSelection(page: Page, selectedKey: string) {
   await expect(page.getByLabel('看板选择器').locator('[aria-current="true"]')).toHaveCount(1);
   await expect(page.getByLabel('看板选择器').locator(`[data-focus-side-card="${selectedKey}"]`)).toHaveAttribute('aria-current', 'true');
+}
+
+async function focusStageLayout(page: Page) {
+  return page.locator('[data-uiux="dashboard-focus"]').evaluate((rootElement) => {
+    const root = rootElement as HTMLElement;
+    const focus = root.querySelector<HTMLElement>('.focus');
+    const stage = root.querySelector<HTMLElement>('.stage');
+    const side = root.querySelector<HTMLElement>('.side');
+    const shell = root.closest<HTMLElement>('.shell');
+    const workspace = root.closest<HTMLElement>('.workspace');
+    const sidebar = shell?.querySelector<HTMLElement>('.sidebar') ?? null;
+    if (!focus || !stage || !side || !workspace || !sidebar || !shell) {
+      throw new Error('focus stage layout nodes are missing');
+    }
+
+    const focusRect = focus.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    const sideRect = side.getBoundingClientRect();
+    const workspaceRect = workspace.getBoundingClientRect();
+    const sidebarRect = sidebar.getBoundingClientRect();
+    return {
+      viewportWidth: window.innerWidth,
+      focusColumns: getComputedStyle(focus).gridTemplateColumns,
+      shellColumns: getComputedStyle(shell).gridTemplateColumns,
+      sidebarPosition: getComputedStyle(sidebar).position,
+      sidebarWidth: Math.round(sidebarRect.width),
+      workspaceLeft: Math.round(workspaceRect.left),
+      workspaceWidth: Math.round(workspaceRect.width),
+      focusWidth: Math.round(focusRect.width),
+      stageLeft: Math.round(stageRect.left),
+      stageWidth: Math.round(stageRect.width),
+      sideLeft: Math.round(sideRect.left),
+      sideWidth: Math.round(sideRect.width)
+    };
+  });
+}
+
+async function expectFocusStageRealWidth(page: Page, minStageWidth: number) {
+  await expect.poll(async () => {
+    const layout = await focusStageLayout(page);
+    return layout.stageWidth;
+  }, { timeout: 1_500 }).toBeGreaterThan(minStageWidth);
+
+  const layout = await focusStageLayout(page);
+  expect(layout.stageWidth, JSON.stringify(layout)).toBeGreaterThan(minStageWidth);
+  expect(layout.stageWidth / layout.focusWidth, JSON.stringify(layout)).toBeGreaterThan(0.45);
+  expect(layout.focusColumns, JSON.stringify(layout)).not.toMatch(/^0px\s+300px$/);
+  expect(layout.sidebarPosition, JSON.stringify(layout)).not.toBe('fixed');
+  expect(layout.sideWidth, JSON.stringify(layout)).toBeGreaterThanOrEqual(280);
+  expect(layout.workspaceLeft, JSON.stringify(layout)).toBeGreaterThanOrEqual(layout.sidebarWidth - 1);
 }
 
 async function focusNavReachability(page: Page) {
