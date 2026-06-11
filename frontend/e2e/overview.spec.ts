@@ -266,6 +266,42 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   expect(reducedAnimations).not.toContain('dashboardStripEnter');
 });
 
+test('TEST-UIUX-NAV-01 focus rail keeps nav reachable and flyout above the stage', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+  await page.locator('[data-dashboard-card="funnel"]').click();
+  await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
+  await expect(page.locator('.shell.focusMode')).toBeVisible();
+  await expectFocusNavIconsReachable(page, 14);
+
+  const contactNav = page.getByLabel('主导航').getByRole('button', { name: '联系人' });
+  await contactNav.hover();
+  await expect.poll(async () => (await navFlyoutState(page, '联系人')).opacity, { timeout: 1_200 }).toBeGreaterThan(0.95);
+  const hoverState = await navFlyoutState(page, '联系人');
+  expect(hoverState.afterContent).toContain('联系人');
+  expect(hoverState.visibility).toBe('visible');
+  expect(hoverState.topIsStage).toBe(false);
+  expect(hoverState.topIsNavButton).toBe(true);
+
+  const quoteNav = page.getByLabel('主导航').getByRole('button', { name: '报价' });
+  await page.keyboard.press('Tab');
+  await quoteNav.focus();
+  await expect(quoteNav).toBeFocused();
+  await expect.poll(async () => (await navFlyoutState(page, '报价')).opacity, { timeout: 500 }).toBeGreaterThan(0.95);
+  const focusState = await navFlyoutState(page, '报价');
+  expect(focusState.afterContent).toContain('报价');
+  expect(focusState.topIsStage).toBe(false);
+  expect(focusState.topIsNavButton).toBe(true);
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 720 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator('[data-dashboard-card="funnel"]').click();
+  await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
+  await expectFocusNavIconsReachable(page, 14);
+});
+
 test('TEST-UIUX-A5-001 main navigation is keyboard reachable', async ({ page }) => {
   const leadsNav = page.getByLabel('主导航').getByRole('button', { name: '线索' });
   await leadsNav.focus();
@@ -479,6 +515,81 @@ async function focusRailKeys(page: Page) {
 async function expectFocusRailSelection(page: Page, selectedKey: string) {
   await expect(page.getByLabel('看板选择器').locator('[aria-current="true"]')).toHaveCount(1);
   await expect(page.getByLabel('看板选择器').locator(`[data-focus-side-card="${selectedKey}"]`)).toHaveAttribute('aria-current', 'true');
+}
+
+async function focusNavReachability(page: Page) {
+  return page.getByLabel('主导航').evaluate((navElement) => {
+    const nav = navElement as HTMLElement;
+    const sidebar = nav.closest('.sidebar') as HTMLElement | null;
+    const items = Array.from(nav.querySelectorAll<HTMLElement>('.navItem'));
+    const last = items[items.length - 1];
+    const navRect = nav.getBoundingClientRect();
+    const sidebarRect = sidebar?.getBoundingClientRect();
+    const lastRect = last.getBoundingClientRect();
+    const navStyle = window.getComputedStyle(nav);
+    const sidebarStyle = sidebar ? window.getComputedStyle(sidebar) : null;
+    return {
+      count: items.length,
+      viewportHeight: window.innerHeight,
+      scrollY: window.scrollY,
+      navTop: navRect.top,
+      navBottom: navRect.bottom,
+      navClientHeight: nav.clientHeight,
+      navScrollHeight: nav.scrollHeight,
+      navScrollTop: nav.scrollTop,
+      navPosition: navStyle.position,
+      navMaxHeight: navStyle.maxHeight,
+      sidebarTop: sidebarRect?.top ?? null,
+      sidebarBottom: sidebarRect?.bottom ?? null,
+      sidebarPosition: sidebarStyle?.position ?? null,
+      sidebarHeight: sidebarStyle?.height ?? null,
+      lastTop: lastRect.top,
+      lastBottom: lastRect.bottom,
+      canScroll: nav.scrollHeight > nav.clientHeight + 1,
+      lastWithinViewport: lastRect.top >= -1 && lastRect.bottom <= window.innerHeight + 1
+    };
+  });
+}
+
+async function expectFocusNavIconsReachable(page: Page, expectedCount: number) {
+  const nav = page.getByLabel('主导航');
+  await expect(nav.locator('.navItem')).toHaveCount(expectedCount);
+  const lastNav = nav.getByRole('button', { name: '操作日志' });
+  await expect(lastNav).toBeVisible();
+
+  let metrics = await focusNavReachability(page);
+  if (!metrics.lastWithinViewport && metrics.canScroll) {
+    await nav.evaluate((navElement) => {
+      navElement.scrollTop = navElement.scrollHeight;
+    });
+    metrics = await focusNavReachability(page);
+  }
+
+  expect(metrics.count).toBe(expectedCount);
+  expect(metrics.lastTop, JSON.stringify(metrics)).toBeGreaterThanOrEqual(-1);
+  expect(metrics.lastBottom, JSON.stringify(metrics)).toBeLessThanOrEqual(metrics.viewportHeight + 1);
+}
+
+async function navFlyoutState(page: Page, label: string) {
+  return page.getByLabel('主导航').getByRole('button', { name: label }).evaluate((buttonElement) => {
+    const button = buttonElement as HTMLElement;
+    const style = window.getComputedStyle(button, '::after');
+    const rect = button.getBoundingClientRect();
+    const x = Math.min(window.innerWidth - 2, rect.right + 24);
+    const y = rect.top + rect.height / 2;
+    const topElement = document.elementFromPoint(x, y);
+    const topButton = topElement?.closest('button');
+    return {
+      afterContent: style.content,
+      opacity: Number.parseFloat(style.opacity),
+      visibility: style.visibility,
+      zIndex: style.zIndex,
+      pointX: Math.round(x),
+      pointY: Math.round(y),
+      topIsStage: Boolean(topElement?.closest('.stage')),
+      topIsNavButton: topButton === button
+    };
+  });
 }
 
 async function expectSingleFocusExitControl(page: Page) {

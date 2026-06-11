@@ -178,14 +178,29 @@ svg {
 
 .shell.focusMode .brand {
   justify-content: center;
-  padding-inline: 0;
+  min-height: 36px;
+  margin-bottom: 8px;
+  padding: 0 0 8px;
+}
+
+.shell.focusMode .brandMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  font-size: 11px;
 }
 
 .shell.focusMode .brandText,
 .shell.focusMode .navItem span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-6px);
+  transform: none;
 }
 
 .nav {
@@ -235,7 +250,35 @@ svg {
   transition: opacity var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
 }
 
+.shell.focusMode .sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 120;
+  width: 72px;
+  height: 100vh;
+  padding: 12px 8px;
+  overflow: visible;
+}
+
+.shell.focusMode .nav {
+  position: relative;
+  z-index: 140;
+  width: 220px;
+  max-height: calc(100vh - 64px);
+  margin-left: 6px;
+  gap: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  pointer-events: none;
+  scrollbar-width: none;
+}
+
+.shell.focusMode .nav::-webkit-scrollbar {
+  display: none;
+}
+
 .shell.focusMode .navItem {
+  z-index: 0;
   justify-content: center;
   width: 44px;
   height: 44px;
@@ -243,6 +286,7 @@ svg {
   border-radius: 50%;
   background: var(--section);
   box-shadow: var(--badge-shadow);
+  pointer-events: auto;
 }
 
 .shell.focusMode .navItem.active {
@@ -250,12 +294,17 @@ svg {
   color: #fff;
 }
 
+.shell.focusMode .navItem:hover,
+.shell.focusMode .navItem:focus-visible {
+  z-index: 160;
+}
+
 .shell.focusMode .navItem::after {
   content: attr(aria-label);
   position: absolute;
   left: calc(100% + 10px);
   top: 50%;
-  z-index: 60;
+  z-index: 180;
   min-width: 112px;
   transform: translateY(-50%) translateX(-4px);
   padding: 9px 12px;
@@ -265,14 +314,35 @@ svg {
   color: var(--text);
   box-shadow: var(--shadow);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity var(--motion-fast) var(--ease-decelerate), transform var(--motion-fast) var(--ease-decelerate);
+  white-space: nowrap;
+  transition: opacity var(--motion-fast) var(--ease-decelerate), transform var(--motion-fast) var(--ease-decelerate), visibility 0ms linear var(--motion-fast);
 }
 
-.shell.focusMode .navItem:hover::after,
+.shell.focusMode .navItem:hover::after {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(-50%);
+  transition-delay: 360ms;
+}
+
 .shell.focusMode .navItem:focus-visible::after {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: translateY(-50%);
+  transition-delay: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell.focusMode .navItem::after,
+  .shell.focusMode .navItem:hover::after,
+  .shell.focusMode .navItem:focus-visible::after {
+    transform: translateY(-50%);
+    transition-delay: 0ms;
+  }
 }
 
 .workspace {
@@ -3770,6 +3840,13 @@ button.sideCard {
   .sidebar {
     position: static;
     height: auto;
+  }
+
+  .shell.focusMode .sidebar {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: hidden;
   }
 
   .workspace {
