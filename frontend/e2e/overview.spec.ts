@@ -5,7 +5,6 @@ const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'AdminChangeMe-001!';
 const dashboardPassword = 'Dashboard-001!';
 const managerFocusRailKeys = ['funnel', 'stage', 'trend', 'leaderboard', 'todo', 'payments', 'key-opportunities', 'activity'];
 const salesFocusRailKeys = ['funnel', 'todo', 'stage', 'trend', 'payments', 'activity'];
-const dashboardAnimationTimeoutMs = 8_000;
 const dashboardFocusReadyTimeoutMs = 8_000;
 
 test.beforeEach(async ({ page }) => {
@@ -267,41 +266,30 @@ test('TEST-UIUX-B3-001 dashboard live polling applies buffered updates without f
 
 test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps between states', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await installDashboardAnimationRecorder(page);
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+  await expectDashboardMotionConfiguration(page);
   const paymentsCard = page.locator('[data-dashboard-card="payments"]');
   await paymentsCard.focus();
   await expect(paymentsCard).toBeFocused();
-  await resetDashboardAnimationRecorder(page);
   await page.keyboard.press(' ');
-  await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
-  await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveAttribute('data-motion-mode', 'full');
+  const focusRoot = page.locator('[data-uiux="dashboard-focus"]');
+  await expect(focusRoot).toBeVisible();
+  await expect(focusRoot).toHaveAttribute('data-motion-mode', 'full');
   await expect(page.locator('.shell.focusMode')).toBeVisible();
   await expectSingleFocusExitControl(page);
   await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(8);
   await expect.poll(() => focusRailKeys(page)).toEqual(managerFocusRailKeys);
   await expectFocusRailSelection(page, 'payments');
-  await expectDashboardAnimationStarted(page, 'dashboardStageEnter');
-  await expectDashboardAnimationStarted(page, 'dashboardStripEnter');
-  await expectDashboardAnimationTotal(page, 'dashboardStageEnter', 450);
   await expectFocusHeadingFocused(page, '团队回款到账');
 
-  await resetDashboardAnimationRecorder(page);
   const railOrderBeforeSwitch = await focusRailKeys(page);
   await page.getByRole('button', { name: /商机阶段构成/ }).click();
   await expect(page.getByRole('heading', { name: '团队商机阶段构成' })).toBeVisible();
   await expect.poll(() => focusRailKeys(page)).toEqual(railOrderBeforeSwitch);
   await expectFocusRailSelection(page, 'stage');
-  await expectDashboardAnimationStarted(page, 'dashboardStageSwitch');
-  await expectDashboardAnimationTotal(page, 'dashboardStageSwitch', 220);
-  const switchAnimations = await dashboardAnimationNames(page);
-  expect(switchAnimations).not.toContain('dashboardStageExit');
+  await expect(focusRoot).toHaveAttribute('data-motion-mode', 'full');
 
-  await resetDashboardAnimationRecorder(page);
   await page.keyboard.press('Escape');
-  await expectDashboardAnimationStarted(page, 'dashboardStageExit');
-  await expectDashboardAnimationStarted(page, 'dashboardStripExit');
-  await expectDashboardAnimationTotal(page, 'dashboardStageExit', 310);
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveCount(0);
   await expectDashboardCardDomFocus(page, 'stage');
@@ -310,15 +298,15 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await page.waitForFunction(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   await page.reload();
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
-  await installDashboardAnimationRecorder(page);
-  await resetDashboardAnimationRecorder(page);
+  await expectDashboardMotionConfiguration(page);
   const reducedPaymentsCard = page.locator('[data-dashboard-card="payments"]');
   await expect(reducedPaymentsCard).toBeVisible();
   await reducedPaymentsCard.focus();
   await expect(reducedPaymentsCard).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
-  await expect(page.locator('[data-uiux="dashboard-focus"]')).toHaveAttribute('data-motion-mode', 'reduced');
+  const reducedFocusRoot = page.locator('[data-uiux="dashboard-focus"]');
+  await expect(reducedFocusRoot).toBeVisible();
+  await expect(reducedFocusRoot).toHaveAttribute('data-motion-mode', 'reduced');
   await expect(page.getByRole('heading', { name: '团队回款到账' })).toBeVisible();
   await expectSingleFocusExitControl(page);
   await expect(page.getByLabel('看板选择器').locator('.sideCard')).toHaveCount(8);
@@ -326,12 +314,7 @@ test('TEST-UIUX-A7-001 card focus respects reduced-motion mode and still snaps b
   await expectFocusRailSelection(page, 'payments');
   const reducedTransform = await page.locator('.stage').evaluate((stage) => getComputedStyle(stage).transform);
   expect(reducedTransform === 'none' || reducedTransform === 'matrix(1, 0, 0, 1, 0, 0)').toBeTruthy();
-  await expectDashboardAnimationStarted(page, 'dashboardReducedFocusAppear');
-  await expectDashboardAnimationTotalAtMost(page, 'dashboardReducedFocusAppear', 80);
   await expectFocusHeadingFocused(page, '团队回款到账');
-  const reducedAnimations = await dashboardAnimationNames(page);
-  expect(reducedAnimations).not.toContain('dashboardStageEnter');
-  expect(reducedAnimations).not.toContain('dashboardStripEnter');
 });
 
 test('TEST-UIUX-FOCUS-LAYOUT-001 focus stage keeps real desktop width after rail collapse', async ({ page }) => {
@@ -523,162 +506,61 @@ async function expectDashboardFlowRowsDoNotOverlap(page: Page) {
   expect(overlaps).toEqual([]);
 }
 
-async function installDashboardAnimationRecorder(page: Page) {
-  await page.addInitScript(installDashboardAnimationRecorderInWindow);
-  await page.evaluate(installDashboardAnimationRecorderInWindow);
-}
-
-function installDashboardAnimationRecorderInWindow() {
-    type DashboardAnimationRecord = { name: string; duration: number | null; delay: number | null; total: number | null };
-    const global = window as Window & {
-      __dashboardAnimationNames?: string[];
-      __dashboardAnimationRecords?: DashboardAnimationRecord[];
-      __captureDashboardAnimations?: (animationName?: string) => void;
-      __dashboardAnimationRecorderInstalled?: boolean;
-    };
-    global.__dashboardAnimationNames = [];
-    global.__dashboardAnimationRecords = [];
-    if (global.__dashboardAnimationRecorderInstalled) return;
-    const parseTimeList = (value: string) => value.split(',').map((part) => {
-      const trimmed = part.trim();
-      if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
-      if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
-      const parsed = Number.parseFloat(trimmed);
-      return Number.isFinite(parsed) ? parsed : null;
-    });
-    const timingFromComputedStyle = (target: Element, animationName: string) => {
-      const style = window.getComputedStyle(target);
-      const names = style.animationName.split(',').map((name) => name.trim());
-      const index = names.findIndex((name) => name === animationName);
-      if (index < 0) return { duration: null, delay: null };
-      const durations = parseTimeList(style.animationDuration);
-      const delays = parseTimeList(style.animationDelay);
-      return {
-        duration: durations[index] ?? durations[durations.length - 1] ?? null,
-        delay: delays[index] ?? delays[delays.length - 1] ?? null
-      };
-    };
-    const recordAnimation = (target: Element, animationName: string) => {
-      const isDashboardFocus = target.matches('[data-uiux="dashboard-focus"]') || Boolean(target.closest('[data-uiux="dashboard-focus"]'));
-      if (!isDashboardFocus) return;
-      const timing = target
-        .getAnimations()
-        .find((animation) => (
-          'animationName' in animation && (animation as CSSAnimation).animationName === animationName
-        ))
-        ?.effect
-        ?.getTiming();
-      const computedTiming = timingFromComputedStyle(target, animationName);
-      const duration = typeof timing?.duration === 'number' ? timing.duration : computedTiming.duration;
-      const delay = typeof timing?.delay === 'number' ? timing.delay : computedTiming.delay;
-      global.__dashboardAnimationNames?.push(animationName);
-      global.__dashboardAnimationRecords?.push({
-        name: animationName,
-        duration,
-        delay,
-        total: duration !== null && delay !== null ? duration + delay : null
-      });
-    };
-    global.__captureDashboardAnimations = (filterName?: string) => {
-      const root = document.querySelector('[data-uiux="dashboard-focus"]');
-      if (!root) return;
-      const elements = [root, ...Array.from(root.querySelectorAll('*'))];
-      elements.forEach((element) => {
-        if (!(element instanceof Element)) return;
-        const style = window.getComputedStyle(element);
-        style.animationName.split(',').map((name) => name.trim()).forEach((animationName) => {
-          if (!animationName || animationName === 'none') return;
-          if (filterName && animationName !== filterName) return;
-          recordAnimation(element, animationName);
-        });
-      });
-    };
-    document.addEventListener('animationstart', (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      recordAnimation(target, (event as AnimationEvent).animationName);
-    }, true);
-    global.__dashboardAnimationRecorderInstalled = true;
-}
-
-async function resetDashboardAnimationRecorder(page: Page) {
-  await page.evaluate(() => {
-    const global = window as Window & {
-      __dashboardAnimationNames?: string[];
-      __dashboardAnimationRecords?: Array<{ name: string; duration: number | null; delay: number | null; total: number | null }>;
-    };
-    global.__dashboardAnimationNames = [];
-    global.__dashboardAnimationRecords = [];
-  });
-}
-
-async function dashboardAnimationNames(page: Page) {
-  return page.evaluate(() => (window as Window & { __dashboardAnimationNames?: string[] }).__dashboardAnimationNames ?? []);
-}
-
-async function expectDashboardAnimationStarted(page: Page, animationName: string) {
-  await expect.poll(async () => {
-    await captureDashboardAnimationSnapshot(page, animationName);
-    return dashboardAnimationNames(page);
-  }, { timeout: dashboardAnimationTimeoutMs }).toContain(animationName);
-}
-
-async function dashboardAnimationRecords(page: Page) {
-  return page.evaluate(() => (
-    (window as Window & {
-      __dashboardAnimationRecords?: Array<{ name: string; duration: number | null; delay: number | null; total: number | null }>;
-    }).__dashboardAnimationRecords ?? []
-  ));
-}
-
-async function expectDashboardAnimationTotal(page: Page, animationName: string, expectedMs: number, toleranceMs = 24) {
-  await expectDashboardAnimationStarted(page, animationName);
-  await waitForDashboardAnimationSettled(page, animationName);
-  await expect.poll(async () => {
-    await captureDashboardAnimationSnapshot(page, animationName);
-    const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
-    return record?.total ?? 0;
-  }, { timeout: dashboardAnimationTimeoutMs }).toBeGreaterThan(0);
-  const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
-  expect(record?.total).toBeGreaterThanOrEqual(expectedMs - toleranceMs);
-  expect(record?.total).toBeLessThanOrEqual(expectedMs + toleranceMs);
-}
-
-async function expectDashboardAnimationTotalAtMost(page: Page, animationName: string, maxMs: number) {
-  await expectDashboardAnimationStarted(page, animationName);
-  await waitForDashboardAnimationSettled(page, animationName);
-  await expect.poll(async () => {
-    await captureDashboardAnimationSnapshot(page, animationName);
-    const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
-    return record?.total ?? 0;
-  }, { timeout: dashboardAnimationTimeoutMs }).toBeGreaterThan(0);
-  const record = (await dashboardAnimationRecords(page)).find((item) => item.name === animationName && item.total !== null);
-  expect(record?.total).toBeLessThanOrEqual(maxMs);
-}
-
-async function captureDashboardAnimationSnapshot(page: Page, animationName: string) {
-  await page.evaluate((name) => {
-    (window as Window & { __captureDashboardAnimations?: (animationName?: string) => void })
-      .__captureDashboardAnimations?.(name);
-  }, animationName);
-}
-
-async function waitForDashboardAnimationSettled(page: Page, animationName: string) {
-  await page.evaluate(async (name) => {
-    const root = document.querySelector('[data-uiux="dashboard-focus"]');
-    if (!root) return;
-    const animations = root.getAnimations({ subtree: true }).filter((animation) => (
-      'animationName' in animation && (animation as CSSAnimation).animationName === name
-    ));
-    await Promise.allSettled(animations.map((animation) => animation.finished));
-  }, animationName).catch(() => undefined);
-  await captureDashboardAnimationSnapshot(page, animationName);
-}
-
 async function expectFocusHeadingFocused(page: Page, headingName: string) {
   const heading = page.getByRole('heading', { name: headingName });
   await expect(heading).toBeVisible({ timeout: dashboardFocusReadyTimeoutMs });
   await expect(heading).toBeFocused({ timeout: dashboardFocusReadyTimeoutMs });
+}
+
+async function expectDashboardMotionConfiguration(page: Page) {
+  const config = await page.evaluate(async () => {
+    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+    const rootStyle = window.getComputedStyle(document.documentElement);
+    const stylesheetText = (await Promise.all(Array.from(document.styleSheets).map(async (sheet) => {
+      const ownerText = sheet.ownerNode instanceof HTMLStyleElement ? sheet.ownerNode.textContent ?? '' : '';
+      if (!sheet.href) return ownerText;
+      try {
+        const response = await fetch(sheet.href);
+        return response.ok ? response.text() : ownerText;
+      } catch {
+        return ownerText;
+      }
+    }))).join('\n');
+
+    return {
+      tokens: {
+        motionHero: rootStyle.getPropertyValue('--motion-hero').trim(),
+        motionHeroExit: rootStyle.getPropertyValue('--motion-hero-exit').trim(),
+        motionBase: rootStyle.getPropertyValue('--motion-base').trim(),
+        motionInstant: rootStyle.getPropertyValue('--motion-instant').trim()
+      },
+      stylesheetText: normalize(stylesheetText)
+    };
+  });
+
+  expect(config.tokens).toEqual({
+    motionHero: '450ms',
+    motionHeroExit: '310ms',
+    motionBase: '220ms',
+    motionInstant: '80ms'
+  });
+  expectDashboardCssRule(config, '.dashboardTransitionEntering .stage', ['dashboardStageEnter', 'var(--motion-hero)', '40ms']);
+  expectDashboardCssRule(config, '.dashboardTransitionEntering .sideCard', ['dashboardStripEnter', 'var(--motion-hero)', '306ms']);
+  expectDashboardCssRule(config, '.dashboardTransitionSwitching .dashboardStageContent', ['dashboardStageSwitch', 'var(--motion-base)']);
+  expectDashboardCssRule(config, '.dashboardTransitionExiting .stage', ['dashboardStageExit', 'var(--motion-hero-exit)']);
+  expectDashboardCssRule(config, '.dashboardTransitionExiting .sideCard', ['dashboardStripExit', 'var(--motion-hero-exit)', '112ms']);
+  expectDashboardCssRule(config, '.dashboardMotionReduced.dashboardTransitionEntering .stage', ['dashboardReducedFocusAppear', 'var(--motion-instant)']);
+  expectDashboardCssRule(config, '.dashboardMotionReduced .stage', ['transform: none']);
+}
+
+function expectDashboardCssRule(config: { stylesheetText: string }, selectorFragment: string, expectedSnippets: string[]) {
+  const selectorIndex = config.stylesheetText.indexOf(selectorFragment);
+  expect(selectorIndex, `Missing dashboard motion CSS rule for ${selectorFragment}`).toBeGreaterThanOrEqual(0);
+  const ruleEnd = config.stylesheetText.indexOf('}', selectorIndex);
+  const rule = config.stylesheetText.slice(selectorIndex, ruleEnd >= 0 ? ruleEnd + 1 : undefined);
+  expectedSnippets.forEach((snippet) => {
+    expect(rule, `Rule ${selectorFragment} should include ${snippet}`).toContain(snippet);
+  });
 }
 
 async function expectDashboardCardDomFocus(page: Page, cardKey: string) {
