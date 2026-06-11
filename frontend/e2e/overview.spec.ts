@@ -213,6 +213,17 @@ test('TEST-UIUX-B3-001 dashboard live polling applies buffered updates without f
     await expect(page.getByRole('button', { name: '本月' })).toHaveCount(0);
     await expect(page.getByText('自动合并')).toHaveCount(0);
     await expect(page.getByRole('button', { name: '实时更新' })).toHaveAttribute('aria-pressed', 'true');
+    const updateMeta = page.locator('.updateMeta');
+    await expect(updateMeta).not.toContainText('已暂停');
+    await page.getByRole('button', { name: '实时更新' }).click();
+    await expect(page.getByRole('button', { name: '暂停' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(updateMeta).toContainText('已暂停');
+    await expect(page.locator('.reportLead .liveDot.paused')).toBeVisible();
+    await page.getByRole('button', { name: '暂停' }).click();
+    await expect(page.getByRole('button', { name: '实时更新' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(updateMeta).not.toContainText('已暂停');
+    await expect(updateMeta).toContainText(/更新于|实时更新/);
+    await expect(page.locator('.reportLead .liveDot.livePulse')).toBeVisible();
     const activityCard = page.locator('[data-dashboard-card="activity"]');
     await expect(activityCard.locator('.event.arrived')).toHaveCount(0);
     await page.evaluate(() => {
@@ -234,6 +245,9 @@ test('TEST-UIUX-B3-001 dashboard live polling applies buffered updates without f
     await expect(activityCard).not.toContainText('轮询动态 2');
     await page.getByRole('button', { name: '暂停' }).click();
     await expect(page.getByRole('button', { name: '实时更新' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(updateMeta).not.toContainText('已暂停');
+    await expect(updateMeta).toContainText(/更新于|实时更新/);
+    await expect(page.locator('.reportLead .liveDot.livePulse')).toBeVisible();
     await expect(activityCard).toContainText('轮询动态 2');
     await expect(activityCard.locator('.event.arrived')).toHaveCount(1);
     await expect(activityCard.locator('.event.arrived')).toContainText('轮询动态 2');

@@ -467,6 +467,10 @@ export function WorkOverview({
     if (resume) {
       setLivePaused(false);
       livePausedRef.current = false;
+      if (!next) {
+        setRefreshNotice('');
+        return;
+      }
     }
     if (!next) return;
     applyDashboardSnapshot(next, keys, keys.size ? `已应用 ${keys.size} 条新更新。` : '');
