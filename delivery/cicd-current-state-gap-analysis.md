@@ -69,25 +69,12 @@ rebuilds to roll back.** This is exactly the pattern the new standard prohibits.
 - **D1** Registry form vs export/load (`docker save`→`scp`→`docker load`).
   Export/load = zero new infra, fully §3-compliant; registry = better for
   multi-host/future. → M1 ADR.
-- **D2** Frontend: build `dist` off-host and `scp`, OR containerize as an nginx
-  image. Either is allowed; on-host `npm build` is not.
-- **D3** Release content. **Correction (2026-06-06):** the release content is
-  **NOT "the audited HEAD as-is."** The dashboard / overview / reports UI is
-  committed **P1** scope (`docs/product/acceptance-matrix.md` ACC-018 team
-  overview, ACC-023 basic sales reports; CAP-009), and that UI/UX work was
-  **prior-intended scope that was not actually completed** — the go-live incident
-  exposed it, it is not new post-G12 polish. Therefore the deployable release
-  commit is **"audited backend + the completed UI/UX (ACC-018/023 + UI surface)"**,
-  and the UI/UX completion must pass its own QA (G10) + independent Audit (G12)
-  before it ships. Shipping the current as-is commit would deploy an incomplete
-  P1 UI, which itself violates no-downgrade. Confirm the exact commit only after
-  UI/UX completion is gate-cleared. Also decide seed data for the empty DB.
-  See `delivery/uiux-completion-charter.md`.
-
-  > NOTE: `delivery/cicd-migration-brief.md` (§5/§7) and
-  > `delivery/cicd-migration-plan.md` ("audited application code as-is") still
-  > carry the pre-correction "as-is" wording; this D3 supersedes it. Those two
-  > companion docs should be aligned to this release-content premise.
+- **D2** Frontend: containerize as an nginx image. This is confirmed in
+  `delivery/cicd-migration-acceptance.md` D2 and formalized by ADR-CICD-001.
+- **D3** Release content. **Confirmed (2026-06-12):** release content commit is
+  **`66d2531`**, representing the audited backend G12 result plus the completed
+  and gate-cleared UI/UX follow-on, with zh-CN preserved. This supersedes earlier
+  non-specific HEAD planning language. Also decide seed data for the empty DB.
 - **D4** 80/443 security-group re-open scope (keep co-location constraint: do not
   take host ingress ownership beyond the CRM `server_name`).
 
@@ -108,10 +95,8 @@ verifies digest→commit and that no on-host build was used. Update
 `planning/gate-status.md` on the re-entry.
 
 **Sequencing vs UI/UX completion (per D3).** The CI/CD **mechanism** design
-(M1–M4) is independent of UI content and can proceed in parallel. The **final
-build + deploy** (M5/M6) must target the commit that includes the gate-cleared
-UI/UX completion — it does **not** run against the current as-is HEAD. Track the
-UI/UX completion under `delivery/uiux-completion-charter.md`.
+(M1–M4) is independent of UI content and can proceed. The **final build + deploy**
+(M5/M6) targets commit `66d2531`.
 
 > This document changes nothing on disk beyond itself. It is the diagnostic
 > input; the redesign is performed at G5, not here.

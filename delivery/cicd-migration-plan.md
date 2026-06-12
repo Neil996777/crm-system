@@ -23,15 +23,13 @@ project's normal gates.
 - Therefore there is **no running on-host-built CRM instance to grandfather** and
   **no break-glass record is required** — the redeploy will be CRM's first
   standard-compliant, off-host-build, digest-pinned deployment on a clean host.
-- Release content (**corrected 2026-06-06 — see gap-analysis D3**): the release
-  is **not** the as-is audited HEAD. The committed-P1 UX/UI design realization
-  (ACC-018/ACC-023) was not completed and is a separate follow-on change
-  (`delivery/uiux-completion-charter.md`); the deployable commit is the audited
-  backend **plus** that gate-cleared UI/UX completion, with zh-CN preserved.
-  **This migration must not weaken or revert any G12 fix** (IDOR, durable audit,
-  optimistic concurrency, idempotency, etc.); it changes *how* the artifact is
-  built and deployed, not *what* the code does. The final build+deploy (M5/M6)
-  targets the gate-cleared commit, not the current one.
+- Release content (**confirmed 2026-06-12 — see acceptance C3/D3**): the release
+  content commit is **`66d2531`**, which includes the audited backend G12 result
+  plus the gate-cleared UI/UX completion, with zh-CN preserved. This migration
+  must not weaken or revert any G12 fix (IDOR, durable audit, optimistic
+  concurrency, idempotency, etc.); it changes *how* the artifact is built and
+  deployed, not *what* the code does. The final build+deploy (M5/M6) targets
+  `66d2531`.
 
 ## Scope
 
@@ -55,7 +53,7 @@ Out of scope (must not change in this migration):
 | # | Task | Standard ref | Notes |
 |---|---|---|---|
 | M1 | Image registry selection ADR | §3, §9 | `docs/architecture/adr/` — registry, auth, retention, provenance; both "registry" and "export/load" forms are allowed by the standard. |
-| M2 | Off-host CI pipeline (`templates/cicd-pipeline.md`) | §1.2, §3 | Build 10 Go service images + frontend; run tests; tag `:<gitsha>`; push/export digest-pinned. |
+| M2 | Off-host CI pipeline (`templates/cicd-pipeline.md`) | §1.2, §3 | Build 10 Go service images + nginx frontend image for commit `66d2531`; run tests; tag `:66d2531`; export digest-pinned artifacts. |
 | M3 | Image-only production compose | §1.1, §1.3 | Remove all `build:` keys; reference image tag/digest; remove on-server frontend build. |
 | M4 | Digest-pinned deploy runbook (`templates/deployment-runbook.md`) | §1.3, §3 | Pull/load digest + run; no host build; backup before migrate. |
 | M5 | Release evidence | §4 | Test results, per-service digest→commit, deploy transcript, post-deploy health check, named rollback point. |
@@ -74,7 +72,7 @@ full; a green pipeline does not substitute for QA/Integration/Audit.
 ## Acceptance (this migration is done when)
 
 - Production runs images built **off-host**, pulled/loaded by **digest**, each
-  traceable to the audited commit.
+  traceable to commit `66d2531`.
 - `docker-compose.prod.yml` has **no `build:` keys**; the runbook has **no host
   build steps**.
 - The host does not depend on GitHub source pulls or a build cache to run.

@@ -56,16 +56,17 @@ from the files referenced here.
   → must be built **off-host** and shipped (or containerized). Decide.
 - P5. The host was wiped → **secrets/`.env`, security-group 80/443, and TLS cert
   must be re-provisioned**; the old `/opt/crm-system/.env` is gone.
-- P6. The **exact release commit to deploy** must be confirmed (the audited HEAD,
-  including the later zh-CN localization work — see `planning/gate-status.md`).
+- P6. The **release commit to deploy is confirmed as `66d2531`** (audited backend
+  G12 plus gate-cleared UI/UX completion; see `delivery/cicd-migration-acceptance.md`
+  C3/D3 and `planning/gate-status.md`).
 
 ## 4. What to do (task package — investigate → decide → execute through gates)
 
 | # | Task | Output |
 |---|---|---|
-| M1 | Choose image registry **or** save/load channel | ADR in `docs/architecture/adr/` (registry vs export-load; auth; retention; provenance) |
-| M2 | Off-host CI: build all 10 Go images + frontend, run tests, tag by commit, push/export digest-pinned | pipeline def (`../../../templates/cicd-pipeline.md`) + built images |
-| M3 | Image-only production compose | `docker-compose.prod.images.yml` (no `build:`; `image:` by tag/digest; keep postgres, internal net, security opts, loopback gateway, healthchecks) |
+| M1 | Use save/load export channel and record the registry alternative | ADR in `docs/architecture/adr/` (export-load; auth; retention; provenance; future registry trigger) |
+| M2 | Off-host CI: build all 10 Go images + nginx frontend image for `66d2531`, run tests, export digest-pinned artifacts | pipeline def (`../../../templates/cicd-pipeline.md`) + built images |
+| M3 | Image-only production compose | `docker-compose.prod.yml` (no `build:`; `image:` by tag/digest; keep postgres, internal net, security opts, loopback gateway, healthchecks) |
 | M4 | Digest-pinned deploy runbook | rewritten runbook (no host build) |
 | M5 | Release evidence | test results, per-service digest→commit, deploy transcript, health check, rollback point |
 | M6 | Commit-traceability verification | proof running images = audited commit (digest, not moving tag) |
@@ -78,14 +79,15 @@ from the files referenced here.
    for `linux/amd64` (e.g. `docker buildx build --platform linux/amd64`).
    Note: the **server's docker has no `buildx`** — build on the workstation/CI,
    not the host.
-2. **Image-only compose.** Keep everything in the current prod compose EXCEPT the
-   `build:` blocks → replace with `image:`. Preserve: postgres + its init/migration
-   mounts, `crm_internal` internal network, `crm_edge`, `read_only`/`cap_drop`/
-   `no-new-privileges`, the loopback-only gateway (`127.0.0.1:8080`), healthchecks,
-   log mounts.
-3. **Frontend.** Decide: build `dist` off-host and `scp` to
-   `/opt/crm-system/current/frontend/dist` for host Nginx, OR containerize the
-   frontend as an nginx image. Either is fine; on-host `npm build` is not.
+2. **Image-only compose.** Keep the current production security posture but remove
+   all `build:` blocks, remove the `latest` fallback, and replace source-checkout
+   migration mounts with checksum-verified release artifact mounts. Preserve
+   postgres, `crm_internal`, `crm_edge`, `read_only`/`cap_drop`/
+   `no-new-privileges`, the loopback-only gateway (`127.0.0.1:8080`),
+   healthchecks, and log mounts.
+3. **Frontend.** The frontend release unit is an nginx container image. Host
+   Nginx remains the 80/443 TLS/co-location boundary and proxies the SPA route
+   to the loopback-only frontend container.
 
 **Infrastructure facts (source of truth = `company/infrastructure/` registers; do
 not copy secrets into docs):**
@@ -105,29 +107,21 @@ not copy secrets into docs):**
   `*_DATABASE_URL`, `SERVICE_TOKEN_SECRET`, session/JWT secret). Re-provision on
   the host; never commit.
 
-**Release content (corrected 2026-06-06 — see gap-analysis D3):**
-- The release content is **NOT "the audited HEAD as-is."** The dashboard/overview/
-  reports UI is committed **P1** (ACC-018/ACC-023, CAP-009) and its specified
-  UX/UI design realization is **prior-intended work that was not completed** (a
-  separate follow-on change: `delivery/uiux-completion-charter.md`). The
-  deployable commit is **"audited backend + the gate-cleared UI/UX completion"**,
-  not the current commit; shipping as-is would deploy an incomplete P1 UI
-  (no-downgrade violation). The later zh-CN localization (live 2026-06-05) must be
+**Release content (confirmed 2026-06-12 — see acceptance C3/D3):**
+- The release content commit is **`66d2531`**. It represents the audited backend
+  G12 result plus the completed and gate-cleared UI/UX follow-on; zh-CN must be
   preserved.
 - This CI/CD migration itself changes **no application code** and must **not**
   weaken any G12 fix; it only changes how the artifact is built and deployed.
-- Confirm the exact release commit only **after** the UI/UX completion is
-  gate-cleared (`delivery/cicd-current-state-gap-analysis.md` D3).
 - DB starts empty → run all migrations fresh; decide if any seed data is needed.
 
 ## 6. Open decisions the project must make (record in decision-log / ADR)
 
-- D1. Registry form vs save/load export form (M1). Save/load = zero new infra,
-  fully compliant; registry = better for multi-host/future. Pick and ADR it.
-- D2. Frontend: scp `dist` vs containerize as nginx image (P4).
-- D3. Exact release commit (= audited backend + gate-cleared UI/UX completion,
-  NOT as-is HEAD; see gap-analysis D3 + `uiux-completion-charter.md`) + whether
-  any seed data is loaded into the empty DB.
+- D1. Image channel = save/load export form (M1). Save/load = zero new infra,
+  fully compliant; registry = better for multi-host/future and requires a future ADR.
+- D2. Frontend = nginx container image (P4).
+- D3. Release commit = `66d2531`; decide separately whether any seed data is loaded
+  into the empty DB.
 - D4. 80/443 security-group re-open scope (keep co-location constraint: do not
   take host ingress ownership beyond the CRM `server_name`).
 
