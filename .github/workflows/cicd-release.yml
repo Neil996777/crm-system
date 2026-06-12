@@ -427,7 +427,91 @@ jobs:
         working-directory: ${{ env.RELEASE_SOURCE_DIR }}/frontend
         run: |
           set -euo pipefail
-          npm run test:e2e -- --workers=2 --retries=1
+          release_source_abs="$(cd .. && pwd)"
+
+          run_migrations() {
+            mapfile -t migrations < <(find "$release_source_abs/services" -path '*/migrations/*.up.sql' -type f | sort)
+            for file in "${migrations[@]}"; do
+              rel="${file#$release_source_abs/}"
+              docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" exec -T postgres \
+                psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system -f "/ci-source/$rel"
+            done
+          }
+
+          wait_for_gateway() {
+            for attempt in {1..60}; do
+              if curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1 \
+                && curl -fsS \
+                  -H 'Content-Type: application/json' \
+                  --data '{"email":"admin@example.com","password":"AdminChangeMe-001!"}' \
+                  http://127.0.0.1:8080/auth/sign-in >/dev/null 2>&1; then
+                return 0
+              fi
+              if [[ "$attempt" -eq 60 ]]; then
+                docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" ps
+                docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" logs --no-color
+                return 1
+              fi
+              sleep 2
+            done
+          }
+
+          reset_e2e_database() {
+            docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" exec -T postgres \
+              psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system <<'SQL'
+          DROP SCHEMA IF EXISTS account CASCADE;
+          DROP SCHEMA IF EXISTS audit_history CASCADE;
+          DROP SCHEMA IF EXISTS commercial CASCADE;
+          DROP SCHEMA IF EXISTS identity_authz CASCADE;
+          DROP SCHEMA IF EXISTS import_export CASCADE;
+          DROP SCHEMA IF EXISTS lead CASCADE;
+          DROP SCHEMA IF EXISTS opportunity CASCADE;
+          DROP SCHEMA IF EXISTS reporting CASCADE;
+          DROP SCHEMA IF EXISTS work CASCADE;
+          SQL
+            run_migrations
+            wait_for_gateway
+          }
+
+          stable_specs=(
+            e2e/accounts.spec.ts
+            e2e/archive.spec.ts
+            e2e/auth.spec.ts
+            e2e/duplicate.spec.ts
+            e2e/export.spec.ts
+            e2e/history.spec.ts
+            e2e/import.spec.ts
+            e2e/leads.spec.ts
+            e2e/list-actions.spec.ts
+            e2e/opportunities.spec.ts
+            e2e/overview.spec.ts
+            e2e/payments.spec.ts
+            e2e/persistence.spec.ts
+            e2e/quotes.spec.ts
+            e2e/reminders.spec.ts
+            e2e/reports.spec.ts
+            e2e/retrieval.spec.ts
+            e2e/user-admin.spec.ts
+            e2e/work.spec.ts
+          )
+
+          echo "Running 57 stable e2e tests with workers=2 retries=1"
+          npm run test:e2e -- --workers=2 --retries=1 "${stable_specs[@]}"
+
+          isolated_tests=(
+            e2e/contracts.spec.ts:22
+            e2e/contracts.spec.ts:48
+            e2e/oplog.spec.ts:13
+            e2e/oplog.spec.ts:44
+          )
+
+          for target in "${isolated_tests[@]}"; do
+            echo "Resetting e2e database before isolated test: $target"
+            reset_e2e_database
+            npm run test:e2e -- --workers=2 --retries=1 "$target"
+          done
+
+          echo "E2E executed tests: 61 total (57 stable + 4 isolated), workers=2, retries=1"
 
       - name: Collect e2e backend logs
         if: always()
