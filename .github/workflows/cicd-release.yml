@@ -84,7 +84,7 @@ jobs:
           for service in "${services[@]}"; do
             (
               cd "$RELEASE_SOURCE_DIR/services/$service"
-              go test ./...
+              go test -p 1 -count=1 ./...
             ) 2>&1 | tee "test-results/backend/${service}.log"
           done
 
