@@ -3,10 +3,13 @@ import type {
   CSSProperties,
   HTMLAttributes,
   InputHTMLAttributes,
+  KeyboardEvent,
+  MouseEvent,
   ReactNode,
   SelectHTMLAttributes,
   TextareaHTMLAttributes
 } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -16,6 +19,7 @@ import {
   ChevronUp,
   ChevronsUpDown,
   Loader2,
+  MoreHorizontal,
   Search,
   X
 } from 'lucide-react';
@@ -190,6 +194,9 @@ export type DataTableProps<T> = {
   selectedRowKeys?: DataTableRowKey[];
   onToggleRow?: (row: T, checked: boolean) => void;
   onToggleAll?: (checked: boolean) => void;
+  onRowClick?: (row: T, index: number) => void;
+  isRowClickable?: (row: T, index: number) => boolean;
+  getRowAriaLabel?: (row: T, index: number) => string;
   getRowClassName?: (row: T, index: number) => string | undefined;
   empty?: ReactNode;
   actions?: (row: T, index: number) => ReactNode;
@@ -217,6 +224,9 @@ export function DataTable<T>({
   selectedRowKeys = [],
   onToggleRow,
   onToggleAll,
+  onRowClick,
+  isRowClickable,
+  getRowAriaLabel,
   getRowClassName,
   empty,
   actions
@@ -293,8 +303,25 @@ export function DataTable<T>({
           ) : (
             rows.map((row, index) => {
               const currentKey = keyForRow(row, index);
+              const rowClickable = Boolean(onRowClick && (isRowClickable?.(row, index) ?? true));
+              const openRow = () => onRowClick?.(row, index);
               return (
-                <tr className={getRowClassName?.(row, index)} key={currentKey}>
+                <tr
+                  aria-label={rowClickable ? getRowAriaLabel?.(row, index) : undefined}
+                  className={cx(getRowClassName?.(row, index), rowClickable && 'clickableRow')}
+                  key={currentKey}
+                  tabIndex={rowClickable ? 0 : undefined}
+                  onClick={rowClickable ? (event) => {
+                    if (isInteractiveTarget(event.target)) return;
+                    openRow();
+                  } : undefined}
+                  onKeyDown={rowClickable ? (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    if (isInteractiveTarget(event.target)) return;
+                    event.preventDefault();
+                    openRow();
+                  } : undefined}
+                >
                   {hasSelection ? (
                     <td className="selectCell">
                       <input
@@ -318,6 +345,89 @@ export function DataTable<T>({
           )}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function isInteractiveTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest('button, a, input, select, textarea, [role="button"], [role="menu"], [data-row-interactive="true"]'));
+}
+
+export type ActionMenuItem = {
+  label: string;
+  onSelect?: () => void;
+  disabled?: boolean;
+  reason?: string;
+  tone?: 'default' | 'danger';
+};
+
+export function ActionMenu({ label, items }: { label: string; items: ActionMenuItem[] }) {
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeFromOutside = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('pointerdown', closeFromOutside);
+    return () => document.removeEventListener('pointerdown', closeFromOutside);
+  }, [open]);
+
+  function closeOnEscape(event: KeyboardEvent) {
+    if (event.key !== 'Escape') return;
+    event.stopPropagation();
+    setOpen(false);
+    buttonRef.current?.focus();
+  }
+
+  function select(item: ActionMenuItem) {
+    if (item.disabled) return;
+    item.onSelect?.();
+    setOpen(false);
+  }
+
+  const visibleItems: ActionMenuItem[] = items.length > 0 ? items : [{ label: '暂无可用操作', disabled: true, reason: '当前记录没有可执行的行操作。' }];
+
+  return (
+    <div className="actionMenu" data-row-interactive="true" onClick={(event: MouseEvent) => event.stopPropagation()} onKeyDown={closeOnEscape}>
+      <button
+        ref={buttonRef}
+        aria-controls={open ? menuId : undefined}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={label}
+        className="rowAction"
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <MoreHorizontal size={16} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="actionMenuPanel" id={menuId} ref={menuRef} role="menu">
+          {visibleItems.map((item) => (
+            <button
+              aria-disabled={item.disabled || undefined}
+              className={cx('actionMenuItem', item.tone === 'danger' && 'dangerText')}
+              disabled={item.disabled}
+              key={item.label}
+              role="menuitem"
+              title={item.reason}
+              type="button"
+              onClick={() => select(item)}
+            >
+              <span>{item.label}</span>
+              {item.reason ? <small>{item.reason}</small> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

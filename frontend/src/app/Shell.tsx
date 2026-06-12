@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LogOut } from 'lucide-react';
 import { useSession } from '../auth/SessionProvider';
 import { SignIn } from '../pages/SignIn';
@@ -17,12 +17,14 @@ import { ImportExportPage } from '../pages/importexport/Import';
 import { OperationLogs } from '../pages/admin/OperationLogs';
 import { UserManagement } from '../pages/admin/UserManagement';
 import { AppView, Nav } from './Nav';
+import type { RecordNavigationTarget } from './navigation';
 import { appName, labelFor, roleLabel } from '../i18n/labels';
 
 export function Shell() {
   const { user, loading, logout } = useSession();
   const [view, setView] = useState<AppView>('overview');
   const [focusMode, setFocusMode] = useState(false);
+  const [recordTarget, setRecordTarget] = useState<RecordNavigationTarget | null>(null);
 
   useEffect(() => {
     if (view !== 'overview') {
@@ -32,10 +34,19 @@ export function Shell() {
 
   const selectView = (nextView: AppView) => {
     setView(nextView);
+    setRecordTarget(null);
     if (nextView !== 'overview') {
       setFocusMode(false);
     }
   };
+
+  const navigateToRecord = useCallback((target: RecordNavigationTarget) => {
+    setView(target.view);
+    setRecordTarget(target.recordId ? target : null);
+    if (target.view !== 'overview') {
+      setFocusMode(false);
+    }
+  }, []);
 
   if (loading && !user) {
     return <div className="boot">加载中</div>;
@@ -76,7 +87,25 @@ export function Shell() {
             退出登录
           </button>
         </header>
-        {view === 'leads' ? <LeadList /> : view === 'accounts' ? <AccountList /> : view === 'contacts' ? <ContactList /> : view === 'opportunities' ? <OpportunityList /> : view === 'quotes' ? <QuoteList /> : view === 'contracts' ? <ContractList /> : view === 'payments' ? <PaymentList /> : view === 'tasks' ? <TaskList /> : view === 'reminders' ? <ReminderCenter /> : view === 'managerOverview' ? <ManagerOverview /> : view === 'importExport' ? <ImportExportPage /> : view === 'userManagement' ? <UserManagement /> : view === 'operationLogs' ? <OperationLogs /> : <WorkOverview user={user} onFocusChange={setFocusMode} />}
+        {view === 'leads' ? (
+          <LeadList targetRecordId={recordTarget?.view === 'leads' ? recordTarget.recordId : undefined} onTargetHandled={() => setRecordTarget(null)} />
+        ) : view === 'accounts' ? (
+          <AccountList targetRecordId={recordTarget?.view === 'accounts' ? recordTarget.recordId : undefined} onTargetHandled={() => setRecordTarget(null)} />
+        ) : view === 'contacts' ? (
+          <ContactList targetRecordId={recordTarget?.view === 'contacts' ? recordTarget.recordId : undefined} onTargetHandled={() => setRecordTarget(null)} />
+        ) : view === 'opportunities' ? (
+          <OpportunityList targetRecordId={recordTarget?.view === 'opportunities' ? recordTarget.recordId : undefined} onTargetHandled={() => setRecordTarget(null)} />
+        ) : view === 'quotes' ? (
+          <QuoteList targetRecordId={recordTarget?.view === 'quotes' ? recordTarget.recordId : undefined} onTargetHandled={() => setRecordTarget(null)} />
+        ) : view === 'contracts' ? (
+          <ContractList targetRecordId={recordTarget?.view === 'contracts' ? recordTarget.recordId : undefined} onTargetHandled={() => setRecordTarget(null)} />
+        ) : view === 'payments' ? (
+          <PaymentList targetRecordId={recordTarget?.view === 'payments' ? recordTarget.recordId : undefined} onTargetHandled={() => setRecordTarget(null)} />
+        ) : view === 'tasks' ? (
+          <TaskList targetRecordId={recordTarget?.view === 'tasks' ? recordTarget.recordId : undefined} onTargetHandled={() => setRecordTarget(null)} />
+        ) : view === 'reminders' ? (
+          <ReminderCenter onNavigate={navigateToRecord} />
+        ) : view === 'managerOverview' ? <ManagerOverview /> : view === 'importExport' ? <ImportExportPage /> : view === 'userManagement' ? <UserManagement /> : view === 'operationLogs' ? <OperationLogs /> : <WorkOverview user={user} onFocusChange={setFocusMode} onNavigate={navigateToRecord} />}
       </div>
     </div>
   );

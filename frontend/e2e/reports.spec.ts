@@ -28,6 +28,12 @@ test('TEST-BASIC-REPORT-002 renders basic reports empty state through gateway', 
   await expect(page.getByLabel('负责人分组')).toBeVisible();
   await expect(page.getByLabel('负责人分组').locator('.dataTable')).toBeVisible();
   await expect(page.getByLabel('状态阶段分解').locator('.breakdownCard')).toHaveCount(5);
+
+  await page.getByRole('button', { name: '本月' }).click();
+  await expect(page.getByRole('status')).toContainText('已切换到本月报表。');
+  await page.getByRole('button', { name: '按负责人分组' }).click();
+  await expect(page.getByRole('status')).toContainText('已定位到负责人分组。');
+  await expect(page.getByLabel('负责人分组')).toBeFocused();
 });
 
 test('TEST-UIUX-A4-REPORT-001 sales cannot see reports and direct API access is denied without leakage', async ({ page }) => {

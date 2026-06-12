@@ -2,16 +2,19 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Bell, CalendarDays, Clock, CreditCard, FileSignature, RefreshCcw, UserRound } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { ReminderRow, listReminders } from '../../api/reminders';
+import type { RecordNavigationTarget } from '../../app/navigation';
+import { targetForRelatedRecord } from '../../app/navigation';
 import { Badge, Button, MetricCard, PageHeader, Panel, PanelHeader, ReminderRowCard } from '../../components/ui';
 import { contractStatusLabel, labelFor, localizeError, objectTypeLabel, paymentStatusLabel, priorityLabel, reminderTypeLabel, taskStatusLabel } from '../../i18n/labels';
 
 type ReminderFilter = 'all' | 'due' | 'overdue' | 'contract' | 'payment';
 
-export function ReminderCenter() {
+export function ReminderCenter({ onNavigate }: { onNavigate?: (target: RecordNavigationTarget) => void }) {
   const [businessDate, setBusinessDate] = useState(today());
   const [rows, setRows] = useState<ReminderRow[]>([]);
   const [timezone, setTimezone] = useState('Asia/Shanghai');
   const [filter, setFilter] = useState<ReminderFilter>('all');
+  const [sortDueFirst, setSortDueFirst] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -32,7 +35,7 @@ export function ReminderCenter() {
     if (filter === 'contract') return row.type === 'contract_pending_signature';
     if (filter === 'payment') return row.type === 'payment_due' || row.type === 'payment_overdue';
     return true;
-  }), [rows, filter]);
+  }).sort((left, right) => sortDueFirst ? left.dueDate.localeCompare(right.dueDate) : 0), [rows, filter, sortDueFirst]);
 
   async function refresh() {
     setError('');
@@ -51,6 +54,15 @@ export function ReminderCenter() {
     void refresh();
   }
 
+  function openReminder(row: ReminderRow) {
+    const target = targetForRelatedRecord(row.relatedRecord.type, row.relatedRecord.id);
+    if (!target) {
+      setError('当前提醒没有可跳转的关联记录。');
+      return;
+    }
+    onNavigate?.(target);
+  }
+
   return (
     <main className="content remindersPage" data-uiux="reminders-center">
       <PageHeader
@@ -62,7 +74,7 @@ export function ReminderCenter() {
               <span className="srOnly">业务日期</span>
               <input type="date" value={businessDate} onChange={(event) => setBusinessDate(event.target.value)} />
             </label>
-            <Button>按到期排序</Button>
+            <Button type="button" aria-pressed={sortDueFirst} onClick={() => setSortDueFirst((value) => !value)}>按到期排序</Button>
             <Button variant="primary" type="submit" disabled={false}>
               <RefreshCcw size={16} aria-hidden="true" />
               刷新提醒
@@ -121,7 +133,7 @@ export function ReminderCenter() {
                   )}
                   tone={reminderAccent(row)}
                   overdue={row.type.includes('overdue')}
-                  actions={<Button variant="ghost">查看</Button>}
+                  actions={<Button variant="ghost" onClick={() => openReminder(row)}>查看</Button>}
                 />
               ))}
             </div>

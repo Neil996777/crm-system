@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, FileText, MoreHorizontal, Plus, RotateCcw } from 'lucide-react';
+import { ArrowRight, FileText, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
-import { Quote, createQuote, getQuote, listQuotes } from '../../api/quotes';
+import { Quote, changeQuoteStatus, createQuote, getQuote, listQuotes } from '../../api/quotes';
 import {
   ActiveFilterSummary,
   CrudListShell,
@@ -15,7 +15,7 @@ import {
   exportRows,
   paginate
 } from '../../components/CrudScaffold';
-import { BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
+import { ActionMenu, BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
 import { useSession } from '../../auth/SessionProvider';
 import { labelFor, localizeError, quoteStatusLabel } from '../../i18n/labels';
 import { QuoteDetail } from './QuoteDetail';
@@ -23,7 +23,7 @@ import { QuoteDetail } from './QuoteDetail';
 type Mode = 'list' | 'create' | 'detail';
 const statuses = Object.keys(quoteStatusLabel);
 
-export function QuoteList() {
+export function QuoteList({ targetRecordId, onTargetHandled }: { targetRecordId?: string; onTargetHandled?: () => void }) {
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>('list');
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -40,6 +40,11 @@ export function QuoteList() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!targetRecordId) return;
+    void selectQuote(targetRecordId).finally(() => onTargetHandled?.());
+  }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search) {
     const response = await listQuotes(nextSearch);
@@ -97,6 +102,21 @@ export function QuoteList() {
       有效期: quote.validityEnd
     })));
     setNotice(`已导出 ${selectedRows.length} 条报价。`);
+  }
+
+  async function changeRowStatus(quote: Quote, toStatus: string) {
+    if (!canChangeQuoteTo(quote, toStatus)) return;
+    if (!window.confirm(`确认将报价 ${quote.id} 标记为${labelFor(quoteStatusLabel, toStatus)}？`)) return;
+    setError('');
+    try {
+      const updated = await changeQuoteStatus(quote.id, quote.version, toStatus);
+      setSelected(updated);
+      setNotice(`报价 ${quote.id} 已标记为${labelFor(quoteStatusLabel, toStatus)}。`);
+      await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
   }
 
   if (mode === 'create') {
@@ -168,6 +188,8 @@ export function QuoteList() {
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
           getRowClassName={(quote) => selected?.id === quote.id ? 'selected' : undefined}
+          onRowClick={(quote) => void selectQuote(quote.id)}
+          getRowAriaLabel={(quote) => `打开报价 ${quote.id}`}
           empty="没有符合当前筛选条件的报价。"
           columns={[
             { key: 'quote', header: '报价', width: '220px', render: (quote) => <RecordIdentity icon={<FileText size={17} aria-hidden="true" />} title={quote.opportunityId} subtitle={quote.id} tone="purple" /> },
@@ -177,12 +199,55 @@ export function QuoteList() {
             { key: 'validity', header: '有效期', align: 'right', render: (quote) => quote.validityEnd },
             { key: 'updated', header: '更新时间', align: 'right', sortable: true, sortDirection: 'desc', render: (quote) => formatDate(quote.updatedAt) }
           ]}
-          actions={(quote) => <div className="rowActions"><button className="rowAction" type="button" aria-label={`查看报价 ${quote.id}`} onClick={() => void selectQuote(quote.id)}><ArrowRight size={16} aria-hidden="true" /></button><span className="rowAction" aria-hidden="true"><MoreHorizontal size={16} /></span></div>}
+          actions={(quote) => (
+            <div className="rowActions">
+              <button className="rowAction" type="button" aria-label={`查看报价 ${quote.id}`} onClick={() => void selectQuote(quote.id)}><ArrowRight size={16} aria-hidden="true" /></button>
+              <ActionMenu
+                label={`打开报价 ${quote.id} 的行操作菜单`}
+                items={[
+                  { label: '查看', onSelect: () => void selectQuote(quote.id) },
+                  {
+                    label: '发送',
+                    onSelect: () => void changeRowStatus(quote, 'Sent'),
+                    disabled: !canChangeQuoteTo(quote, 'Sent'),
+                    reason: quote.status !== 'Draft' ? '仅草稿报价可发送。' : undefined
+                  },
+                  {
+                    label: '接受',
+                    onSelect: () => void changeRowStatus(quote, 'Accepted'),
+                    disabled: !canChangeQuoteTo(quote, 'Accepted'),
+                    reason: quote.status !== 'Sent' ? '仅已发送报价可接受。' : undefined
+                  },
+                  {
+                    label: '拒绝',
+                    onSelect: () => void changeRowStatus(quote, 'Rejected'),
+                    disabled: !canChangeQuoteTo(quote, 'Rejected'),
+                    reason: quote.status !== 'Sent' ? '仅已发送报价可拒绝。' : undefined,
+                    tone: 'danger'
+                  },
+                  {
+                    label: '标记过期',
+                    onSelect: () => void changeRowStatus(quote, 'Expired'),
+                    disabled: !canChangeQuoteTo(quote, 'Expired'),
+                    reason: quote.status !== 'Draft' && quote.status !== 'Sent' ? '仅草稿或已发送报价可标记过期。' : undefined,
+                    tone: 'danger'
+                  }
+                ]}
+              />
+            </div>
+          )}
         />
       }
       pagination={<CrudPagination slice={slice} onPageChange={setPage} onPageSizeChange={(next) => { setPageSize(next); setPage(1); }} />}
     />
   );
+}
+
+function canChangeQuoteTo(quote: Quote, toStatus: string) {
+  if (toStatus === 'Sent') return quote.status === 'Draft';
+  if (toStatus === 'Accepted' || toStatus === 'Rejected') return quote.status === 'Sent';
+  if (toStatus === 'Expired') return quote.status === 'Draft' || quote.status === 'Sent';
+  return false;
 }
 
 function QuoteFormRules() {

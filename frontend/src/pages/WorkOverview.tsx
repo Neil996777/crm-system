@@ -21,6 +21,8 @@ import { Quote, listQuotes } from '../api/quotes';
 import { BasicReport, GroupRow, ManagerOverview as ManagerOverviewData, PaymentGroupRow, getBasicReport, getManagerOverview } from '../api/reports';
 import { ReminderRow, listReminders } from '../api/reminders';
 import { Activity as WorkActivity, WorkTask, listActivities, listTasks } from '../api/work';
+import type { RecordNavigationTarget } from '../app/navigation';
+import { targetForRelatedRecord } from '../app/navigation';
 import {
   Badge,
   Button,
@@ -56,6 +58,7 @@ const focusEnterMs = 450;
 const focusExitMs = 310;
 const focusSwitchMs = 220;
 const focusReducedMs = 80;
+const focusHeadingWaitMs = 1_200;
 const dashboardLivePollMs = 10_000;
 const dashboardLiveCoalesceMs = 900;
 const dashboardLiveHighlightMs = 1_600;
@@ -95,8 +98,8 @@ type DashboardModel = {
   funnelRows: StageAggregate[];
   trendPoints: Array<{ label: string; value: number }>;
   leaderboardRows: Array<{ ownerId: string; wonCount: number; amount: number }>;
-  todoRows: Array<{ id: string; title: string; meta: string; badge: string; tone: 'primary' | 'warning' | 'danger' }>;
-  paymentRows: Array<{ id: string; title: string; meta: string; amount: number; status: string; tone: 'success' | 'warning' | 'danger' | 'primary' }>;
+  todoRows: Array<{ id: string; title: string; meta: string; badge: string; tone: 'primary' | 'warning' | 'danger'; target: RecordNavigationTarget | null }>;
+  paymentRows: Array<{ id: string; title: string; meta: string; amount: number; status: string; tone: 'success' | 'warning' | 'danger' | 'primary'; recordId?: string }>;
   keyOpportunities: Opportunity[];
   activities: WorkActivity[];
   metrics: {
@@ -121,10 +124,12 @@ const nonTerminalStages = new Set(['New Opportunity', 'Needs Confirmed', 'Quote'
 
 export function WorkOverview({
   user,
-  onFocusChange
+  onFocusChange,
+  onNavigate
 }: {
   user: CurrentUser;
   onFocusChange: (enabled: boolean) => void;
+  onNavigate?: (target: RecordNavigationTarget) => void;
 }) {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -139,6 +144,8 @@ export function WorkOverview({
   const [changedKeys, setChangedKeys] = useState<Set<string>>(() => new Set());
   const focusRootRef = useRef<HTMLElement | null>(null);
   const motionTimerRef = useRef<number | null>(null);
+  const focusHeadingFrameRef = useRef<number | null>(null);
+  const focusHeadingRequestRef = useRef(0);
   const livePollTimerRef = useRef<number | null>(null);
   const liveCoalesceTimerRef = useRef<number | null>(null);
   const highlightTimerRef = useRef<number | null>(null);
@@ -153,7 +160,7 @@ export function WorkOverview({
   const prefersReducedMotion = usePrefersReducedMotion();
   const isManagerView = user.role !== 'Sales';
   const model = useMemo(() => (snapshot ? buildModel(snapshot, user, changedKeys, livePaused) : null), [changedKeys, livePaused, snapshot, user]);
-  const cards = useMemo(() => (model ? dashboardCards(model, isManagerView) : []), [model, isManagerView]);
+  const cards = useMemo(() => (model ? dashboardCards(model, isManagerView, onNavigate) : []), [model, isManagerView, onNavigate]);
 
   useEffect(() => {
     resetLiveState();
@@ -267,6 +274,7 @@ export function WorkOverview({
     if (motionTimerRef.current) {
       window.clearTimeout(motionTimerRef.current);
     }
+    cancelPendingStageHeadingFocus();
     if (livePollTimerRef.current) {
       window.clearTimeout(livePollTimerRef.current);
     }
@@ -483,6 +491,7 @@ export function WorkOverview({
   }
 
   function beginCardFocus(cardKey: DashboardCardKey, sourceElement: HTMLElement) {
+    cancelPendingStageHeadingFocus();
     const rects = captureDashboardRects();
     rects[cardKey] = rectFromDom(sourceElement);
     restoreCardKeyRef.current = cardKey;
@@ -495,6 +504,7 @@ export function WorkOverview({
 
   function switchFocus(cardKey: DashboardCardKey) {
     if (cardKey === activeCard) return;
+    cancelPendingStageHeadingFocus();
     restoreCardKeyRef.current = cardKey;
     setActiveCard(cardKey);
     setMotionPhase(prefersReducedMotion ? 'reduced-switching' : 'switching');
@@ -504,6 +514,7 @@ export function WorkOverview({
 
   function requestExitFocus() {
     if (!activeCard || motionPhase === 'exiting' || motionPhase === 'reduced-exiting') return;
+    cancelPendingStageHeadingFocus();
     const targetCard = cards.find((card) => card.key === activeCard);
     restoreCardKeyRef.current = activeCard;
     setMotionPhase(prefersReducedMotion ? 'reduced-exiting' : 'exiting');
@@ -511,9 +522,34 @@ export function WorkOverview({
   }
 
   function focusStageHeading() {
-    window.requestAnimationFrame(() => {
-      focusRootRef.current?.querySelector<HTMLElement>('[data-focus-heading]')?.focus();
-    });
+    cancelPendingStageHeadingFocus();
+    const requestId = focusHeadingRequestRef.current;
+    const deadline = window.performance.now() + focusHeadingWaitMs;
+
+    const tryFocusHeading = () => {
+      if (requestId !== focusHeadingRequestRef.current) return;
+      const heading = focusRootRef.current?.querySelector<HTMLElement>('[data-focus-heading]');
+      if (heading) {
+        focusHeadingFrameRef.current = null;
+        heading.focus();
+        return;
+      }
+      if (window.performance.now() >= deadline) {
+        focusHeadingFrameRef.current = null;
+        return;
+      }
+      focusHeadingFrameRef.current = window.requestAnimationFrame(tryFocusHeading);
+    };
+
+    focusHeadingFrameRef.current = window.requestAnimationFrame(tryFocusHeading);
+  }
+
+  function cancelPendingStageHeadingFocus() {
+    focusHeadingRequestRef.current += 1;
+    if (focusHeadingFrameRef.current) {
+      window.cancelAnimationFrame(focusHeadingFrameRef.current);
+      focusHeadingFrameRef.current = null;
+    }
   }
 
   if (loading && !snapshot) {
@@ -766,7 +802,7 @@ type DashboardCard = {
   tone?: AccentTone;
 };
 
-function dashboardCards(model: DashboardModel, isManagerView: boolean): DashboardCard[] {
+function dashboardCards(model: DashboardModel, isManagerView: boolean, onNavigate?: (target: RecordNavigationTarget) => void): DashboardCard[] {
   const scope = model.scopeWord;
   const base: DashboardCard[] = [
     {
@@ -778,7 +814,7 @@ function dashboardCards(model: DashboardModel, isManagerView: boolean): Dashboar
       focusSubtitle: '数量 · 金额 · 重点商机',
       tone: 'sky',
       children: <FunnelOverview model={model} />,
-      focus: <FunnelFocus model={model} />
+      focus: <FunnelFocus model={model} onNavigate={onNavigate} />
     },
     {
       key: 'stage',
@@ -809,8 +845,8 @@ function dashboardCards(model: DashboardModel, isManagerView: boolean): Dashboar
       sideIcon: <Bell size={18} aria-hidden="true" />,
       focusSubtitle: '任务 · 提醒 · 预警',
       tone: 'peach',
-      children: <TodoOverview model={model} />,
-      focus: <TodoFocus model={model} />
+      children: <TodoOverview model={model} onNavigate={onNavigate} />,
+      focus: <TodoFocus model={model} onNavigate={onNavigate} />
     },
     {
       key: 'payments',
@@ -820,8 +856,8 @@ function dashboardCards(model: DashboardModel, isManagerView: boolean): Dashboar
       sideIcon: <CreditCard size={18} aria-hidden="true" />,
       focusSubtitle: '回款状态 · 授权记录',
       tone: 'peach',
-      children: <PaymentsOverview model={model} />,
-      focus: <PaymentsFocus model={model} />
+      children: <PaymentsOverview model={model} onNavigate={onNavigate} />,
+      focus: <PaymentsFocus model={model} onNavigate={onNavigate} />
     },
     {
       key: 'activity',
@@ -830,8 +866,8 @@ function dashboardCards(model: DashboardModel, isManagerView: boolean): Dashboar
       metric: model.activities.length ? formatTime(model.activities[0].occurredAt) : '暂无',
       sideIcon: <ListChecks size={18} aria-hidden="true" />,
       focusSubtitle: '动态 · 最近更新',
-      children: <ActivityOverview model={model} />,
-      focus: <ActivityFocus model={model} />
+      children: <ActivityOverview model={model} onNavigate={onNavigate} />,
+      focus: <ActivityFocus model={model} onNavigate={onNavigate} />
     }
   ];
 
@@ -864,8 +900,8 @@ function dashboardCards(model: DashboardModel, isManagerView: boolean): Dashboar
       sideIcon: <BriefcaseBusiness size={18} aria-hidden="true" />,
       focusSubtitle: '高金额 · 临近预计关闭',
       tone: 'sky',
-      children: <KeyOpportunityOverview model={model} />,
-      focus: <KeyOpportunityFocus model={model} />
+      children: <KeyOpportunityOverview model={model} onNavigate={onNavigate} />,
+      focus: <KeyOpportunityFocus model={model} onNavigate={onNavigate} />
     },
     base[5]
   ];
@@ -917,7 +953,7 @@ function FunnelOverview({ model }: { model: DashboardModel }) {
   );
 }
 
-function FunnelFocus({ model }: { model: DashboardModel }) {
+function FunnelFocus({ model, onNavigate }: { model: DashboardModel; onNavigate?: (target: RecordNavigationTarget) => void }) {
   const max = Math.max(1, ...model.funnelRows.map((row) => row.count));
   return (
     <div className="dashboardFocusStack">
@@ -935,7 +971,7 @@ function FunnelFocus({ model }: { model: DashboardModel }) {
           </div>
         ))}
       </div>
-      <OpportunityTable rows={model.keyOpportunities} caption="聚焦商机明细" />
+      <OpportunityTable rows={model.keyOpportunities} caption="聚焦商机明细" onNavigate={onNavigate} />
     </div>
   );
 }
@@ -1052,24 +1088,26 @@ function LeaderboardFocus({ model }: { model: DashboardModel }) {
   );
 }
 
-function TodoOverview({ model }: { model: DashboardModel }) {
+function TodoOverview({ model, onNavigate }: { model: DashboardModel; onNavigate?: (target: RecordNavigationTarget) => void }) {
   if (model.todoRows.length === 0) return <EmptyState>暂无待办与预警。</EmptyState>;
   return (
     <div className="dashboardList">
       {model.todoRows.slice(0, 4).map((row) => (
-        <DashboardListRow key={row.id} title={row.title} meta={row.meta} badges={<Badge tone={row.tone}>{row.badge}</Badge>} />
+        <DashboardListRow key={row.id} title={row.title} meta={row.meta} badges={<Badge tone={row.tone}>{row.badge}</Badge>} onClick={row.target && onNavigate ? () => onNavigate(row.target as RecordNavigationTarget) : undefined} />
       ))}
     </div>
   );
 }
 
-function TodoFocus({ model }: { model: DashboardModel }) {
+function TodoFocus({ model, onNavigate }: { model: DashboardModel; onNavigate?: (target: RecordNavigationTarget) => void }) {
   return (
     <DataTable
       caption="待办与预警明细"
       rows={model.todoRows}
       rowKey={(row) => row.id}
       empty="暂无待办与预警。"
+      onRowClick={onNavigate ? (row) => { if (row.target) onNavigate(row.target); } : undefined}
+      getRowAriaLabel={(row) => `打开待办 ${row.title}`}
       columns={[
         { key: 'title', header: '事项', render: (row) => row.title },
         { key: 'meta', header: '范围', render: (row) => row.meta },
@@ -1079,13 +1117,19 @@ function TodoFocus({ model }: { model: DashboardModel }) {
   );
 }
 
-function PaymentsOverview({ model }: { model: DashboardModel }) {
+function PaymentsOverview({ model, onNavigate }: { model: DashboardModel; onNavigate?: (target: RecordNavigationTarget) => void }) {
   if (model.paymentRows.length === 0) return <EmptyState>暂无回款记录。</EmptyState>;
   return (
     <>
       <div className="paymentRows">
         {model.paymentRows.slice(0, 3).map((row) => (
-          <div className={model.changedKeys.has(paymentChangeKey(row)) ? 'paymentRow arrived' : 'paymentRow'} key={row.id}>
+          <button
+            className={model.changedKeys.has(paymentChangeKey(row)) ? 'paymentRow arrived clickablePaymentRow' : 'paymentRow clickablePaymentRow'}
+            disabled={!row.recordId || !onNavigate}
+            key={row.id}
+            type="button"
+            onClick={() => row.recordId && onNavigate?.({ view: 'payments', recordId: row.recordId })}
+          >
             <span className="flowIcon pay" aria-hidden="true"><CreditCard size={13} /></span>
             <div>
               <strong>{row.title}</strong>
@@ -1095,7 +1139,7 @@ function PaymentsOverview({ model }: { model: DashboardModel }) {
               <span className="money">{formatMoney(row.amount, model.currency)}</span>
               <Badge tone={row.tone}>{row.status}</Badge>
             </div>
-          </div>
+          </button>
         ))}
       </div>
       <div className="footer"><span className="paymentSummary">{model.scopeWord}回款金额 <span className="money">{formatMoney(model.metrics.paymentAmount, model.currency)}</span></span></div>
@@ -1103,13 +1147,16 @@ function PaymentsOverview({ model }: { model: DashboardModel }) {
   );
 }
 
-function PaymentsFocus({ model }: { model: DashboardModel }) {
+function PaymentsFocus({ model, onNavigate }: { model: DashboardModel; onNavigate?: (target: RecordNavigationTarget) => void }) {
   return (
     <DataTable
       caption="回款到账明细"
       rows={model.paymentRows}
       rowKey={(row) => row.id}
       empty="暂无回款记录。"
+      onRowClick={onNavigate ? (row) => { if (row.recordId) onNavigate({ view: 'payments', recordId: row.recordId }); } : undefined}
+      isRowClickable={(row) => Boolean(row.recordId)}
+      getRowAriaLabel={(row) => `打开回款记录 ${row.title}`}
       columns={[
         { key: 'record', header: '记录', render: (row) => row.title },
         { key: 'meta', header: '说明', render: (row) => row.meta },
@@ -1120,7 +1167,7 @@ function PaymentsFocus({ model }: { model: DashboardModel }) {
   );
 }
 
-function KeyOpportunityOverview({ model }: { model: DashboardModel }) {
+function KeyOpportunityOverview({ model, onNavigate }: { model: DashboardModel; onNavigate?: (target: RecordNavigationTarget) => void }) {
   if (model.keyOpportunities.length === 0) return <EmptyState>暂无重点商机。</EmptyState>;
   return (
     <div className="dashboardList">
@@ -1130,41 +1177,57 @@ function KeyOpportunityOverview({ model }: { model: DashboardModel }) {
           title={opportunity.title}
           meta={`${opportunity.customerId} · ${opportunity.ownerId}`}
           badges={<><Badge tone={stageBadgeTone(opportunity.stage)}>{labelFor(opportunityStageLabel, opportunity.stage)}</Badge><Badge>{formatMoney(opportunity.expectedAmount, 'CNY')}</Badge></>}
+          onClick={onNavigate ? () => onNavigate({ view: 'opportunities', recordId: opportunity.id }) : undefined}
         />
       ))}
     </div>
   );
 }
 
-function KeyOpportunityFocus({ model }: { model: DashboardModel }) {
-  return <OpportunityTable rows={model.keyOpportunities} caption="重点商机明细" />;
+function KeyOpportunityFocus({ model, onNavigate }: { model: DashboardModel; onNavigate?: (target: RecordNavigationTarget) => void }) {
+  return <OpportunityTable rows={model.keyOpportunities} caption="重点商机明细" onNavigate={onNavigate} />;
 }
 
-function ActivityOverview({ model }: { model: DashboardModel }) {
+function ActivityOverview({ model, onNavigate }: { model: DashboardModel; onNavigate?: (target: RecordNavigationTarget) => void }) {
   if (model.activities.length === 0) return <EmptyState>暂无最近活动。</EmptyState>;
   return (
     <div className="timeline">
       {model.activities.slice(0, 4).map((activity) => (
-        <div className={model.changedKeys.has(activityChangeKey(activity)) ? 'event arrived' : 'event'} key={activity.id}>
+        <button
+          className={model.changedKeys.has(activityChangeKey(activity)) ? 'event arrived clickableActivityRow' : 'event clickableActivityRow'}
+          disabled={!targetForRelatedRecord(activity.relatedType, activity.relatedId) || !onNavigate}
+          key={activity.id}
+          type="button"
+          onClick={() => {
+            const target = targetForRelatedRecord(activity.relatedType, activity.relatedId);
+            if (target) onNavigate?.(target);
+          }}
+        >
           <span className="flowIcon" aria-hidden="true"><Activity size={13} /></span>
           <div>
             <p>{activity.content || '动态已记录'}</p>
             <small><Badge>{labelFor(objectTypeLabel, activity.relatedType)}</Badge> {activity.ownerId}</small>
           </div>
           <span className="eventTime">{formatTime(activity.occurredAt)}</span>
-        </div>
+        </button>
       ))}
     </div>
   );
 }
 
-function ActivityFocus({ model }: { model: DashboardModel }) {
+function ActivityFocus({ model, onNavigate }: { model: DashboardModel; onNavigate?: (target: RecordNavigationTarget) => void }) {
   return (
     <DataTable
       caption="最近活动明细"
       rows={model.activities}
       rowKey={(row) => row.id}
       empty="暂无最近活动。"
+      onRowClick={onNavigate ? (row) => {
+        const target = targetForRelatedRecord(row.relatedType, row.relatedId);
+        if (target) onNavigate(target);
+      } : undefined}
+      isRowClickable={(row) => Boolean(targetForRelatedRecord(row.relatedType, row.relatedId))}
+      getRowAriaLabel={(row) => `打开活动关联记录 ${labelFor(objectTypeLabel, row.relatedType)} ${row.relatedId}`}
       columns={[
         { key: 'content', header: '活动', render: (row) => row.content || '动态已记录' },
         { key: 'related', header: '对象', render: (row) => `${labelFor(objectTypeLabel, row.relatedType)} ${row.relatedId}` },
@@ -1175,25 +1238,32 @@ function ActivityFocus({ model }: { model: DashboardModel }) {
   );
 }
 
-function DashboardListRow({ title, meta, badges }: { title: ReactNode; meta: ReactNode; badges?: ReactNode }) {
-  return (
-    <div className="dashboardRow">
+function DashboardListRow({ title, meta, badges, onClick }: { title: ReactNode; meta: ReactNode; badges?: ReactNode; onClick?: () => void }) {
+  const content = (
+    <>
       <div>
         <strong>{title}</strong>
         <span>{meta}</span>
       </div>
       {badges ? <div className="badges">{badges}</div> : null}
-    </div>
+    </>
+  );
+  return onClick ? (
+    <button className="dashboardRow clickableDashboardRow" type="button" onClick={onClick}>{content}</button>
+  ) : (
+    <div className="dashboardRow">{content}</div>
   );
 }
 
-function OpportunityTable({ rows, caption }: { rows: Opportunity[]; caption: string }) {
+function OpportunityTable({ rows, caption, onNavigate }: { rows: Opportunity[]; caption: string; onNavigate?: (target: RecordNavigationTarget) => void }) {
   return (
     <DataTable
       caption={caption}
       rows={rows}
       rowKey={(row) => row.id}
       empty="暂无商机明细。"
+      onRowClick={onNavigate ? (row) => onNavigate({ view: 'opportunities', recordId: row.id }) : undefined}
+      getRowAriaLabel={(row) => `打开商机 ${row.title || row.id}`}
       columns={[
         { key: 'title', header: '商机', render: (row) => row.title },
         { key: 'customer', header: '客户', render: (row) => row.customerId },
@@ -1370,14 +1440,16 @@ function buildTodoRows(reminders: ReminderRow[], tasks: WorkTask[]) {
     title: row.relatedRecord.display,
     meta: `${labelFor(reminderTypeLabel, row.type)} · ${row.dueDate}`,
     badge: labelFor(reminderTypeLabel, row.type),
-    tone: row.type.includes('overdue') ? 'danger' as const : 'warning' as const
+    tone: row.type.includes('overdue') ? 'danger' as const : 'warning' as const,
+    target: targetForRelatedRecord(row.relatedRecord.type, row.relatedRecord.id)
   }));
   const taskRows = tasks.map((task) => ({
     id: task.id,
     title: task.title,
     meta: `${labelFor(objectTypeLabel, task.relatedType)} ${task.relatedId} · ${task.dueDate}`,
     badge: labelFor(taskStatusLabel, task.status),
-    tone: task.dueDate < today() ? 'danger' as const : 'primary' as const
+    tone: task.dueDate < today() ? 'danger' as const : 'primary' as const,
+    target: { view: 'tasks', recordId: task.id } as RecordNavigationTarget
   }));
   return [...reminderRows, ...taskRows].slice(0, 12);
 }
@@ -1401,7 +1473,8 @@ function buildPaymentRows(report: BasicReport | null, paymentContracts: Contract
     meta: `${salesScope ? '可见合同/回款记录' : '合同记录'} · ${labelFor(contractStatusLabel, contract.status)}`,
     amount: numberValue(contract.amount),
     status: labelFor(contractStatusLabel, contract.status),
-    tone: contract.status === 'Completed' || contract.status === 'Signed' || contract.status === 'Active' ? 'success' as const : 'warning' as const
+    tone: contract.status === 'Completed' || contract.status === 'Signed' || contract.status === 'Active' ? 'success' as const : 'warning' as const,
+    recordId: contract.id
   }));
 }
 

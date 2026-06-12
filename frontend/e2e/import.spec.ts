@@ -18,6 +18,9 @@ test('TEST-CSV-IMPORT-001/002 imports valid CSV rows and shows row errors', asyn
 
   await page.getByRole('button', { name: '导入/导出' }).click();
   await expect(page.getByRole('heading', { name: '导入/导出' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '最近批次' })).toHaveCount(0);
+  await page.getByRole('button', { name: '新建导入' }).click();
+  await expect(page.locator('form.importForm').getByLabel('CSV 文件')).toBeFocused();
   const importForm = page.locator('form.importForm');
   await importForm.getByLabel('对象类型').selectOption('lead');
   await importForm.getByLabel('CSV 文件').setInputFiles({

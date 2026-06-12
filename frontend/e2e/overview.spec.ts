@@ -68,11 +68,31 @@ test('TEST-UIUX-DASHBOARD-001 renders manager dashboard 8 cards and per-card foc
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
   await expect(page.locator('.shell.focusMode')).toHaveCount(0);
-  await page.locator('[data-dashboard-card="activity"]').click();
+  await page.locator('[data-dashboard-card="activity"] .dashboardPanelHeader').click();
   await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
   await expectSingleFocusExitControl(page);
   await page.getByRole('button', { name: '返回' }).click();
   await expect(page.locator('[data-uiux="dashboard"]')).toBeVisible();
+});
+
+test('TEST-UIUX-FUNC-ROWNAV-001 focus-stage opportunity row click opens the record detail', async ({ page }) => {
+  const title = `Focus Row Nav ${Date.now()}`;
+  await createOpportunity(page, title);
+  await page.getByRole('button', { name: '刷新数据' }).click();
+  await expect(page.locator('.updateMeta')).toContainText('已刷新');
+
+  await page.locator('[data-dashboard-card="key-opportunities"] .clickableDashboardRow').filter({ hasText: title }).click();
+  await expect(page.getByLabel('商机详情').getByRole('heading', { name: title })).toBeVisible();
+  await page.getByLabel('主导航').getByRole('button', { name: '工作台' }).click();
+  await page.getByRole('button', { name: '刷新数据' }).click();
+  await expect(page.locator('.updateMeta')).toContainText('已刷新');
+
+  await page.locator('[data-dashboard-card="key-opportunities"] .dashboardPanelHeader').click();
+  await expect(page.locator('[data-uiux="dashboard-focus"]')).toBeVisible();
+  const focusTable = page.getByRole('table', { name: '重点商机明细' });
+  await expect(focusTable).toContainText(title);
+  await focusTable.getByRole('row', { name: new RegExp(title) }).click();
+  await expect(page.getByLabel('商机详情').getByRole('heading', { name: title })).toBeVisible();
 });
 
 test('TEST-UIUX-A6-001 dashboard remains stable on narrow desktop viewport', async ({ page }) => {
@@ -726,4 +746,25 @@ async function createUser(page: import('@playwright/test').Page, email: string, 
     if (!response.ok) throw new Error(JSON.stringify(body));
     return body.user as { id: string; email: string; displayName: string; role: string; status: string };
   }, { email, displayName, password: dashboardPassword, role });
+}
+
+async function createOpportunity(page: import('@playwright/test').Page, title: string) {
+  return page.evaluate(async ({ title }) => {
+    const response = await fetch('/api/opportunities', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        customerId: `acct_${Date.now()}`,
+        ownerId: 'sales-1',
+        stage: 'New Opportunity',
+        expectedAmount: '99999999.00',
+        expectedCloseDate: '2027-12-31'
+      })
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(body));
+    return body.data as { id: string; title: string };
+  }, { title });
 }

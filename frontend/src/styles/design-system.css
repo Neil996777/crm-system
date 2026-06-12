@@ -382,7 +382,7 @@ svg {
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--card);
 }
 
 .topbarIdentity .avatar {
@@ -1717,6 +1717,78 @@ td.selectCell {
 .rowActionsCell {
   width: 132px;
   text-align: right;
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+.clickableRow:hover td,
+.clickableRow:focus-visible td {
+  background: var(--section);
+}
+
+.clickableRow:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.actionMenu {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.actionMenuPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 90;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.actionMenuItem {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.actionMenuItem:hover:not(:disabled),
+.actionMenuItem:focus-visible {
+  background: var(--section);
+  outline: none;
+}
+
+.actionMenuItem:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.actionMenuItem small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: normal;
 }
 
 .emptyCell {
@@ -3185,6 +3257,44 @@ tbody tr:hover td {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
+}
+
+.clickableDashboardRow,
+.clickablePaymentRow,
+.clickableActivityRow {
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.clickableDashboardRow {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.clickablePaymentRow,
+.clickableActivityRow {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.clickableDashboardRow:hover,
+.clickablePaymentRow:hover:not(:disabled),
+.clickableActivityRow:hover:not(:disabled),
+.clickableDashboardRow:focus-visible,
+.clickablePaymentRow:focus-visible,
+.clickableActivityRow:focus-visible {
+  background: var(--section);
+  outline: none;
+}
+
+.clickablePaymentRow:disabled,
+.clickableActivityRow:disabled {
+  cursor: default;
 }
 
 .salesDashboardGrid .dashboardRow {

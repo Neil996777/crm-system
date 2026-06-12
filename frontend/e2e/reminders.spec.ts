@@ -32,6 +32,14 @@ test('TEST-REMINDER-001/002/003 groups task contract and payment reminders by bu
   await expect(page.getByLabel('提醒数据范围')).toContainText('仅本人提醒');
   await expect(page.locator('.reminderCard').first()).not.toContainText('task_overdue');
   await expect(page.locator('.reminderCard').first()).not.toContainText('contract_pending_signature');
+
+  const sortButton = page.getByRole('button', { name: '按到期排序' });
+  await sortButton.click();
+  await expect(sortButton).toHaveAttribute('aria-pressed', 'true');
+
+  const contractReminder = page.locator('.reminderCard').filter({ hasText: '合同待签署' }).first();
+  await contractReminder.getByRole('button', { name: '查看' }).click();
+  await expect(page.getByLabel('合同详情')).toBeVisible();
 });
 
 test('TEST-REMINDER-004 suppresses completed task reminders after refresh', async ({ page }) => {

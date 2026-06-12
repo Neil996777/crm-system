@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Building2, MoreHorizontal, Plus, RotateCcw } from 'lucide-react';
+import { ArrowRight, Building2, Plus, RotateCcw } from 'lucide-react';
 import { Account, archiveAccount, checkAccountDuplicate, createAccount, getAccount, listAccounts } from '../../api/accounts';
 import { ApiError } from '../../api/client';
 import { DuplicateWarningResult } from '../../api/duplicates';
@@ -17,7 +17,7 @@ import {
   paginate
 } from '../../components/CrudScaffold';
 import { DuplicateWarning } from '../../components/DuplicateWarning';
-import { BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
+import { ActionMenu, BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
 import { useSession } from '../../auth/SessionProvider';
 import { accountStatusLabel, archiveStatusLabel, labelFor, localizeError } from '../../i18n/labels';
 import { AccountDetail } from './AccountDetail';
@@ -25,7 +25,7 @@ import { AccountDetail } from './AccountDetail';
 type Mode = 'list' | 'create' | 'detail';
 const statuses = Object.keys(accountStatusLabel);
 
-export function AccountList() {
+export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordId?: string; onTargetHandled?: () => void }) {
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>('list');
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -44,6 +44,11 @@ export function AccountList() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!targetRecordId) return;
+    void selectAccount(targetRecordId).finally(() => onTargetHandled?.());
+  }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search, nextIncludeArchived = includeArchived) {
     const response = await listAccounts(nextSearch, nextIncludeArchived);
@@ -121,6 +126,20 @@ export function AccountList() {
       }
       setSelectedIds([]);
       setNotice(`已归档 ${archived} 条客户。`);
+      await refresh();
+    } catch (caught) {
+      const error = caught as ApiError;
+      setError(localizeError(error));
+    }
+  }
+
+  async function archiveRow(account: Account) {
+    if (user?.role === 'Sales' || account.archived) return;
+    if (!window.confirm(`确认归档客户 ${account.companyName}？`)) return;
+    setError('');
+    try {
+      await archiveAccount(account.id, account.version, '行操作归档客户记录');
+      setNotice(`已归档客户 ${account.companyName}。`);
       await refresh();
     } catch (caught) {
       const error = caught as ApiError;
@@ -254,6 +273,8 @@ export function AccountList() {
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
           getRowClassName={(account) => selected?.id === account.id ? 'selected' : undefined}
+          onRowClick={(account) => void selectAccount(account.id)}
+          getRowAriaLabel={(account) => `打开客户 ${account.companyName}`}
           empty="没有符合当前筛选条件的客户。"
           columns={[
             {
@@ -272,7 +293,19 @@ export function AccountList() {
               <button className="rowAction" type="button" aria-label={`查看 ${account.companyName}`} onClick={() => void selectAccount(account.id)}>
                 <ArrowRight size={16} aria-hidden="true" />
               </button>
-              <span className="rowAction" aria-hidden="true"><MoreHorizontal size={16} /></span>
+              <ActionMenu
+                label={`打开 ${account.companyName} 的行操作菜单`}
+                items={[
+                  { label: '查看', onSelect: () => void selectAccount(account.id) },
+                  {
+                    label: '归档',
+                    onSelect: () => void archiveRow(account),
+                    disabled: user?.role === 'Sales' || account.archived,
+                    reason: user?.role === 'Sales' ? '销售角色不能归档客户。' : account.archived ? '已归档。' : undefined,
+                    tone: 'danger'
+                  }
+                ]}
+              />
             </div>
           )}
         />

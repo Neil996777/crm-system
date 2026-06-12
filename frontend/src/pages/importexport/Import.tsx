@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Upload } from 'lucide-react';
 import { ImportRun, startImport } from '../../api/importexport';
@@ -12,6 +12,7 @@ export function ImportExportPage() {
   const [result, setResult] = useState<ImportRun | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,6 +33,11 @@ export function ImportExportPage() {
     }
   }
 
+  function focusImportForm() {
+    fileInputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    fileInputRef.current?.focus();
+  }
+
   return (
     <main className="content importExportPage" data-uiux="import-export">
       <PageHeader
@@ -39,8 +45,7 @@ export function ImportExportPage() {
         description="导入/导出有权限访问的记录 · 经理视图 · 仅处理授权范围"
         actions={(
           <>
-            <Button>最近批次</Button>
-            <Button variant="primary">
+            <Button variant="primary" onClick={focusImportForm}>
               <Upload size={16} aria-hidden="true" />
               新建导入
             </Button>
@@ -73,7 +78,7 @@ export function ImportExportPage() {
             </label>
             <label>
               CSV 文件
-              <input type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+              <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
             </label>
             <button className="primaryButton" type="submit" disabled={busy}>
               开始导入

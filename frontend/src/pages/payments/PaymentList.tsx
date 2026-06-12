@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, CreditCard, MoreHorizontal, Plus, RotateCcw } from 'lucide-react';
+import { ArrowRight, CreditCard, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
-import { Contract } from '../../api/contracts';
+import { Contract, getContract } from '../../api/contracts';
 import { createPaymentPlan, listPaymentContracts } from '../../api/payments';
 import {
   ActiveFilterSummary,
@@ -16,14 +16,14 @@ import {
   exportRows,
   paginate
 } from '../../components/CrudScaffold';
-import { BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
+import { ActionMenu, BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
 import { useSession } from '../../auth/SessionProvider';
 import { contractStatusLabel, labelFor, localizeError, paymentStatusLabel } from '../../i18n/labels';
 import { PaymentDetail } from './PaymentDetail';
 
 type Mode = 'list' | 'create' | 'detail';
 
-export function PaymentList() {
+export function PaymentList({ targetRecordId, onTargetHandled }: { targetRecordId?: string; onTargetHandled?: () => void }) {
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>('list');
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -40,6 +40,11 @@ export function PaymentList() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!targetRecordId) return;
+    void selectPayment(targetRecordId).finally(() => onTargetHandled?.());
+  }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search, nextIncludeArchived = includeArchived) {
     try {
@@ -91,6 +96,22 @@ export function PaymentList() {
     setNotice(`已导出 ${selectedRows.length} 条回款合同。`);
   }
 
+  async function selectPayment(contractId: string) {
+    setError('');
+    try {
+      setSelected(await getContract(contractId));
+      setMode('detail');
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
+  function startPlan(contract: Contract) {
+    setForm({ contractId: contract.id, dueAmount: '', dueDate: '', currency: 'CNY' });
+    setMode('create');
+  }
+
   if (mode === 'create') {
     return (
       <FormShell title="新建回款计划" description="为已授权合同创建回款计划。" badge="新建" onCancel={() => setMode('list')} actions={<Button variant="primary" form="payment-plan-form" type="submit">保存</Button>} side={<PaymentFormRules />}>
@@ -132,6 +153,8 @@ export function PaymentList() {
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
           getRowClassName={(contract) => selected?.id === contract.id ? 'selected' : undefined}
+          onRowClick={(contract) => void selectPayment(contract.id)}
+          getRowAriaLabel={(contract) => `打开回款合同 ${contract.id}`}
           empty="没有符合当前筛选条件的回款合同。"
           columns={[
             { key: 'contract', header: '合同', width: '230px', render: (contract) => <RecordIdentity icon={<CreditCard size={17} aria-hidden="true" />} title={contract.opportunityId} subtitle={contract.id} tone="mint" /> },
@@ -140,7 +163,19 @@ export function PaymentList() {
             { key: 'amount', header: '合同金额', align: 'right', render: (contract) => <span className="amountText">{money(contract.amount)}</span> },
             { key: 'updated', header: '更新时间', align: 'right', sortable: true, sortDirection: 'desc', render: (contract) => formatDate(contract.updatedAt) }
           ]}
-          actions={(contract) => <div className="rowActions"><button className="rowAction" type="button" aria-label={`查看回款 ${contract.id}`} onClick={() => { setError(''); setSelected(contract); setMode('detail'); }}><ArrowRight size={16} aria-hidden="true" /></button><span className="rowAction" aria-hidden="true"><MoreHorizontal size={16} /></span></div>}
+          actions={(contract) => (
+            <div className="rowActions">
+              <button className="rowAction" type="button" aria-label={`查看回款 ${contract.id}`} onClick={() => { setError(''); setSelected(contract); setMode('detail'); }}><ArrowRight size={16} aria-hidden="true" /></button>
+              <ActionMenu
+                label={`打开回款 ${contract.id} 的行操作菜单`}
+                items={[
+                  { label: '查看', onSelect: () => { setError(''); setSelected(contract); setMode('detail'); } },
+                  { label: '新建计划', onSelect: () => startPlan(contract), reason: '使用现有回款计划表单。' },
+                  { label: '登记回款', onSelect: () => { setError(''); setSelected(contract); setMode('detail'); }, reason: '在详情页填写回款金额和幂等键。' }
+                ]}
+              />
+            </div>
+          )}
         />
       }
       pagination={<CrudPagination slice={slice} onPageChange={setPage} onPageSizeChange={(next) => { setPageSize(next); setPage(1); }} />}

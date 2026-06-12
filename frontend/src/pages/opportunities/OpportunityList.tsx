@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, BriefcaseBusiness, MoreHorizontal, Plus, RotateCcw } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
-import { Opportunity, archiveOpportunity, createOpportunity, getOpportunity, listOpportunities, updateOpportunity } from '../../api/opportunities';
+import { Opportunity, archiveOpportunity, changeOpportunityStage, createOpportunity, getOpportunity, listOpportunities, updateOpportunity } from '../../api/opportunities';
 import {
   ActiveFilterSummary,
   CrudListShell,
@@ -15,7 +15,7 @@ import {
   exportRows,
   paginate
 } from '../../components/CrudScaffold';
-import { BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
+import { ActionMenu, BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
 import { useSession } from '../../auth/SessionProvider';
 import { labelFor, localizeError, opportunityStageLabel } from '../../i18n/labels';
 import { OpportunityDetail } from './OpportunityDetail';
@@ -24,7 +24,7 @@ const stages = Object.keys(opportunityStageLabel);
 const editableStages = ['New Opportunity', 'Needs Confirmed', 'Quote', 'Contract Negotiation'];
 type Mode = 'list' | 'create' | 'edit' | 'detail';
 
-export function OpportunityList() {
+export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRecordId?: string; onTargetHandled?: () => void }) {
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>('list');
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -52,6 +52,11 @@ export function OpportunityList() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!targetRecordId) return;
+    void selectOpportunity(targetRecordId).finally(() => onTargetHandled?.());
+  }, [targetRecordId, onTargetHandled]);
 
   useEffect(() => {
     if (ownerLocked && user) {
@@ -184,6 +189,37 @@ export function OpportunityList() {
       }
       setSelectedIds([]);
       setNotice(`已归档 ${archived} 条商机。`);
+      await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
+  async function archiveRow(opportunity: Opportunity) {
+    if (user?.role === 'Sales' || opportunity.archived || isTerminal(opportunity)) return;
+    if (!window.confirm(`确认归档商机 ${opportunity.title || opportunity.id}？`)) return;
+    setError('');
+    setNotice('');
+    try {
+      await archiveOpportunity(opportunity.id, opportunity.version, '行操作归档商机记录');
+      setNotice(`已归档商机 ${opportunity.title || opportunity.id}。`);
+      await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
+  async function advanceRow(opportunity: Opportunity) {
+    const nextStage = nextEditableStage(opportunity.stage);
+    if (!nextStage) return;
+    if (!window.confirm(`确认推进到${labelFor(opportunityStageLabel, nextStage)}？`)) return;
+    setError('');
+    try {
+      const updated = await changeOpportunityStage(opportunity.id, opportunity.version, nextStage);
+      setSelected(updated);
+      setNotice(`已推进 ${opportunity.title || opportunity.id} 到${labelFor(opportunityStageLabel, nextStage)}。`);
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
@@ -347,6 +383,8 @@ export function OpportunityList() {
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
           getRowClassName={(opportunity) => selected?.id === opportunity.id ? 'selected' : undefined}
+          onRowClick={(opportunity) => void selectOpportunity(opportunity.id)}
+          getRowAriaLabel={(opportunity) => `打开商机 ${opportunity.title || opportunity.id}`}
           empty="没有符合当前筛选条件的商机。"
           columns={[
             {
@@ -378,9 +416,37 @@ export function OpportunityList() {
               <button className="rowAction" type="button" aria-label={`查看 ${opportunity.title || opportunity.id}`} onClick={() => void selectOpportunity(opportunity.id)}>
                 <ArrowRight size={16} aria-hidden="true" />
               </button>
-              <span className="rowAction" aria-hidden="true">
-                <MoreHorizontal size={16} />
-              </span>
+              <ActionMenu
+                label={`打开 ${opportunity.title || opportunity.id} 的行操作菜单`}
+                items={[
+                  { label: '查看', onSelect: () => void selectOpportunity(opportunity.id) },
+                  {
+                    label: '编辑',
+                    onSelect: () => startEdit(opportunity),
+                    disabled: user?.role === 'Sales' || isTerminal(opportunity) || Boolean(opportunity.archived),
+                    reason: user?.role === 'Sales' ? '销售角色不能编辑负责人范围外字段。' : isTerminal(opportunity) ? '终态商机只读。' : opportunity.archived ? '已归档记录只读。' : undefined
+                  },
+                  {
+                    label: nextEditableStage(opportunity.stage) ? `推进到${labelFor(opportunityStageLabel, nextEditableStage(opportunity.stage) ?? '')}` : '推进阶段',
+                    onSelect: () => void advanceRow(opportunity),
+                    disabled: !nextEditableStage(opportunity.stage) || Boolean(opportunity.archived),
+                    reason: !nextEditableStage(opportunity.stage) ? '终态商机无法推进阶段。' : opportunity.archived ? '已归档记录只读。' : undefined
+                  },
+                  {
+                    label: '转移负责人',
+                    onSelect: () => void selectOpportunity(opportunity.id),
+                    disabled: user?.role === 'Sales' || isTerminal(opportunity) || Boolean(opportunity.archived),
+                    reason: user?.role === 'Sales' ? '销售角色不能转移负责人。' : isTerminal(opportunity) ? '终态商机只读。' : opportunity.archived ? '已归档记录只读。' : '在详情页填写新负责人 ID。'
+                  },
+                  {
+                    label: '归档',
+                    onSelect: () => void archiveRow(opportunity),
+                    disabled: user?.role === 'Sales' || isTerminal(opportunity) || Boolean(opportunity.archived),
+                    reason: user?.role === 'Sales' ? '销售角色不能归档商机。' : isTerminal(opportunity) ? '终态商机只读。' : opportunity.archived ? '已归档。' : undefined,
+                    tone: 'danger'
+                  }
+                ]}
+              />
             </div>
           )}
         />
@@ -397,6 +463,17 @@ export function OpportunityList() {
       }
     />
   );
+}
+
+function isTerminal(opportunity: Opportunity) {
+  return opportunity.stage === 'Won' || opportunity.stage === 'Lost';
+}
+
+function nextEditableStage(stage: string) {
+  if (stage === 'New Opportunity') return 'Needs Confirmed';
+  if (stage === 'Needs Confirmed') return 'Quote';
+  if (stage === 'Quote') return 'Contract Negotiation';
+  return '';
 }
 
 function OpportunityFormRules({ ownerLocked }: { ownerLocked: boolean }) {

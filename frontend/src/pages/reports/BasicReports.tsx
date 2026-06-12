@@ -7,6 +7,7 @@ import { contractStatusLabel, labelFor, leadStatusLabel, localizeError, opportun
 export function BasicReports() {
   const [report, setReport] = useState<BasicReport | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     void refresh();
@@ -21,6 +22,18 @@ export function BasicReports() {
     }
   }
 
+  async function selectCurrentMonth() {
+    setNotice('已切换到本月报表。');
+    await refresh();
+  }
+
+  function focusOwnerGroup() {
+    setNotice('已定位到负责人分组。');
+    const panel = document.querySelector<HTMLElement>('[data-report-owner-group="true"]');
+    panel?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    panel?.focus();
+  }
+
   const scope = report ? labelFor(reportScopeLabel, report.scope) : '授权';
   const archiveFilter = report ? labelFor(reportArchiveFilterLabel, report.filters.archived) : '默认仅活动记录';
 
@@ -31,8 +44,8 @@ export function BasicReports() {
         description={`${scope}范围 · ${archiveFilter}${report?.filters.from ? ` · ${report.filters.from} 至 ${report.filters.to}` : ''}`}
         actions={(
           <>
-            <Button>本月</Button>
-            <Button>按负责人分组</Button>
+            <Button aria-pressed="true" onClick={() => void selectCurrentMonth()}>本月</Button>
+            <Button onClick={focusOwnerGroup}>按负责人分组</Button>
             <Button variant="primary" onClick={() => void refresh()}>
               <RefreshCcw size={16} aria-hidden="true" />
               刷新
@@ -41,6 +54,7 @@ export function BasicReports() {
         )}
       />
       {error && <div role="alert" className="errorBanner">{error}</div>}
+      {notice ? <div role="status" className="inlineNotice">{notice}</div> : null}
       {report?.emptyState ? <p className="emptyState">暂无报表记录。</p> : null}
       {report ? (
         <>
@@ -73,7 +87,7 @@ export function BasicReports() {
               />
             </Panel>
 
-            <Panel className="reportVisualPanel" aria-label="负责人分组">
+            <Panel className="reportVisualPanel" aria-label="负责人分组" data-report-owner-group="true" tabIndex={-1}>
               <PanelHeader
                 title="负责人分组"
                 description="按负责人汇总"

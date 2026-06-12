@@ -5,6 +5,7 @@ import { ApiError } from '../../api/client';
 import { ManagedUser, UserStatus, changeUserRole, changeUserStatus, createUser, listUsers } from '../../api/users';
 import { RoleStatusChangeDialog } from '../../components/RoleStatusChangeDialog';
 import { Badge, Button, DataTable, PageHeader, Pagination, Toolbar } from '../../components/ui';
+import { exportRows } from '../../components/CrudScaffold';
 import { labelFor, localizeError, roleLabel, userStatusLabel } from '../../i18n/labels';
 
 const roles: UserRole[] = ['Administrator', 'Sales Manager', 'Sales'];
@@ -97,6 +98,15 @@ export function UserManagement() {
   }, [selected, nextRole, nextStatus, activeAdministratorCount]);
   const selectedIsLastActiveAdmin = Boolean(selected && selected.role === 'Administrator' && selected.status === 'Active' && activeAdministratorCount <= 1);
 
+  function exportFilteredUsers() {
+    exportRows('users-filtered.csv', filteredUsers.map((user) => ({
+      显示名: user.displayName,
+      邮箱: user.email,
+      角色: labelFor(roleLabel, user.role),
+      状态: labelFor(userStatusLabel, user.status)
+    })));
+  }
+
   async function confirm() {
     if (!selected) return;
     setError('');
@@ -126,7 +136,7 @@ export function UserManagement() {
         description="仅管理员可访问 · 字段：显示名 / 邮箱 / 角色 / 状态 · 仅显示公开身份字段"
         actions={(
           <>
-            <Button>导出</Button>
+            <Button onClick={exportFilteredUsers}>导出</Button>
             <Button variant="primary" onClick={() => { setShowCreate(true); setSelected(null); }}>
               <Plus size={16} aria-hidden="true" />
               新建用户

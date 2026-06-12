@@ -31,6 +31,13 @@ test('TEST-OPLOG-001/002/005 administrator sees read-only global operation logs'
   await expect(logList.getByRole('button', { name: /编辑|删除|保存|edit|delete|save/i })).toHaveCount(0);
   await expect(page.getByLabel('分页')).toBeVisible();
   await expect(page.getByLabel('操作日志门控说明')).toContainText('不可编辑');
+
+  await page.getByRole('button', { name: '今天' }).click();
+  await expect(page.getByLabel('时间筛选')).toHaveValue('today');
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: '导出', exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('operation-logs-filtered.csv');
 });
 
 test('TEST-OPLOG-004 sales is denied global operation logs without leakage', async ({ page }) => {

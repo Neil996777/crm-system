@@ -58,3 +58,29 @@ test('TEST-LEAD-QUALIFY-004 shows Unassigned qualification as unavailable and ba
   await expect(page.getByRole('button', { name: '标记有效' })).toBeDisabled();
   await expect(page.getByText('未分配线索不能确认或转换。')).toBeVisible();
 });
+
+test('TEST-UIUX-FUNC-ROWMENU-001 lead row menu and row click open the record detail', async ({ page }) => {
+  const companyName = `E2E Row Menu ${Date.now()}`;
+
+  await page.getByRole('button', { name: '线索', exact: true }).click();
+  await page.getByRole('button', { name: '新建线索' }).click();
+  await page.getByLabel('公司名称').fill(companyName);
+  await page.getByLabel('来源').fill('Website');
+  await page.getByLabel('负责人 ID').fill('sales-1');
+  await page.getByRole('button', { name: '保存线索' }).click();
+  await expect(page.getByLabel('线索详情').getByRole('heading', { name: companyName })).toBeVisible();
+
+  await page.getByRole('button', { name: '返回线索列表' }).click();
+  await page.getByPlaceholder('搜索线索名、公司名').fill(companyName);
+  await page.getByRole('button', { name: '应用筛选' }).click();
+  const row = page.getByRole('row', { name: new RegExp(companyName) });
+  await expect(row).toBeVisible();
+  await row.getByRole('button', { name: new RegExp(`打开 ${companyName} 的行操作菜单`) }).click();
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page.getByRole('menuitem', { name: '查看' }).click();
+  await expect(page.getByLabel('线索详情').getByRole('heading', { name: companyName })).toBeVisible();
+
+  await page.getByRole('button', { name: '返回线索列表' }).click();
+  await row.click();
+  await expect(page.getByLabel('线索详情').getByRole('heading', { name: companyName })).toBeVisible();
+});

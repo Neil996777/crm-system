@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, ListChecks, MoreHorizontal, Plus, RotateCcw } from 'lucide-react';
+import { ArrowRight, ListChecks, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { DuplicateWarningResult } from '../../api/duplicates';
 import { ConversionResult, Lead, archiveLead, checkLeadDuplicate, createLead, getLead, listLeads, transferLeadOwner } from '../../api/leads';
@@ -17,7 +17,7 @@ import {
   paginate
 } from '../../components/CrudScaffold';
 import { DuplicateWarning } from '../../components/DuplicateWarning';
-import { BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
+import { ActionMenu, BulkActionBar, Button, DataTable, TextField, Toolbar } from '../../components/ui';
 import { useSession } from '../../auth/SessionProvider';
 import { labelFor, leadStatusLabel, localizeError } from '../../i18n/labels';
 import { LeadDetail } from './LeadDetail';
@@ -25,7 +25,7 @@ import { LeadDetail } from './LeadDetail';
 type Mode = 'list' | 'create' | 'detail';
 const statuses = Object.keys(leadStatusLabel);
 
-export function LeadList() {
+export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?: string; onTargetHandled?: () => void }) {
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>('list');
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -46,6 +46,11 @@ export function LeadList() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!targetRecordId) return;
+    void selectLead(targetRecordId).finally(() => onTargetHandled?.());
+  }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search, nextIncludeArchived = includeArchived) {
     const response = await listLeads(nextSearch, nextIncludeArchived);
@@ -163,6 +168,36 @@ export function LeadList() {
       }
       setSelectedIds([]);
       setNotice(`已转移 ${transferred} 条线索负责人。`);
+      await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
+  async function archiveRow(lead: Lead) {
+    if (user?.role === 'Sales' || lead.archived) return;
+    if (!window.confirm(`确认归档线索 ${lead.companyName || lead.leadName || lead.id}？`)) return;
+    setError('');
+    try {
+      await archiveLead(lead, '行操作归档线索记录');
+      setNotice(`已归档线索 ${lead.companyName || lead.leadName || lead.id}。`);
+      await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
+  async function transferRow(lead: Lead) {
+    if (user?.role === 'Sales' || lead.archived) return;
+    const toOwnerId = window.prompt('请输入新负责人 ID', lead.ownerId || '');
+    if (!toOwnerId?.trim()) return;
+    setError('');
+    try {
+      const updated = await transferLeadOwner(lead, toOwnerId.trim(), '行操作转移线索负责人');
+      setSelected(updated);
+      setNotice(`已转移线索 ${lead.companyName || lead.leadName || lead.id} 的负责人。`);
       await refresh();
     } catch (caught) {
       const apiError = caught as ApiError;
@@ -307,6 +342,8 @@ export function LeadList() {
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
           getRowClassName={(lead) => selected?.id === lead.id ? 'selected' : undefined}
+          onRowClick={(lead) => void selectLead(lead.id)}
+          getRowAriaLabel={(lead) => `打开线索 ${lead.companyName || lead.leadName || lead.id}`}
           empty="没有符合当前筛选条件的线索。"
           columns={[
             {
@@ -325,7 +362,31 @@ export function LeadList() {
               <button className="rowAction" type="button" aria-label={`查看 ${lead.companyName || lead.leadName || lead.id}`} onClick={() => void selectLead(lead.id)}>
                 <ArrowRight size={16} aria-hidden="true" />
               </button>
-              <span className="rowAction" aria-hidden="true"><MoreHorizontal size={16} /></span>
+              <ActionMenu
+                label={`打开 ${lead.companyName || lead.leadName || lead.id} 的行操作菜单`}
+                items={[
+                  { label: '查看', onSelect: () => void selectLead(lead.id) },
+                  {
+                    label: '转移负责人',
+                    onSelect: () => void transferRow(lead),
+                    disabled: user?.role === 'Sales' || Boolean(lead.archived),
+                    reason: user?.role === 'Sales' ? '销售角色不能转移负责人。' : lead.archived ? '已归档记录只读。' : undefined
+                  },
+                  {
+                    label: '归档',
+                    onSelect: () => void archiveRow(lead),
+                    disabled: user?.role === 'Sales' || Boolean(lead.archived),
+                    reason: user?.role === 'Sales' ? '销售角色不能归档线索。' : lead.archived ? '已归档。' : undefined,
+                    tone: 'danger'
+                  },
+                  {
+                    label: '转为商机',
+                    onSelect: () => void selectLead(lead.id),
+                    disabled: lead.status !== 'Valid' || lead.ownerId === '' || Boolean(lead.archived),
+                    reason: lead.status !== 'Valid' ? '仅有效线索可转换。' : lead.ownerId === '' ? '未分配线索不能转换。' : lead.archived ? '已归档记录只读。' : '在详情页填写预计金额和日期。'
+                  }
+                ]}
+              />
             </div>
           )}
         />

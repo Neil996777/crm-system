@@ -20,6 +20,10 @@ test('TEST-USER-ADMIN-001 creates user and changes role/status with confirmation
   await expect(page.getByLabel('末位管理员保护')).toBeVisible();
   await expect(page.getByLabel('分页')).toBeVisible();
   await expect(page.getByText(/角色仅：管理员 \/ 销售经理 \/ 销售/)).toBeVisible();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: '导出', exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('users-filtered.csv');
 
   await page.getByRole('button', { name: '新建用户' }).click();
   const createForm = page.locator('form.createPanel');

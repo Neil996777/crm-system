@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, MoreHorizontal, Plus, RotateCcw, UserRound } from 'lucide-react';
+import { ArrowRight, Plus, RotateCcw, UserRound } from 'lucide-react';
 import { Contact, createContact, getContact, listAllContacts } from '../../api/accounts';
 import { ApiError } from '../../api/client';
 import {
@@ -23,7 +23,7 @@ import { localizeError } from '../../i18n/labels';
 
 type Mode = 'list' | 'create' | 'detail';
 
-export function ContactList() {
+export function ContactList({ targetRecordId, onTargetHandled }: { targetRecordId?: string; onTargetHandled?: () => void }) {
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>('list');
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -39,6 +39,11 @@ export function ContactList() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!targetRecordId) return;
+    void selectContact(targetRecordId).finally(() => onTargetHandled?.());
+  }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search) {
     const response = await listAllContacts(nextSearch);
@@ -199,6 +204,8 @@ export function ContactList() {
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
           getRowClassName={(contact) => selected?.id === contact.id ? 'selected' : undefined}
+          onRowClick={(contact) => void selectContact(contact.id)}
+          getRowAriaLabel={(contact) => `打开联系人 ${contact.contactName}`}
           empty="没有符合当前筛选条件的联系人。"
           columns={[
             { key: 'name', header: '联系人', width: '220px', render: (contact) => <RecordIdentity icon={<UserRound size={17} aria-hidden="true" />} title={contact.contactName} subtitle={contact.accountName || contact.accountId} tone="mint" /> },
@@ -210,7 +217,6 @@ export function ContactList() {
           actions={(contact) => (
             <div className="rowActions">
               <button className="rowAction" type="button" aria-label={`查看 ${contact.contactName}`} onClick={() => void selectContact(contact.id)}><ArrowRight size={16} aria-hidden="true" /></button>
-              <span className="rowAction" aria-hidden="true"><MoreHorizontal size={16} /></span>
             </div>
           )}
         />

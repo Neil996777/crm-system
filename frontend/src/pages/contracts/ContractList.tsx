@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, FileSignature, MoreHorizontal, Plus, RotateCcw } from 'lucide-react';
+import { ArrowRight, FileSignature, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
-import { Contract, archiveContract, createContract, getContract, listContracts } from '../../api/contracts';
+import { Contract, archiveContract, changeContractStatus, createContract, getContract, listContracts } from '../../api/contracts';
 import {
   ActiveFilterSummary,
   CrudListShell,
@@ -15,7 +15,7 @@ import {
   exportRows,
   paginate
 } from '../../components/CrudScaffold';
-import { BulkActionBar, Button, DataTable, TextAreaField, TextField, Toolbar } from '../../components/ui';
+import { ActionMenu, BulkActionBar, Button, DataTable, TextAreaField, TextField, Toolbar } from '../../components/ui';
 import { useSession } from '../../auth/SessionProvider';
 import { contractStatusLabel, labelFor, localizeError } from '../../i18n/labels';
 import { ContractDetail } from './ContractDetail';
@@ -23,7 +23,7 @@ import { ContractDetail } from './ContractDetail';
 type Mode = 'list' | 'create' | 'detail';
 const statuses = Object.keys(contractStatusLabel);
 
-export function ContractList() {
+export function ContractList({ targetRecordId, onTargetHandled }: { targetRecordId?: string; onTargetHandled?: () => void }) {
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>('list');
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -50,6 +50,11 @@ export function ContractList() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!targetRecordId) return;
+    void selectContract(targetRecordId).finally(() => onTargetHandled?.());
+  }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search, nextIncludeArchived = includeArchived) {
     const response = await listContracts(nextSearch, nextIncludeArchived);
@@ -119,6 +124,41 @@ export function ContractList() {
     }
   }
 
+  async function archiveRow(contract: Contract) {
+    if (user?.role === 'Sales' || contract.archived) return;
+    if (!window.confirm(`确认归档合同 ${contract.id}？`)) return;
+    setError('');
+    try {
+      await archiveContract(contract, '行操作归档合同记录');
+      setNotice(`已归档合同 ${contract.id}。`);
+      await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
+  async function changeRowStatus(contract: Contract, toStatus: string) {
+    if (!canChangeContractTo(contract, toStatus)) return;
+    let signedEffectiveDate = contract.signedEffectiveDate ?? '';
+    if (toStatus === 'Signed') {
+      const input = window.prompt('请输入签署/生效日期', signedEffectiveDate || today());
+      if (!input?.trim()) return;
+      signedEffectiveDate = input.trim();
+    }
+    if (!window.confirm(`确认将合同 ${contract.id} 标记为${labelFor(contractStatusLabel, toStatus)}？`)) return;
+    setError('');
+    try {
+      const updated = await changeContractStatus(contract.id, contract.version, toStatus, signedEffectiveDate);
+      setSelected(updated);
+      setNotice(`合同 ${contract.id} 已标记为${labelFor(contractStatusLabel, toStatus)}。`);
+      await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
   function exportSelected() {
     if (selectedRows.length === 0) return;
     exportRows('contracts-selected.csv', selectedRows.map((contract) => ({
@@ -177,6 +217,8 @@ export function ContractList() {
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
           getRowClassName={(contract) => selected?.id === contract.id ? 'selected' : undefined}
+          onRowClick={(contract) => void selectContract(contract.id)}
+          getRowAriaLabel={(contract) => `打开合同 ${contract.id}`}
           empty="没有符合当前筛选条件的合同。"
           columns={[
             { key: 'contract', header: '合同', width: '220px', render: (contract) => <RecordIdentity icon={<FileSignature size={17} aria-hidden="true" />} title={contract.opportunityId} subtitle={`${contract.archived ? '已归档 · ' : ''}${contract.id}`} tone="peach" /> },
@@ -186,12 +228,62 @@ export function ContractList() {
             { key: 'signed', header: '预计签署', align: 'right', render: (contract) => contract.expectedSignedDate },
             { key: 'updated', header: '更新时间', align: 'right', sortable: true, sortDirection: 'desc', render: (contract) => formatDate(contract.updatedAt) }
           ]}
-          actions={(contract) => <div className="rowActions"><button className="rowAction" type="button" aria-label={`查看合同 ${contract.id}`} onClick={() => void selectContract(contract.id)}><ArrowRight size={16} aria-hidden="true" /></button><span className="rowAction" aria-hidden="true"><MoreHorizontal size={16} /></span></div>}
+          actions={(contract) => (
+            <div className="rowActions">
+              <button className="rowAction" type="button" aria-label={`查看合同 ${contract.id}`} onClick={() => void selectContract(contract.id)}><ArrowRight size={16} aria-hidden="true" /></button>
+              <ActionMenu
+                label={`打开合同 ${contract.id} 的行操作菜单`}
+                items={[
+                  { label: '查看', onSelect: () => void selectContract(contract.id) },
+                  {
+                    label: '签署',
+                    onSelect: () => void changeRowStatus(contract, 'Signed'),
+                    disabled: !canChangeContractTo(contract, 'Signed'),
+                    reason: contract.status !== 'Pending Signature' ? '仅待签署合同可签署。' : undefined
+                  },
+                  {
+                    label: '启用',
+                    onSelect: () => void changeRowStatus(contract, 'Active'),
+                    disabled: !canChangeContractTo(contract, 'Active'),
+                    reason: contract.status !== 'Signed' ? '仅已签署合同可启用。' : undefined
+                  },
+                  {
+                    label: '完成',
+                    onSelect: () => void changeRowStatus(contract, 'Completed'),
+                    disabled: !canChangeContractTo(contract, 'Completed'),
+                    reason: contract.status !== 'Active' ? '仅启用合同可完成。' : undefined
+                  },
+                  {
+                    label: '终止',
+                    onSelect: () => void changeRowStatus(contract, 'Terminated'),
+                    disabled: !canChangeContractTo(contract, 'Terminated'),
+                    reason: contract.status === 'Completed' || contract.status === 'Terminated' ? '已完成或已终止合同不能再终止。' : undefined,
+                    tone: 'danger'
+                  },
+                  {
+                    label: '归档',
+                    onSelect: () => void archiveRow(contract),
+                    disabled: user?.role === 'Sales' || Boolean(contract.archived),
+                    reason: user?.role === 'Sales' ? '销售角色不能归档合同。' : contract.archived ? '已归档。' : undefined,
+                    tone: 'danger'
+                  }
+                ]}
+              />
+            </div>
+          )}
         />
       }
       pagination={<CrudPagination slice={slice} onPageChange={setPage} onPageSizeChange={(next) => { setPageSize(next); setPage(1); }} />}
     />
   );
+}
+
+function canChangeContractTo(contract: Contract, toStatus: string) {
+  if (toStatus === 'Signed') return contract.status === 'Pending Signature';
+  if (toStatus === 'Active') return contract.status === 'Signed';
+  if (toStatus === 'Completed') return contract.status === 'Active';
+  if (toStatus === 'Terminated') return contract.status !== 'Completed' && contract.status !== 'Terminated';
+  return false;
 }
 
 function ContractFormRules() {
@@ -214,4 +306,8 @@ function money(value: string) {
 function formatDate(value: string) {
   if (!value) return '未更新';
   return value.length > 10 ? value.slice(0, 10) : value;
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
 }

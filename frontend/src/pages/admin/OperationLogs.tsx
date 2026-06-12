@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client';
 import { HistoryEvent } from '../../api/history';
 import { getOperationLog } from '../../api/oplog';
 import { AuditEventCard, Badge, Button, PageHeader, Pagination, Panel, PanelHeader, Toolbar } from '../../components/ui';
+import { exportRows } from '../../components/CrudScaffold';
 import { actionLabel, labelFor, localizeError, localizeMessage, objectTypeLabel, resultLabel, roleLabel } from '../../i18n/labels';
 
 const pageSizeOptions = [5, 10, 20];
@@ -60,6 +61,19 @@ export function OperationLogs() {
   const safePage = Math.min(page, totalPages);
   const pagedEvents = filteredEvents.slice((safePage - 1) * pageSize, safePage * pageSize);
 
+  function exportFilteredEvents() {
+    exportRows('operation-logs-filtered.csv', filteredEvents.map((event) => ({
+      操作人: event.actorDisplay || event.actorUserId,
+      角色: labelFor(roleLabel, event.actorRole),
+      动作: labelFor(actionLabel, event.action),
+      对象: `${labelFor(objectTypeLabel, event.resourceType)} ${event.resourceId}`,
+      结果: labelFor(resultLabel, event.result),
+      安全摘要: safeSummaryText(event),
+      时间: formatDate(event.occurredAt),
+      事件哈希: event.eventHash || ''
+    })));
+  }
+
   return (
     <main className="content operationLogPage" data-uiux="operation-log">
       <PageHeader
@@ -67,8 +81,8 @@ export function OperationLogs() {
         description="仅管理员可访问 · 只读审计 · 使用安全摘要"
         actions={(
           <>
-            <Button>今天</Button>
-            <Button variant="primary">导出</Button>
+            <Button aria-pressed={timeFilter === 'today'} onClick={() => { setTimeFilter('today'); setPage(1); }}>今天</Button>
+            <Button variant="primary" onClick={exportFilteredEvents}>导出</Button>
           </>
         )}
       />

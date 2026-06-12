@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, CalendarDays, CheckCircle2, ClipboardList, MoreHorizontal, Plus, RotateCcw } from 'lucide-react';
+import { ArrowRight, CalendarDays, CheckCircle2, ClipboardList, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../api/client';
 import { WorkTask, changeTaskStatus, createTask, listTasks } from '../api/work';
 import { useSession } from '../auth/SessionProvider';
@@ -18,7 +18,7 @@ import {
   exportRows,
   paginate
 } from './CrudScaffold';
-import { BulkActionBar, Button, DataTable, Panel, SelectField, TextField, Toolbar } from './ui';
+import { ActionMenu, BulkActionBar, Button, DataTable, Panel, SelectField, TextField, Toolbar } from './ui';
 import { labelFor, localizeError, objectTypeLabel, taskStatusLabel } from '../i18n/labels';
 
 type Mode = 'list' | 'create' | 'detail';
@@ -26,7 +26,7 @@ type Mode = 'list' | 'create' | 'detail';
 const statuses = Object.keys(taskStatusLabel);
 const relatedTypes = ['Opportunity', 'Lead', 'Account', 'Contact', 'Quote', 'Contract', 'Payment'];
 
-export function TaskList() {
+export function TaskList({ targetRecordId, onTargetHandled }: { targetRecordId?: string; onTargetHandled?: () => void }) {
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>('list');
   const [tasks, setTasks] = useState<WorkTask[]>([]);
@@ -51,6 +51,11 @@ export function TaskList() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!targetRecordId) return;
+    void openTask(targetRecordId).finally(() => onTargetHandled?.());
+  }, [targetRecordId, onTargetHandled]);
 
   useEffect(() => {
     if (user?.role === 'Sales') {
@@ -100,6 +105,30 @@ export function TaskList() {
       const updated = await changeTaskStatus(task.id, 'Completed', task.version);
       if (selected?.id === task.id) setSelected(updated);
       await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
+  async function openTask(taskId: string) {
+    setError('');
+    const existing = tasks.find((task) => task.id === taskId);
+    if (existing) {
+      setSelected(existing);
+      setMode('detail');
+      return;
+    }
+    try {
+      const response = await listTasks();
+      const found = response.items.find((task) => task.id === taskId);
+      if (found) {
+        setTasks(response.items);
+        setSelected(found);
+        setMode('detail');
+      } else {
+        setError('未找到该任务或当前账号无权查看。');
+      }
     } catch (caught) {
       const apiError = caught as ApiError;
       setError(localizeError(apiError));
@@ -312,6 +341,8 @@ export function TaskList() {
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
           getRowClassName={(task) => selected?.id === task.id ? 'selected' : undefined}
+          onRowClick={(task) => { setSelected(task); setMode('detail'); }}
+          getRowAriaLabel={(task) => `打开任务 ${task.title}`}
           empty="没有符合当前筛选条件的任务。"
           columns={[
             {
@@ -332,7 +363,18 @@ export function TaskList() {
           actions={(task) => (
             <div className="rowActions">
               <button className="rowAction" type="button" aria-label={`查看任务 ${task.title}`} onClick={() => { setSelected(task); setMode('detail'); }}><ArrowRight size={16} aria-hidden="true" /></button>
-              <span className="rowAction" aria-hidden="true"><MoreHorizontal size={16} /></span>
+              <ActionMenu
+                label={`打开任务 ${task.title} 的行操作菜单`}
+                items={[
+                  { label: '查看', onSelect: () => { setSelected(task); setMode('detail'); } },
+                  {
+                    label: '完成任务',
+                    onSelect: () => void complete(task),
+                    disabled: task.status === 'Completed' || task.status === 'Cancelled',
+                    reason: task.status === 'Completed' || task.status === 'Cancelled' ? '终态任务不能再次完成。' : undefined
+                  }
+                ]}
+              />
             </div>
           )}
         />
