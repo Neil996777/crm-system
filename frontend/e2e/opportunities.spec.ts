@@ -26,8 +26,10 @@ test('TEST-OPP-CLOSE-002 blocks Won until related contract is Signed', async ({ 
   await createOpportunity(page, title);
 
   await page.getByRole('button', { name: '关闭为赢单' }).click();
+  await expect(page.getByRole('button', { name: '确认赢单' })).toBeDisabled();
   await page.getByLabel('合同 ID').fill('contract_missing_e2e');
   await page.getByLabel('关闭日期').fill('2027-07-01');
+  await expect(page.getByRole('button', { name: '确认赢单' })).toBeEnabled();
   await page.getByRole('button', { name: '确认赢单' }).click();
 
   await expect(page.getByRole('alert')).toContainText('赢单需要有已签署的关联合同。');
@@ -39,9 +41,12 @@ test('TEST-OPP-CLOSE-003 closes Lost with reason and terminal detail is read-onl
   await createOpportunity(page, title);
 
   await page.getByRole('button', { name: '关闭为丢单' }).click();
+  await expect(page.getByRole('button', { name: '确认丢单' })).toBeDisabled();
   await page.getByLabel('关闭日期').fill('2027-07-02');
   await page.getByLabel('丢单原因').selectOption('PRICE');
+  await expect(page.getByRole('button', { name: '确认丢单' })).toBeDisabled();
   await page.getByLabel('原因详情').fill('Competitor pricing');
+  await expect(page.getByRole('button', { name: '确认丢单' })).toBeEnabled();
   await page.getByRole('button', { name: '确认丢单' }).click();
 
   await expect(page.getByText('当前阶段：丢单')).toBeVisible();

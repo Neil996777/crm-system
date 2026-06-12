@@ -10,6 +10,8 @@ import {
   ExportSelectedButton,
   FormSection,
   FormShell,
+  ListAsyncFeedback,
+  ListTableLoading,
   RecordIdentity,
   StatusPill,
   exportRows,
@@ -33,6 +35,8 @@ export function QuoteList({ targetRecordId, onTargetHandled }: { targetRecordId?
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
+  const [selectingId, setSelectingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [form, setForm] = useState({ opportunityId: '', customerId: '', amount: '', validityEnd: '', ownerId: '' });
@@ -47,9 +51,18 @@ export function QuoteList({ targetRecordId, onTargetHandled }: { targetRecordId?
   }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search) {
-    const response = await listQuotes(nextSearch);
-    setQuotes(response.items);
-    setPage(1);
+    setLoading(true);
+    setError('');
+    try {
+      const response = await listQuotes(nextSearch);
+      setQuotes(response.items);
+      setPage(1);
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function submit(event: FormEvent) {
@@ -69,8 +82,16 @@ export function QuoteList({ targetRecordId, onTargetHandled }: { targetRecordId?
 
   async function selectQuote(id: string) {
     setError('');
-    setSelected(await getQuote(id));
-    setMode('detail');
+    setSelectingId(id);
+    try {
+      setSelected(await getQuote(id));
+      setMode('detail');
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setSelectingId('');
+    }
   }
 
   async function updateSelected(quote: Quote) {
@@ -158,29 +179,29 @@ export function QuoteList({ targetRecordId, onTargetHandled }: { targetRecordId?
       title="报价"
       description={`${scopeLabel} · 共 ${rows.length} 条 · 默认按更新时间倒序`}
       scope={`${scopeLabel} · 第 ${slice.page} / ${slice.totalPages} 页`}
-      actions={<><Button onClick={() => void refresh(search)}><RotateCcw size={16} aria-hidden="true" />刷新</Button><Button variant="primary" onClick={() => setMode('create')}><Plus size={16} aria-hidden="true" />新建报价</Button></>}
+      actions={<><Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search)}><RotateCcw size={16} aria-hidden="true" />{loading ? '刷新中' : '刷新'}</Button><Button variant="primary" onClick={() => setMode('create')}><Plus size={16} aria-hidden="true" />新建报价</Button></>}
       toolbar={
         <Toolbar
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder="搜索报价、商机或客户"
           filters={<label className="inlineCheckbox"><span>状态</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">全部状态</option>{statuses.map((item) => <option value={item} key={item}>{labelFor(quoteStatusLabel, item)}</option>)}</select></label>}
-          actions={<Button onClick={() => void refresh(search)}>应用筛选</Button>}
+          actions={<Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search)}>应用筛选</Button>}
         />
       }
+      feedback={<ListAsyncFeedback error={error} loading={loading} selecting={Boolean(selectingId)} />}
       activeFilters={<ActiveFilterSummary onClear={() => { setSearch(''); setStatus(''); setSelectedIds([]); void refresh(''); }}><span className="chip">负责人：{scopeLabel}</span><span className="chip">状态：{status ? labelFor(quoteStatusLabel, status) : '全部状态'}</span></ActiveFilterSummary>}
       bulkBar={
         <BulkActionBar>
-          <div className="bulkSummary"><span className="bulkCount">已选择 {selectedRows.length} 条</span><span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '报价当前无转移/归档接口，按 A3 仅提供导出与清除选择。')}</span></div>
+          <div className="bulkSummary"><span className="bulkCount">已选择 {selectedRows.length} 条</span><span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '报价批量操作保留导出与清除选择。')}</span></div>
           <div className="bulkActions">
-            {user?.role !== 'Sales' ? <><Button className="bulkButton" disabled title="报价当前无负责人转移接口；按 A3 禁用。">批量转移负责人</Button><Button className="bulkButton" disabled title="报价当前无归档接口；按 A3 禁用。">批量归档</Button></> : null}
             <ExportSelectedButton disabled={selectedRows.length === 0} onExport={exportSelected} />
             <Button className="bulkButton" variant="primary" disabled={selectedRows.length === 0} onClick={() => setSelectedIds([])}>清除选择</Button>
           </div>
         </BulkActionBar>
       }
       table={
-        <DataTable
+        loading ? <ListTableLoading label="正在加载报价列表..." /> : <DataTable
           caption="报价结果表"
           rows={slice.items}
           rowKey={(quote) => quote.id}
@@ -201,6 +222,7 @@ export function QuoteList({ targetRecordId, onTargetHandled }: { targetRecordId?
                   icon={<FileText size={17} aria-hidden="true" />}
                   title={quote.opportunityId}
                   titleAriaLabel={`打开报价 ${quote.id}`}
+                  titleBusy={selectingId === quote.id}
                   subtitle={quote.id}
                   tone="purple"
                   onTitleClick={() => void selectQuote(quote.id)}

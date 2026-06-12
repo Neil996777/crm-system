@@ -16,12 +16,16 @@ export function CloseOpportunityDialog({
   const [reasonCode, setReasonCode] = useState('');
   const [reasonDetail, setReasonDetail] = useState('');
   const [saving, setSaving] = useState(false);
+  const canSubmit = mode === 'Won'
+    ? contractId.trim() !== ''
+    : reasonCode.trim() !== '' && reasonDetail.trim() !== '';
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (!canSubmit) return;
     setSaving(true);
     try {
-      await onConfirm({ contractId, closeDate, lostReason: { code: reasonCode, detail: reasonDetail } });
+      await onConfirm({ contractId: contractId.trim(), closeDate, lostReason: { code: reasonCode.trim(), detail: reasonDetail.trim() } });
     } finally {
       setSaving(false);
     }
@@ -36,7 +40,7 @@ export function CloseOpportunityDialog({
       {mode === 'Won' && (
         <label>
           合同 ID
-          <input value={contractId} onChange={(event) => setContractId(event.target.value)} />
+          <input required value={contractId} onChange={(event) => setContractId(event.target.value)} />
         </label>
       )}
       <label>
@@ -47,7 +51,7 @@ export function CloseOpportunityDialog({
         <>
           <label>
             丢单原因
-            <select value={reasonCode} onChange={(event) => setReasonCode(event.target.value)}>
+            <select required value={reasonCode} onChange={(event) => setReasonCode(event.target.value)}>
               <option value="">选择原因</option>
               <option value="PRICE">价格</option>
               <option value="COMPETITOR">竞争对手</option>
@@ -58,11 +62,11 @@ export function CloseOpportunityDialog({
           </label>
           <label>
             原因详情
-            <input value={reasonDetail} onChange={(event) => setReasonDetail(event.target.value)} />
+            <input required value={reasonDetail} onChange={(event) => setReasonDetail(event.target.value)} />
           </label>
         </>
       )}
-      <button className="primaryButton" type="submit" disabled={saving}>
+      <button className="primaryButton" type="submit" disabled={saving || !canSubmit}>
         {mode === 'Won' ? '确认赢单' : '确认丢单'}
       </button>
     </form>

@@ -106,7 +106,7 @@ export function OperationLogs() {
                 <label className="compactFilter">
                   <span className="srOnly">动作筛选</span>
                   <select value={actionFilter} onChange={(event) => { setActionFilter(event.target.value); setPage(1); }}>
-                    <option value="all">操作人：全部</option>
+                    <option value="all">操作：全部</option>
                     {actionOptions.map((action) => <option key={action} value={action}>{labelFor(actionLabel, action)}</option>)}
                   </select>
                 </label>

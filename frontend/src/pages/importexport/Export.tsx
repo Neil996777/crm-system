@@ -36,11 +36,6 @@ export function ExportPanel() {
       {error && <div role="alert" className="errorBanner">{error}</div>}
       <div className="objectPills" aria-label="导出对象类型">
         <Badge tone="primary">{labelFor(objectTypeLabel, 'lead')}</Badge>
-        <Badge>客户</Badge>
-        <Badge>联系人</Badge>
-        <Badge>商机</Badge>
-        <Badge>报价</Badge>
-        <Badge>合同</Badge>
       </div>
       <div className="importForm">
         <label>
@@ -93,7 +88,7 @@ export function ExportPanel() {
 }
 
 function fileSafetyText(value: string) {
-  return fileSafetyLabel[value] ?? '文件安全状态已记录';
+  return fileSafetyLabel[value] ?? fileSafetyLabel.unknown;
 }
 
 function RunStat({ label, value }: { label: string; value: string | number }) {

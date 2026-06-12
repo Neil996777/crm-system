@@ -12,6 +12,8 @@ import {
   ExportSelectedButton,
   FormSection,
   FormShell,
+  ListAsyncFeedback,
+  ListTableLoading,
   RecordIdentity,
   StatusPill,
   exportRows,
@@ -32,6 +34,8 @@ export function ContactList({ targetRecordId, onTargetHandled }: { targetRecordI
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
+  const [selectingId, setSelectingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [form, setForm] = useState({ accountId: '', contactName: '', email: '', phone: '', roleNote: '' });
@@ -46,9 +50,18 @@ export function ContactList({ targetRecordId, onTargetHandled }: { targetRecordI
   }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search) {
-    const response = await listAllContacts(nextSearch);
-    setContacts(response.items);
-    setPage(1);
+    setLoading(true);
+    setError('');
+    try {
+      const response = await listAllContacts(nextSearch);
+      setContacts(response.items);
+      setPage(1);
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function submit(event: FormEvent) {
@@ -72,8 +85,17 @@ export function ContactList({ targetRecordId, onTargetHandled }: { targetRecordI
   }
 
   async function selectContact(id: string) {
-    setSelected(await getContact(id));
-    setMode('detail');
+    setError('');
+    setSelectingId(id);
+    try {
+      setSelected(await getContact(id));
+      setMode('detail');
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setSelectingId('');
+    }
   }
 
   const rows = useMemo(() => contacts, [contacts]);
@@ -171,32 +193,27 @@ export function ContactList({ targetRecordId, onTargetHandled }: { targetRecordI
       scope={`${scopeLabel} · 第 ${slice.page} / ${slice.totalPages} 页`}
       actions={
         <>
-          <Button onClick={() => void refresh(search)}><RotateCcw size={16} aria-hidden="true" />刷新</Button>
+          <Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search)}><RotateCcw size={16} aria-hidden="true" />{loading ? '刷新中' : '刷新'}</Button>
           <Button variant="primary" onClick={() => setMode('create')}><Plus size={16} aria-hidden="true" />新建联系人</Button>
         </>
       }
-      toolbar={<Toolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="搜索联系人或客户" actions={<Button onClick={() => void refresh(search)}>应用筛选</Button>} />}
+      toolbar={<Toolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="搜索联系人或客户" actions={<Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search)}>应用筛选</Button>} />}
+      feedback={<ListAsyncFeedback error={error} loading={loading} selecting={Boolean(selectingId)} />}
       activeFilters={<ActiveFilterSummary onClear={() => { setSearch(''); setSelectedIds([]); void refresh(''); }}><span className="chip">负责人：{scopeLabel}</span><span className="chip">关键词：{search || '全部'}</span></ActiveFilterSummary>}
       bulkBar={
         <BulkActionBar>
           <div className="bulkSummary">
             <span className="bulkCount">已选择 {selectedRows.length} 条</span>
-            <span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '联系人当前无转移/归档接口，按 A3 仅提供导出与清除选择。')}</span>
+            <span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '联系人批量操作保留导出与清除选择。')}</span>
           </div>
           <div className="bulkActions">
-            {user?.role !== 'Sales' ? (
-              <>
-                <Button className="bulkButton" disabled title="联系人当前无负责人转移接口；按 A3 禁用。">批量转移负责人</Button>
-                <Button className="bulkButton" disabled title="联系人当前无归档接口；按 A3 禁用。">批量归档</Button>
-              </>
-            ) : null}
             <ExportSelectedButton disabled={selectedRows.length === 0} onExport={exportSelected} />
             <Button className="bulkButton" variant="primary" onClick={() => setSelectedIds([])} disabled={selectedRows.length === 0}>清除选择</Button>
           </div>
         </BulkActionBar>
       }
       table={
-        <DataTable
+        loading ? <ListTableLoading label="正在加载联系人列表..." /> : <DataTable
           caption="联系人结果表"
           rows={slice.items}
           rowKey={(contact) => contact.id}
@@ -217,6 +234,7 @@ export function ContactList({ targetRecordId, onTargetHandled }: { targetRecordI
                   icon={<UserRound size={17} aria-hidden="true" />}
                   title={contact.contactName}
                   titleAriaLabel={`打开联系人 ${contact.contactName}`}
+                  titleBusy={selectingId === contact.id}
                   subtitle={contact.accountName || contact.accountId}
                   tone="mint"
                   onTitleClick={() => void selectContact(contact.id)}

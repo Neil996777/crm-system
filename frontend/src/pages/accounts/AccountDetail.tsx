@@ -6,7 +6,7 @@ import { AddContactDialog } from '../../components/AddContactDialog';
 import { ArchiveConfirmation } from '../../components/ArchiveConfirmation';
 import { ContactTable } from '../../components/ContactTable';
 import { DetailHero, DetailStat, StatusPill } from '../../components/CrudScaffold';
-import { Panel } from '../../components/ui';
+import { Panel, SkeletonBlock } from '../../components/ui';
 import { accountStatusLabel, archiveStatusLabel, labelFor, localizeError } from '../../i18n/labels';
 
 type Props = {
@@ -19,6 +19,7 @@ type Props = {
 
 export function AccountDetail({ account, onArchived, onError, onBack, error }: Props) {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(true);
   const [eligibility, setEligibility] = useState<ArchiveEligibility | null>(null);
   const [reason, setReason] = useState('');
 
@@ -27,8 +28,17 @@ export function AccountDetail({ account, onArchived, onError, onBack, error }: P
   }, [account.id]);
 
   async function refreshContacts() {
-    const response = await listContacts(account.id);
-    setContacts(response.items);
+    setContactsLoading(true);
+    onError('');
+    try {
+      const response = await listContacts(account.id);
+      setContacts(response.items);
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      onError(localizeError(apiError));
+    } finally {
+      setContactsLoading(false);
+    }
   }
 
   async function created() {
@@ -96,7 +106,7 @@ export function AccountDetail({ account, onArchived, onError, onBack, error }: P
             <h2>联系人</h2>
             <AddContactDialog accountId={account.id} onCreated={created} onError={onError} />
           </div>
-          <ContactTable contacts={contacts} />
+          {contactsLoading ? <SkeletonBlock lines={3} label="正在加载联系人..." /> : <ContactTable contacts={contacts} />}
         </Panel>
         <Panel>
           <div className="sectionHeader">

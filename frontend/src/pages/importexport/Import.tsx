@@ -63,11 +63,6 @@ export function ImportExportPage() {
           />
           <div className="objectPills" aria-label="导入对象类型">
             <Badge tone="primary">{labelFor(objectTypeLabel, 'lead')}</Badge>
-            <Badge>客户</Badge>
-            <Badge>联系人</Badge>
-            <Badge>商机</Badge>
-            <Badge>报价</Badge>
-            <Badge>合同</Badge>
           </div>
           <form className="importForm" onSubmit={(event) => void submit(event)}>
             <label>
@@ -80,7 +75,7 @@ export function ImportExportPage() {
               CSV 文件
               <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
             </label>
-            <button className="primaryButton" type="submit" disabled={busy}>
+            <button className="primaryButton" type="submit" disabled={busy || !file}>
               开始导入
             </button>
           </form>

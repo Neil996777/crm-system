@@ -2820,10 +2820,11 @@ tbody tr:hover td {
 }
 
 .exportFlowPanel .importForm {
-  grid-template-columns: minmax(160px, 1fr) auto auto auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .exportConfirm {
+  grid-column: 1 / -1;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--inner-radius);

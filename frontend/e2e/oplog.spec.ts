@@ -16,6 +16,7 @@ test('TEST-OPLOG-001/002/005 administrator sees read-only global operation logs'
 
   await page.getByRole('button', { name: '操作日志' }).click();
   await expect(page.getByRole('heading', { name: '操作日志' })).toBeVisible();
+  await expect(page.getByLabel('动作筛选')).toContainText('操作：全部');
 
   const logList = page.getByLabel('只读审计列表');
   await expect(logList).toContainText('EVT-USER-ADMIN-CHANGED');

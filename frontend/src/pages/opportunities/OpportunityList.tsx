@@ -10,6 +10,8 @@ import {
   ExportSelectedButton,
   FormSection,
   FormShell,
+  ListAsyncFeedback,
+  ListTableLoading,
   RecordIdentity,
   StatusPill,
   exportRows,
@@ -37,6 +39,8 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
   const [includeArchived, setIncludeArchived] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
+  const [selectingId, setSelectingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [form, setForm] = useState({
@@ -69,9 +73,18 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
   }
 
   async function refresh(nextSearch = search, nextStage = stage, nextIncludeArchived = includeArchived) {
-    const response = await listOpportunities(nextSearch, nextStage, nextIncludeArchived);
-    setOpportunities(response.items);
-    setPage(1);
+    setLoading(true);
+    setError('');
+    try {
+      const response = await listOpportunities(nextSearch, nextStage, nextIncludeArchived);
+      setOpportunities(response.items);
+      setPage(1);
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function submit(event: FormEvent) {
@@ -94,8 +107,16 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
 
   async function selectOpportunity(id: string) {
     setError('');
-    setSelected(await getOpportunity(id));
-    setMode('detail');
+    setSelectingId(id);
+    try {
+      setSelected(await getOpportunity(id));
+      setMode('detail');
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setSelectingId('');
+    }
   }
 
   async function updateSelected(opportunity: Opportunity) {
@@ -227,6 +248,31 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
     }
   }
 
+  async function transferRow(opportunity: Opportunity) {
+    if (user?.role === 'Sales' || isTerminal(opportunity) || opportunity.archived) return;
+    const ownerId = window.prompt('请输入新负责人 ID', opportunity.ownerId || '');
+    if (!ownerId?.trim()) return;
+    setError('');
+    setNotice('');
+    try {
+      const updated = await updateOpportunity(opportunity.id, {
+        title: opportunity.title,
+        customerId: opportunity.customerId,
+        ownerId: ownerId.trim(),
+        stage: opportunity.stage,
+        expectedAmount: opportunity.expectedAmount,
+        expectedCloseDate: opportunity.expectedCloseDate,
+        expectedVersion: opportunity.version
+      });
+      setSelected(updated);
+      setNotice(`已转移商机 ${opportunity.title || opportunity.id} 的负责人。`);
+      await refresh();
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    }
+  }
+
   if (mode === 'create' || mode === 'edit') {
     const editing = mode === 'edit';
     return (
@@ -293,9 +339,9 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
       scope={`${scopeLabel} · 第 ${slice.page} / ${slice.totalPages} 页`}
       actions={
         <>
-          <Button onClick={() => void refresh(search, stage)}>
+          <Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, stage)}>
             <RotateCcw size={16} aria-hidden="true" />
-            刷新
+            {loading ? '刷新中' : '刷新'}
           </Button>
           <Button variant="primary" onClick={startCreate}>
             <Plus size={16} aria-hidden="true" />
@@ -344,9 +390,10 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
               </label>
             </>
           }
-          actions={<Button onClick={() => void refresh(search, stage, includeArchived)}>应用筛选</Button>}
+          actions={<Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, stage, includeArchived)}>应用筛选</Button>}
         />
       }
+      feedback={<ListAsyncFeedback error={error} loading={loading} selecting={Boolean(selectingId)} />}
       activeFilters={
         <ActiveFilterSummary onClear={clearFilters}>
           <span className="chip">负责人：{scopeLabel}</span>
@@ -360,12 +407,11 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
         <BulkActionBar>
           <div className="bulkSummary">
             <span className="bulkCount">已选择 {selectedRows.length} 条</span>
-            <span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '批量转移/归档需要后端能力；当前按 A3 显示不可提交说明。')}</span>
+            <span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '商机批量归档通过现有单条接口逐条执行。')}</span>
           </div>
           <div className="bulkActions">
             {user?.role !== 'Sales' ? (
               <>
-                <Button className="bulkButton" disabled title="商机当前无负责人转移接口；按 A3 禁用。">批量转移负责人</Button>
                 <Button className="bulkButton" disabled={selectedRows.length === 0} onClick={() => void archiveSelected()}>批量归档</Button>
               </>
             ) : null}
@@ -375,7 +421,7 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
         </BulkActionBar>
       }
       table={
-        <DataTable
+        loading ? <ListTableLoading label="正在加载商机列表..." /> : <DataTable
           caption="商机结果表"
           rows={slice.items}
           rowKey={(opportunity) => opportunity.id}
@@ -396,6 +442,7 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
                   icon={<BriefcaseBusiness size={17} aria-hidden="true" />}
                   title={opportunity.title || opportunity.id}
                   titleAriaLabel={`打开商机 ${opportunity.title || opportunity.id}`}
+                  titleBusy={selectingId === opportunity.id}
                   subtitle={`${opportunity.archived ? '已归档 · ' : ''}更新于 ${formatDate(opportunity.updatedAt)}`}
                   tone={identityTone(opportunity.stage)}
                   onTitleClick={() => void selectOpportunity(opportunity.id)}
@@ -433,9 +480,9 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
                   },
                   {
                     label: '转移负责人',
-                    onSelect: () => void selectOpportunity(opportunity.id),
+                    onSelect: () => void transferRow(opportunity),
                     disabled: user?.role === 'Sales' || isTerminal(opportunity) || Boolean(opportunity.archived),
-                    reason: user?.role === 'Sales' ? '销售角色不能转移负责人。' : isTerminal(opportunity) ? '终态商机只读。' : opportunity.archived ? '已归档记录只读。' : '在详情页填写新负责人 ID。'
+                    reason: user?.role === 'Sales' ? '销售角色不能转移负责人。' : isTerminal(opportunity) ? '终态商机只读。' : opportunity.archived ? '已归档记录只读。' : undefined
                   },
                   {
                     label: '归档',

@@ -71,8 +71,67 @@ test('TEST-UIUX-G12-018 seven lists use clickable record names and no legacy arr
     }
 
     const refreshedRow = page.getByRole('table', { name: record.table }).locator('tbody tr').filter({ hasText: record.search }).first();
+    if (record.nav === '回款') {
+      await expect(refreshedRow.getByRole('button', { name: record.titleButton, exact: true })).toContainText(record.id);
+    }
     await refreshedRow.getByRole('button', { name: record.titleButton, exact: true }).click();
     await expect(page.getByLabel(record.detailLabel)).toContainText(record.detailText);
+  }
+});
+
+test('TEST-UIUX-G12-019 list refresh and record-open failures surface errors', async ({ page }) => {
+  await page.route('**/api/leads**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/leads') {
+      await route.fulfill({ status: 500, contentType: 'application/json', body: forcedErrorBody() });
+      return;
+    }
+    await route.continue();
+  });
+  await openList(page, '线索', '线索');
+  await expect(page.getByRole('alert')).toContainText('请求失败。');
+  await page.unroute('**/api/leads**');
+
+  const suffix = String(Date.now());
+  const fixtures = await createListFixtures(page, suffix);
+  const lead = fixtures.find((record) => record.nav === '线索');
+  if (!lead) throw new Error('lead fixture missing');
+
+  await openList(page, '线索', '线索');
+  await filterCurrentList(page, '搜索线索名、公司名', lead.search);
+  const row = leadRows(page, lead.search).first();
+  await expect(row).toBeVisible();
+  await page.route('**/api/leads/**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === `/api/leads/${lead.id}`) {
+      await route.fulfill({ status: 500, contentType: 'application/json', body: forcedErrorBody() });
+      return;
+    }
+    await route.continue();
+  });
+  await row.getByRole('button', { name: lead.titleButton, exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('请求失败。');
+  await expect(page.getByRole('heading', { name: '线索', exact: true })).toBeVisible();
+  await page.unroute('**/api/leads/**');
+});
+
+test('TEST-UIUX-G12-019 removed no-endpoint disabled bulk buttons are absent', async ({ page }) => {
+  const pages: Array<{ nav: string; heading: string; absent: string[] }> = [
+    { nav: '公司/客户', heading: '公司/客户', absent: ['批量转移负责人'] },
+    { nav: '联系人', heading: '联系人', absent: ['批量转移负责人', '批量归档'] },
+    { nav: '商机', heading: '商机', absent: ['批量转移负责人'] },
+    { nav: '报价', heading: '报价', absent: ['批量转移负责人', '批量归档'] },
+    { nav: '合同', heading: '合同', absent: ['批量转移负责人'] },
+    { nav: '回款', heading: '回款', absent: ['批量转移负责人', '批量归档'] },
+    { nav: '任务', heading: '任务', absent: ['批量转移负责人', '批量归档', '取消任务'] }
+  ];
+
+  for (const item of pages) {
+    await openList(page, item.nav, item.heading);
+    await expect(page.locator('button[title*="按 A3 禁用"]')).toHaveCount(0);
+    for (const label of item.absent) {
+      await expect(page.getByRole('button', { name: label, exact: true })).toHaveCount(0);
+    }
   }
 });
 
@@ -328,4 +387,14 @@ function searchPlaceholderFor(nav: string) {
   if (nav === '报价') return '搜索报价、商机或客户';
   if (nav === '合同') return '搜索合同、报价或客户';
   return '搜索合同、商机或客户';
+}
+
+function forcedErrorBody() {
+  return JSON.stringify({
+    error: {
+      code: 'FORCED_E2E_ERROR',
+      category: 'system',
+      safeMessage: 'Request failed.'
+    }
+  });
 }

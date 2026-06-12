@@ -49,7 +49,6 @@ export function OpportunityDetail({
     } catch (caught) {
       const apiError = caught as ApiError;
       onError(localizeError(apiError));
-      await refresh();
     } finally {
       setBusy(false);
     }

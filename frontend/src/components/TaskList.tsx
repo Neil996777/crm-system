@@ -258,9 +258,6 @@ export function TaskList({ targetRecordId, onTargetHandled }: { targetRecordId?:
               <div><dt>到期日</dt><dd>{selected.dueDate}</dd></div>
               <div><dt>版本</dt><dd>v{selected.version}</dd></div>
             </dl>
-            <div className="actionBand opportunityActions">
-              <Button disabled title="任务当前无批量归档/取消页面入口；按 A3 禁用。">取消任务</Button>
-            </div>
           </Panel>
         </section>
       </main>
@@ -320,12 +317,6 @@ export function TaskList({ targetRecordId, onTargetHandled }: { targetRecordId?:
             <span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '任务批量完成通过现有单条状态接口逐条执行；转移/归档无任务端点。')}</span>
           </div>
           <div className="bulkActions">
-            {user?.role !== 'Sales' ? (
-              <>
-                <Button className="bulkButton" disabled title="任务当前无负责人转移接口；按 A3 禁用。">批量转移负责人</Button>
-                <Button className="bulkButton" disabled title="任务当前无归档接口；按 A3 禁用。">批量归档</Button>
-              </>
-            ) : null}
             <Button className="bulkButton" disabled={selectedRows.length === 0} onClick={() => void completeSelected()}>批量完成</Button>
             <ExportSelectedButton disabled={selectedRows.length === 0} onExport={exportSelected} />
             <Button className="bulkButton" variant="primary" disabled={selectedRows.length === 0} onClick={() => setSelectedIds([])}>清除选择</Button>

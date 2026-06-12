@@ -11,6 +11,8 @@ import {
   ExportSelectedButton,
   FormSection,
   FormShell,
+  ListAsyncFeedback,
+  ListTableLoading,
   RecordIdentity,
   StatusPill,
   exportRows,
@@ -37,6 +39,8 @@ export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?:
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [creating, setCreating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [selectingId, setSelectingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [duplicateWarning, setDuplicateWarning] = useState<DuplicateWarningResult | null>(null);
@@ -53,9 +57,18 @@ export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?:
   }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search, nextIncludeArchived = includeArchived) {
-    const response = await listLeads(nextSearch, nextIncludeArchived);
-    setLeads(response.items);
-    setPage(1);
+    setLoading(true);
+    setError('');
+    try {
+      const response = await listLeads(nextSearch, nextIncludeArchived);
+      setLeads(response.items);
+      setPage(1);
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function submit(event: FormEvent) {
@@ -97,8 +110,16 @@ export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?:
 
   async function selectLead(id: string) {
     setError('');
-    setSelected(await getLead(id));
-    setMode('detail');
+    setSelectingId(id);
+    try {
+      setSelected(await getLead(id));
+      setMode('detail');
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setSelectingId('');
+    }
   }
 
   async function updateSelected(lead: Lead) {
@@ -272,9 +293,9 @@ export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?:
       scope={`${scopeLabel} · 第 ${slice.page} / ${slice.totalPages} 页`}
       actions={
         <>
-          <Button onClick={() => void refresh(search, includeArchived)}>
+          <Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, includeArchived)}>
             <RotateCcw size={16} aria-hidden="true" />
-            刷新
+            {loading ? '刷新中' : '刷新'}
           </Button>
           <Button variant="primary" onClick={() => { setDuplicateWarning(null); setCreating(true); setMode('create'); }}>
             <Plus size={16} aria-hidden="true" />
@@ -304,9 +325,10 @@ export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?:
               </label>
             </>
           }
-          actions={<Button onClick={() => void refresh(search, includeArchived)}>应用筛选</Button>}
+          actions={<Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, includeArchived)}>应用筛选</Button>}
         />
       }
+      feedback={<ListAsyncFeedback error={error} loading={loading} selecting={Boolean(selectingId)} />}
       activeFilters={
         <ActiveFilterSummary onClear={clearFilters}>
           <span className="chip">负责人：{scopeLabel}</span>
@@ -334,7 +356,7 @@ export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?:
         </BulkActionBar>
       }
       table={
-        <DataTable
+        loading ? <ListTableLoading label="正在加载线索列表..." /> : <DataTable
           caption="线索结果表"
           rows={slice.items}
           rowKey={(lead) => lead.id}
@@ -355,6 +377,7 @@ export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?:
                   icon={<ListChecks size={17} aria-hidden="true" />}
                   title={lead.companyName || lead.leadName || lead.id}
                   titleAriaLabel={`打开线索 ${lead.companyName || lead.leadName || lead.id}`}
+                  titleBusy={selectingId === lead.id}
                   subtitle={`${lead.archived ? '已归档 · ' : ''}${lead.source || '未填写来源'}`}
                   onTitleClick={() => void selectLead(lead.id)}
                 />

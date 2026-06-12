@@ -11,6 +11,8 @@ import {
   ExportSelectedButton,
   FormSection,
   FormShell,
+  ListAsyncFeedback,
+  ListTableLoading,
   RecordIdentity,
   StatusPill,
   exportRows,
@@ -33,6 +35,8 @@ export function PaymentList({ targetRecordId, onTargetHandled }: { targetRecordI
   const [includeArchived, setIncludeArchived] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
+  const [selectingId, setSelectingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [form, setForm] = useState({ contractId: '', dueAmount: '', dueDate: '', currency: 'CNY' });
@@ -47,6 +51,8 @@ export function PaymentList({ targetRecordId, onTargetHandled }: { targetRecordI
   }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search, nextIncludeArchived = includeArchived) {
+    setLoading(true);
+    setError('');
     try {
       const response = await listPaymentContracts(nextSearch, nextIncludeArchived);
       setContracts(response.items);
@@ -54,6 +60,8 @@ export function PaymentList({ targetRecordId, onTargetHandled }: { targetRecordI
     } catch (caught) {
       const apiError = caught as ApiError;
       setError(localizeError(apiError));
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -98,12 +106,15 @@ export function PaymentList({ targetRecordId, onTargetHandled }: { targetRecordI
 
   async function selectPayment(contractId: string) {
     setError('');
+    setSelectingId(contractId);
     try {
       setSelected(await getContract(contractId));
       setMode('detail');
     } catch (caught) {
       const apiError = caught as ApiError;
       setError(localizeError(apiError));
+    } finally {
+      setSelectingId('');
     }
   }
 
@@ -140,12 +151,13 @@ export function PaymentList({ targetRecordId, onTargetHandled }: { targetRecordI
       title="回款"
       description={`${scopeLabel} · 共 ${rows.length} 条合同 · 默认按更新时间倒序`}
       scope={`${scopeLabel} · 第 ${slice.page} / ${slice.totalPages} 页`}
-      actions={<><Button onClick={() => void refresh(search, includeArchived)}><RotateCcw size={16} aria-hidden="true" />刷新</Button><Button variant="primary" onClick={() => setMode('create')}><Plus size={16} aria-hidden="true" />新建回款计划</Button></>}
-      toolbar={<Toolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="搜索合同、商机或客户" filters={<label className="inlineCheckbox"><input type="checkbox" checked={includeArchived} onChange={(event) => setIncludeArchived(event.target.checked)} />包含已归档</label>} actions={<Button onClick={() => void refresh(search, includeArchived)}>应用筛选</Button>} />}
+      actions={<><Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, includeArchived)}><RotateCcw size={16} aria-hidden="true" />{loading ? '刷新中' : '刷新'}</Button><Button variant="primary" onClick={() => setMode('create')}><Plus size={16} aria-hidden="true" />新建回款计划</Button></>}
+      toolbar={<Toolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="搜索合同、商机或客户" filters={<label className="inlineCheckbox"><input type="checkbox" checked={includeArchived} onChange={(event) => setIncludeArchived(event.target.checked)} />包含已归档</label>} actions={<Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, includeArchived)}>应用筛选</Button>} />}
+      feedback={<ListAsyncFeedback error={error} loading={loading} selecting={Boolean(selectingId)} />}
       activeFilters={<ActiveFilterSummary onClear={() => { setSearch(''); setIncludeArchived(false); setSelectedIds([]); void refresh('', false); }}><span className="chip">负责人：{scopeLabel}</span><span className="chip">归档：{includeArchived ? '包含已归档' : '仅活动记录'}</span></ActiveFilterSummary>}
-      bulkBar={<BulkActionBar><div className="bulkSummary"><span className="bulkCount">已选择 {selectedRows.length} 条</span><span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '回款页当前按合同授权范围展示；转移/归档走合同页面。')}</span></div><div className="bulkActions">{user?.role !== 'Sales' ? <><Button className="bulkButton" disabled title="回款页不执行负责人转移；按 A3 禁用。">批量转移负责人</Button><Button className="bulkButton" disabled title="回款页归档请在合同页面执行；按 A3 禁用。">批量归档</Button></> : null}<ExportSelectedButton disabled={selectedRows.length === 0} onExport={exportSelected} /><Button className="bulkButton" variant="primary" disabled={selectedRows.length === 0} onClick={() => setSelectedIds([])}>清除选择</Button></div></BulkActionBar>}
+      bulkBar={<BulkActionBar><div className="bulkSummary"><span className="bulkCount">已选择 {selectedRows.length} 条</span><span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '回款页当前按合同授权范围展示。')}</span></div><div className="bulkActions"><ExportSelectedButton disabled={selectedRows.length === 0} onExport={exportSelected} /><Button className="bulkButton" variant="primary" disabled={selectedRows.length === 0} onClick={() => setSelectedIds([])}>清除选择</Button></div></BulkActionBar>}
       table={
-        <DataTable
+        loading ? <ListTableLoading label="正在加载回款列表..." /> : <DataTable
           caption="回款合同结果表"
           rows={slice.items}
           rowKey={(contract) => contract.id}
@@ -164,9 +176,10 @@ export function PaymentList({ targetRecordId, onTargetHandled }: { targetRecordI
               render: (contract) => (
                 <RecordIdentity
                   icon={<CreditCard size={17} aria-hidden="true" />}
-                  title={contract.opportunityId}
+                  title={contract.id}
                   titleAriaLabel={`打开回款合同 ${contract.id}`}
-                  subtitle={contract.id}
+                  subtitle={`商机 ${contract.opportunityId}`}
+                  titleBusy={selectingId === contract.id}
                   tone="mint"
                   onTitleClick={() => void selectPayment(contract.id)}
                 />

@@ -10,6 +10,8 @@ import {
   ExportSelectedButton,
   FormSection,
   FormShell,
+  ListAsyncFeedback,
+  ListTableLoading,
   RecordIdentity,
   StatusPill,
   exportRows,
@@ -34,6 +36,8 @@ export function ContractList({ targetRecordId, onTargetHandled }: { targetRecord
   const [includeArchived, setIncludeArchived] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
+  const [selectingId, setSelectingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [form, setForm] = useState({
@@ -57,9 +61,18 @@ export function ContractList({ targetRecordId, onTargetHandled }: { targetRecord
   }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search, nextIncludeArchived = includeArchived) {
-    const response = await listContracts(nextSearch, nextIncludeArchived);
-    setContracts(response.items);
-    setPage(1);
+    setLoading(true);
+    setError('');
+    try {
+      const response = await listContracts(nextSearch, nextIncludeArchived);
+      setContracts(response.items);
+      setPage(1);
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function submit(event: FormEvent) {
@@ -79,8 +92,16 @@ export function ContractList({ targetRecordId, onTargetHandled }: { targetRecord
 
   async function selectContract(id: string) {
     setError('');
-    setSelected(await getContract(id));
-    setMode('detail');
+    setSelectingId(id);
+    try {
+      setSelected(await getContract(id));
+      setMode('detail');
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setSelectingId('');
+    }
   }
 
   async function updateSelected(contract: Contract) {
@@ -204,12 +225,13 @@ export function ContractList({ targetRecordId, onTargetHandled }: { targetRecord
       title="合同"
       description={`${scopeLabel} · 共 ${rows.length} 条 · 默认按更新时间倒序`}
       scope={`${scopeLabel} · 第 ${slice.page} / ${slice.totalPages} 页`}
-      actions={<><Button onClick={() => void refresh(search, includeArchived)}><RotateCcw size={16} aria-hidden="true" />刷新</Button><Button variant="primary" onClick={() => setMode('create')}><Plus size={16} aria-hidden="true" />新建合同</Button></>}
-      toolbar={<Toolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="搜索合同、报价或客户" filters={<><label className="inlineCheckbox"><span>状态</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">全部状态</option>{statuses.map((item) => <option value={item} key={item}>{labelFor(contractStatusLabel, item)}</option>)}</select></label><label className="inlineCheckbox"><input type="checkbox" checked={includeArchived} onChange={(event) => setIncludeArchived(event.target.checked)} />包含已归档</label></>} actions={<Button onClick={() => void refresh(search, includeArchived)}>应用筛选</Button>} />}
+      actions={<><Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, includeArchived)}><RotateCcw size={16} aria-hidden="true" />{loading ? '刷新中' : '刷新'}</Button><Button variant="primary" onClick={() => setMode('create')}><Plus size={16} aria-hidden="true" />新建合同</Button></>}
+      toolbar={<Toolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="搜索合同、报价或客户" filters={<><label className="inlineCheckbox"><span>状态</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">全部状态</option>{statuses.map((item) => <option value={item} key={item}>{labelFor(contractStatusLabel, item)}</option>)}</select></label><label className="inlineCheckbox"><input type="checkbox" checked={includeArchived} onChange={(event) => setIncludeArchived(event.target.checked)} />包含已归档</label></>} actions={<Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, includeArchived)}>应用筛选</Button>} />}
+      feedback={<ListAsyncFeedback error={error} loading={loading} selecting={Boolean(selectingId)} />}
       activeFilters={<ActiveFilterSummary onClear={() => { setSearch(''); setStatus(''); setIncludeArchived(false); setSelectedIds([]); void refresh('', false); }}><span className="chip">负责人：{scopeLabel}</span><span className="chip">状态：{status ? labelFor(contractStatusLabel, status) : '全部状态'}</span><span className="chip">归档：{includeArchived ? '包含已归档' : '仅活动记录'}</span></ActiveFilterSummary>}
-      bulkBar={<BulkActionBar><div className="bulkSummary"><span className="bulkCount">已选择 {selectedRows.length} 条</span><span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '合同批量归档通过现有单条归档接口逐条执行。')}</span></div><div className="bulkActions">{user?.role !== 'Sales' ? <><Button className="bulkButton" disabled title="合同当前无负责人转移接口；按 A3 禁用。">批量转移负责人</Button><Button className="bulkButton" disabled={selectedRows.length === 0} onClick={() => void archiveSelected()}>批量归档</Button></> : null}<ExportSelectedButton disabled={selectedRows.length === 0} onExport={exportSelected} /><Button className="bulkButton" variant="primary" disabled={selectedRows.length === 0} onClick={() => setSelectedIds([])}>清除选择</Button></div></BulkActionBar>}
+      bulkBar={<BulkActionBar><div className="bulkSummary"><span className="bulkCount">已选择 {selectedRows.length} 条</span><span className="bulkHint">{notice || (user?.role === 'Sales' ? '销售角色仅保留导出和清除选择。' : '合同批量归档通过现有单条归档接口逐条执行。')}</span></div><div className="bulkActions">{user?.role !== 'Sales' ? <Button className="bulkButton" disabled={selectedRows.length === 0} onClick={() => void archiveSelected()}>批量归档</Button> : null}<ExportSelectedButton disabled={selectedRows.length === 0} onExport={exportSelected} /><Button className="bulkButton" variant="primary" disabled={selectedRows.length === 0} onClick={() => setSelectedIds([])}>清除选择</Button></div></BulkActionBar>}
       table={
-        <DataTable
+        loading ? <ListTableLoading label="正在加载合同列表..." /> : <DataTable
           caption="合同结果表"
           rows={slice.items}
           rowKey={(contract) => contract.id}
@@ -230,6 +252,7 @@ export function ContractList({ targetRecordId, onTargetHandled }: { targetRecord
                   icon={<FileSignature size={17} aria-hidden="true" />}
                   title={contract.opportunityId}
                   titleAriaLabel={`打开合同 ${contract.id}`}
+                  titleBusy={selectingId === contract.id}
                   subtitle={`${contract.archived ? '已归档 · ' : ''}${contract.id}`}
                   tone="peach"
                   onTitleClick={() => void selectContract(contract.id)}

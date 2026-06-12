@@ -11,6 +11,8 @@ import {
   ExportSelectedButton,
   FormSection,
   FormShell,
+  ListAsyncFeedback,
+  ListTableLoading,
   RecordIdentity,
   StatusPill,
   exportRows,
@@ -36,6 +38,8 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
   const [includeArchived, setIncludeArchived] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
+  const [selectingId, setSelectingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [duplicateWarning, setDuplicateWarning] = useState<DuplicateWarningResult | null>(null);
@@ -51,9 +55,18 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
   }, [targetRecordId, onTargetHandled]);
 
   async function refresh(nextSearch = search, nextIncludeArchived = includeArchived) {
-    const response = await listAccounts(nextSearch, nextIncludeArchived);
-    setAccounts(response.items);
-    setPage(1);
+    setLoading(true);
+    setError('');
+    try {
+      const response = await listAccounts(nextSearch, nextIncludeArchived);
+      setAccounts(response.items);
+      setPage(1);
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function submit(event: FormEvent) {
@@ -85,8 +98,16 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
 
   async function selectAccount(id: string) {
     setError('');
-    setSelected(await getAccount(id));
-    setMode('detail');
+    setSelectingId(id);
+    try {
+      setSelected(await getAccount(id));
+      setMode('detail');
+    } catch (caught) {
+      const apiError = caught as ApiError;
+      setError(localizeError(apiError));
+    } finally {
+      setSelectingId('');
+    }
   }
 
   const rows = useMemo(() => accounts.filter((account) => {
@@ -204,9 +225,9 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
       scope={`${scopeLabel} · 第 ${slice.page} / ${slice.totalPages} 页`}
       actions={
         <>
-          <Button onClick={() => void refresh(search, includeArchived)}>
+          <Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, includeArchived)}>
             <RotateCcw size={16} aria-hidden="true" />
-            刷新
+            {loading ? '刷新中' : '刷新'}
           </Button>
           <Button variant="primary" onClick={() => { setDuplicateWarning(null); setMode('create'); }}>
             <Plus size={16} aria-hidden="true" />
@@ -236,9 +257,10 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
               </label>
             </>
           }
-          actions={<Button onClick={() => void refresh(search, includeArchived)}>应用筛选</Button>}
+          actions={<Button disabled={loading} aria-busy={loading || undefined} onClick={() => void refresh(search, includeArchived)}>应用筛选</Button>}
         />
       }
+      feedback={<ListAsyncFeedback error={error} loading={loading} selecting={Boolean(selectingId)} />}
       activeFilters={
         <ActiveFilterSummary onClear={clearFilters}>
           <span className="chip">负责人：{scopeLabel}</span>
@@ -255,7 +277,6 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
           <div className="bulkActions">
             {user?.role !== 'Sales' ? (
               <>
-                <Button className="bulkButton" disabled title="客户当前无负责人转移接口；按 A3 禁用。">批量转移负责人</Button>
                 <Button className="bulkButton" disabled={selectedRows.length === 0} onClick={() => void archiveSelected()}>批量归档</Button>
               </>
             ) : null}
@@ -265,7 +286,7 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
         </BulkActionBar>
       }
       table={
-        <DataTable
+        loading ? <ListTableLoading label="正在加载客户列表..." /> : <DataTable
           caption="客户结果表"
           rows={slice.items}
           rowKey={(account) => account.id}
@@ -286,6 +307,7 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
                   icon={<Building2 size={17} aria-hidden="true" />}
                   title={account.companyName}
                   titleAriaLabel={`打开客户 ${account.companyName}`}
+                  titleBusy={selectingId === account.id}
                   subtitle={`${account.archived ? '已归档 · ' : ''}更新于 ${formatDate(account.updatedAt)}`}
                   tone={account.archived ? 'peach' : 'sky'}
                   onTitleClick={() => void selectAccount(account.id)}

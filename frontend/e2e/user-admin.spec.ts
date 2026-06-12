@@ -35,6 +35,7 @@ test('TEST-USER-ADMIN-001 creates user and changes role/status with confirmation
   await page.getByPlaceholder('搜索显示名或邮箱').fill(displayName);
   const createdRow = page.getByRole('row', { name: displayName });
   await expect(createdRow).toContainText('销售');
+  await expect(createdRow).not.toContainText('唯一启用管理员');
   await expect(createdRow.getByRole('button', { name: `编辑 ${displayName}` })).toBeVisible();
   await expect(createdRow.getByRole('button', { name: `停用 ${displayName}` })).toBeVisible();
   await expect(createdRow.getByRole('button', { name: `改角色 ${displayName}` })).toBeVisible();
@@ -61,6 +62,7 @@ test('TEST-INV-LASTADMIN-001 blocks disabling or downgrading the last active Adm
   await page.getByRole('button', { name: '管理：用户与角色' }).click();
   await expect(page.getByLabel('末位管理员保护')).toContainText('唯一启用管理员');
   await page.getByPlaceholder('搜索显示名或邮箱').fill('Seed Administrator');
+  await expect(page.getByRole('row', { name: 'Seed Administrator' })).toContainText('唯一启用管理员');
   await expect(page.getByRole('row', { name: 'Seed Administrator' }).getByRole('button', { name: '停用 Seed Administrator' })).toBeDisabled();
   await page.getByRole('button', { name: '编辑 Seed Administrator' }).click();
   await expect(page.getByLabel('新角色').locator('option[value="Sales"]')).toHaveAttribute('disabled', '');

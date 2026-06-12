@@ -228,7 +228,7 @@ export function UserManagement() {
           empty="暂无符合筛选的用户。"
           getRowClassName={(user) => isLastActiveAdministrator(user) ? 'protectedRow' : undefined}
           columns={[
-            { key: 'name', header: '显示名', render: (user) => <UserIdentity user={user} /> },
+            { key: 'name', header: '显示名', render: (user) => <UserIdentity user={user} lastActiveAdministrator={isLastActiveAdministrator(user)} /> },
             { key: 'email', header: '邮箱', render: (user) => user.email },
             { key: 'role', header: '角色', render: (user) => <Badge tone={user.role === 'Administrator' ? 'primary' : user.role === 'Sales Manager' ? 'warning' : 'neutral'}>{labelFor(roleLabel, user.role)}</Badge> },
             { key: 'status', header: '状态', render: (user) => <Badge tone={user.status === 'Active' ? 'success' : 'neutral'}>{labelFor(userStatusLabel, user.status)}</Badge> }
@@ -302,13 +302,13 @@ export function UserManagement() {
   );
 }
 
-function UserIdentity({ user }: { user: ManagedUser }) {
+function UserIdentity({ user, lastActiveAdministrator }: { user: ManagedUser; lastActiveAdministrator: boolean }) {
   return (
     <div className="userIdentity">
       <span className="tableAvatar" aria-hidden="true">{user.displayName.slice(0, 1)}</span>
       <span>
         <strong>{user.displayName}</strong>
-        <small>{user.role === 'Administrator' ? '唯一启用管理员' : labelFor(roleLabel, user.role)}</small>
+        <small>{lastActiveAdministrator ? '唯一启用管理员' : labelFor(roleLabel, user.role)}</small>
       </span>
     </div>
   );

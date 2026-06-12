@@ -14,6 +14,8 @@ test.beforeEach(async ({ page }) => {
 test('TEST-CSV-EXPORT-001 exports active authorized records after confirmation', async ({ page }) => {
   await page.getByRole('button', { name: '导入/导出' }).click();
   await expect(page.getByRole('heading', { name: '导入/导出' })).toBeVisible();
+  await expect(page.getByLabel('导出对象类型').locator('.badge')).toHaveCount(1);
+  await expect(page.getByLabel('导出对象类型')).toContainText('线索');
   await page.getByRole('checkbox', { name: '确认导出范围并记录审计日志' }).check();
   await page.getByRole('button', { name: '开始导出' }).click();
 

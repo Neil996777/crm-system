@@ -168,7 +168,9 @@ export const reportArchiveFilterLabel: Record<string, string> = {
 export const fileSafetyLabel: Record<string, string> = {
   dangerous_cells_prefixed: '危险单元格已安全前缀化',
   safe: '安全',
-  Safe: '安全'
+  Safe: '安全',
+  none_required: '无需处理',
+  unknown: '文件安全状态已记录'
 };
 
 export const errorMessageZh: Record<string, string> = {

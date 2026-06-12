@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { ArrowLeft, Download } from 'lucide-react';
-import { Badge, Button, Card, Pagination } from './ui';
+import { Badge, Button, Card, Pagination, SkeletonBlock } from './ui';
 
 export const DEFAULT_PAGE_SIZE = 25;
 
@@ -48,6 +48,7 @@ export function CrudListShell({
   scope,
   actions,
   toolbar,
+  feedback,
   activeFilters,
   bulkBar,
   table,
@@ -59,6 +60,7 @@ export function CrudListShell({
   scope?: ReactNode;
   actions?: ReactNode;
   toolbar: ReactNode;
+  feedback?: ReactNode;
   activeFilters?: ReactNode;
   bulkBar?: ReactNode;
   table: ReactNode;
@@ -76,6 +78,7 @@ export function CrudListShell({
       </section>
       <Card className={className ? `listShell ${className}` : 'listShell'} aria-label={`${title}列表`}>
         <div className="listToolbarSlot">{toolbar}</div>
+        {feedback}
         {activeFilters ? <div className="applied">{activeFilters}</div> : null}
         {bulkBar}
         <div className="listTableSlot">{table}</div>
@@ -112,7 +115,8 @@ export function RecordIdentity({
   subtitle,
   tone = 'sky',
   onTitleClick,
-  titleAriaLabel
+  titleAriaLabel,
+  titleBusy
 }: {
   icon?: ReactNode;
   title: ReactNode;
@@ -120,6 +124,7 @@ export function RecordIdentity({
   tone?: 'sky' | 'mint' | 'peach' | 'purple' | 'primary';
   onTitleClick?: () => void;
   titleAriaLabel?: string;
+  titleBusy?: boolean;
 }) {
   return (
     <div className="recordIdentity">
@@ -128,8 +133,10 @@ export function RecordIdentity({
         {onTitleClick ? (
           <button
             aria-label={titleAriaLabel}
+            aria-busy={titleBusy || undefined}
             className="recordLinkButton"
             data-row-interactive="true"
+            disabled={titleBusy}
             type="button"
             onClick={(event) => {
               event.stopPropagation();
@@ -145,6 +152,28 @@ export function RecordIdentity({
       </div>
     </div>
   );
+}
+
+export function ListAsyncFeedback({
+  error,
+  loading,
+  selecting
+}: {
+  error?: string;
+  loading?: boolean;
+  selecting?: boolean;
+}) {
+  return (
+    <>
+      {error ? <div role="alert" className="errorBanner">{error}</div> : null}
+      {loading ? <div role="status" className="inlineNotice">正在刷新列表...</div> : null}
+      {selecting ? <div role="status" className="inlineNotice">正在打开记录...</div> : null}
+    </>
+  );
+}
+
+export function ListTableLoading({ label = '正在加载列表...' }: { label?: string }) {
+  return <SkeletonBlock lines={5} label={label} />;
 }
 
 export function StatusPill({
