@@ -63,6 +63,7 @@ jobs:
             echo "CRM_E2E_COMPOSE_FILE=$compose_file"
             echo "COMPOSE_FILE=$compose_file"
             echo "COMPOSE_PROJECT_NAME=$CRM_E2E_COMPOSE_PROJECT"
+            echo "GOMODCACHE=$RUNNER_TEMP/go-mod-cache"
           } >> "$GITHUB_ENV"
 
       - name: Patch testcontainers host-port readiness for CI
@@ -81,6 +82,9 @@ jobs:
             import-export
           )
 
+          mkdir -p "$GOMODCACHE"
+          echo "Using CI Go module cache: $GOMODCACHE"
+
           for service in "${services[@]}"; do
             (
               cd "$RELEASE_SOURCE_DIR/services/$service"
@@ -91,7 +95,7 @@ jobs:
           patched=0
           for file in "$(go env GOMODCACHE)"/github.com/testcontainers/testcontainers-go@v*/wait/host_port.go; do
             [[ -f "$file" ]] || continue
-            chmod u+w "$file"
+            chmod -R u+w "$(dirname "$(dirname "$file")")"
             ruby -0pi -e '
               marker = "\treturn nil\n}\n\nfunc externalCheck"
               replacement = "\tif delayText := os.Getenv(\"TESTCONTAINERS_HOST_PORT_READY_DELAY\"); delayText != \"\" {\n\t\tif delay, err := time.ParseDuration(delayText); err == nil && delay > 0 {\n\t\t\ttimer := time.NewTimer(delay)\n\t\t\tselect {\n\t\t\tcase <-ctx.Done():\n\t\t\t\ttimer.Stop()\n\t\t\t\treturn ctx.Err()\n\t\t\tcase <-timer.C:\n\t\t\t}\n\t\t}\n\t}\n\n\treturn nil\n}\n\nfunc externalCheck"
@@ -103,6 +107,8 @@ jobs:
               end
               $_ = $_.sub(marker, replacement)
             ' "$file"
+            grep -q "TESTCONTAINERS_HOST_PORT_READY_DELAY" "$file"
+            echo "Patched $(basename "$(dirname "$(dirname "$file")")")/wait/host_port.go"
             patched=$((patched + 1))
           done
           [[ "$patched" -gt 0 ]]
