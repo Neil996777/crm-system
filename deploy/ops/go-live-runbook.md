@@ -1,101 +1,229 @@
-# CRM Go-Live Runbook (Production Deployment)
+# CRM Go-Live Runbook - Digest-Pinned Load And Run
 
 ## Document Control
 
 - Project: CRM System
-- Purpose: production go-live after G12 audit PASS (2026-06-04)
-- Executor: **Ops `crm-deploy` account** on `srv-volcengine-sh-01` (`118.196.44.193`).
-  NOT executed by the audit platform (Claude). Claude verifies before (static smoke) and
-  after (read-only live checks) only.
-- Release commit: the audited HEAD (G12-passed). Confirm `git log` shows the
-  "Record G12 PASS" commit or later before deploying.
+- Purpose: production deployment of the CI/CD migration release bundle.
+- Release content commit: `66d2531`.
+- Target host: `srv-volcengine-sh-01`.
+- Public endpoint: `118.196.44.193` until Infrastructure Ops confirms otherwise
+  in the G11 evidence.
+- Executor: Ops `crm-deploy` account on the production host.
+- Audit boundary: Codex does not self-approve G10/G11/G12. Claude performs G12
+  after the release evidence is complete.
 
-## Why a fresh deploy is required
+## Hard Preconditions
 
-The runtime evidence recorded at G11 predates the six rounds of G12 rework (IDOR fixes,
-durable identity-authz audit, optimistic concurrency, idempotency, etc.). The version that
-was running on the host is therefore **stale and missing the audited security fixes**. A
-read-only probe on 2026-06-05 found the production endpoint not serving (HTTPS 443 handshake
-failed, HTTP empty reply), so go-live is a fresh deployment of the audited build.
+- Claude G8 handoff audit passed:
+  `delivery/cicd-migration-g8-audit-decision.md`.
+- The release bundle was produced by CI from release source commit `66d2531`.
+- The production host does not build application source. Deployment is
+  checksum-verify, image load or digest pull, run, migrate, health-check only.
+- Infrastructure Ops has signed off:
+  ingress/co-location, public IP, disk retention, secret path, backup/offsite
+  path, monitoring, and no impact to vendor agents or Hermes/Feishu bot.
+- Secret values are never printed or copied into evidence. Evidence records
+  paths only.
 
-## Pre-flight (already done / must be true)
+## Required Host Paths
 
-- [x] Local static deploy smoke passed (`bash scripts/test_deploy_smoke.sh`).
-- [ ] Audited release commit pushed to the origin the server pulls from.
-- [ ] Server `/opt/crm-system/current/.env` exists with all required secrets and is NOT in
-      the repo: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, per-service DB
-      credentials, session/JWT signing secret, service-to-service (S2S) secret. (Confirm with
-      Ops; never print secret values.)
-- [ ] SSH as `crm-deploy` (key only; password auth disabled). Keys live under
-      `/Users/neil/practice/software/.secrets/ssh-keys/` — never commit them.
-- [ ] Security group `sg-366ptx1bxp9ts1e710babmc8y`: public TCP 22/80/443 only (verified).
+| Path | Purpose |
+|---|---|
+| `/opt/crm-system/incoming/66d2531/` | uploaded release bundle staging path |
+| `/opt/crm-system/releases/66d2531/` | verified release runtime directory |
+| `/opt/crm-system/secrets/prod.env` | runtime secret env file, values not printed |
+| `/opt/crm-system/secrets/backup.passphrase` | backup encryption passphrase file |
+| `/opt/crm-system/backups/postgres/` | local encrypted backup output |
+| `/opt/crm-system/logs/` | deployment, Nginx, app, and backup logs |
 
-## Deploy steps (run on the host as `crm-deploy`)
+## Forbidden Production Actions
+
+All commands in this runbook that execute a deployment step go through
+`deploy/scripts/run-release-step.sh`. The wrapper exits before execution if the
+operator attempts source checkout, frontend build, Docker image build, Compose
+build, or Compose up with build flags on the production host.
+
+## Fourteen-Step Deployment
+
+Run as `crm-deploy` unless a command explicitly uses `sudo`.
+
+### 1. Receive the release bundle
+
+From the build workstation or CI artifact download location, copy these files to
+`/opt/crm-system/incoming/66d2531/`:
 
 ```bash
-cd /opt/crm-system/current
-
-# 1) Update the deploy dir to the audited release commit, confirm HEAD
-git fetch --all
-git checkout <AUDITED_RELEASE_COMMIT>          # the G12-PASS commit or later
-git log --oneline -1
-
-# 2) Back up the current production DB BEFORE migrations (rollback safety)
-bash deploy/backup/backup.sh                    # encrypted, timestamped, local
-bash deploy/backup/offsite-copy.sh              # copy to off-site srv-aliyun-bj-01
-#    record the backup filename + checksum for rollback
-
-# 3) Build the frontend SPA (Nginx serves /opt/crm-system/current/frontend/dist)
-cd frontend && npm ci && npm run build && cd ..
-
-# 4) Build + start the backend stack from the audited source
-docker compose -f docker-compose.prod.yml up -d --build
-
-# 5) Wait for postgres healthy, then apply migrations
-docker compose -f docker-compose.prod.yml ps    # postgres + services healthy
-bash scripts/migrate.sh up                       # applies all */migrations/*.up.sql
-
-# 6) Reload Nginx (validate config first)
-sudo nginx -t && sudo systemctl reload nginx
-
-# 7) Confirm backup + cert renewal timers are active
-systemctl is-active crm-backup.timer certbot-renew.timer
+release-crm-system-66d2531.tar.gz
+release-crm-system-66d2531.tar.gz.sha256
 ```
 
-## Post-deploy verification
+### 2. Verify archive checksum and unpack
 
-On the host (Ops):
 ```bash
-docker compose -f docker-compose.prod.yml ps              # all services healthy
-bash deploy/healthcheck/check_endpoint.sh                 # TEST-DEPLOY-SMOKE-001/002
+set -euo pipefail
+mkdir -p /opt/crm-system/incoming/66d2531 /opt/crm-system/releases
+cd /opt/crm-system/incoming/66d2531
+sha256sum -c release-crm-system-66d2531.tar.gz.sha256
+tar -xzf release-crm-system-66d2531.tar.gz
+rsync -a --delete release-crm-system-66d2531/ /opt/crm-system/releases/66d2531/
+cd /opt/crm-system/releases/66d2531
 ```
 
-External (Claude can run these read-only):
+### 3. Start the deploy transcript
+
 ```bash
-curl -sS https://118.196.44.193/health                    # expect HTTP 200
-curl -sI  http://118.196.44.193                           # expect 301 -> https
-# negative: from off-host edge (srv-aliyun-bj-01), confirm 8080 + 5432 NOT reachable publicly
+export CRM_DEPLOY_TRANSCRIPT=/opt/crm-system/releases/66d2531/deploy-transcript.log
+: > "$CRM_DEPLOY_TRANSCRIPT"
+printf '%s release=66d2531 host=srv-volcengine-sh-01\n' "$(date -Is)" | tee -a "$CRM_DEPLOY_TRANSCRIPT"
 ```
 
-Record ACC-017 release evidence: endpoint, TLS status, security-group rules, opened ports,
-health URL, deploy timestamp, operator, smoke result
-(`docs/release/acc-017-evidence-template.md`).
+### 4. Verify bundle manifest, checksums, and static release shape
+
+```bash
+bash deploy/scripts/verify-release-bundle.sh /opt/crm-system/releases/66d2531
+```
+
+This fails if the compose file has `build:` keys, a moving image fallback, a
+source checkout migration mount, a missing frontend image service, a missing
+image archive, or a checksum mismatch.
+
+### 5. Verify secret path without printing values
+
+```bash
+test -f /opt/crm-system/secrets/prod.env
+test -f /opt/crm-system/secrets/backup.passphrase
+printf '%s secret_path_verified path=/opt/crm-system/secrets/prod.env\n' "$(date -Is)" | tee -a "$CRM_DEPLOY_TRANSCRIPT"
+```
+
+### 6. Record Infrastructure Ops preflight
+
+Infrastructure Ops records these facts in the G11 evidence:
+
+- confirmed public IP / `CRM_SERVER_NAME` value;
+- public ingress remains CRM 80/443 plus SSH only;
+- `gateway-bff` stays loopback `127.0.0.1:8080`;
+- `frontend-web` stays loopback `127.0.0.1:8081`;
+- PostgreSQL remains internal only;
+- disk has room for current bundle plus one previous-good bundle;
+- backup/offsite/monitoring paths are ready;
+- vendor agents and Hermes/Feishu bot are untouched.
+
+If the public IP differs from `118.196.44.193`, do not modify the verified
+release bundle. Export `CRM_SERVER_NAME=<confirmed-value>` before steps 12 and
+13 and record the override in evidence.
+
+### 7. Capture rollback point and pre-migration backup
+
+```bash
+cd /opt/crm-system/releases/66d2531
+if [[ -d /opt/crm-system/releases/current-good ]]; then
+  readlink -f /opt/crm-system/releases/current-good | tee rollback-point.txt
+else
+  printf 'first-standard-deploy-no-prior-crm-runtime\n' | tee rollback-point.txt
+fi
+
+export CRM_RELEASE_DIR=/opt/crm-system/releases/66d2531
+export CRM_DEPLOY_SECRET_ENV=/opt/crm-system/secrets/prod.env
+if backup_file="$(bash deploy/backup/backup.sh)"; then
+  bash deploy/backup/offsite-copy.sh "$backup_file"
+  printf '%s backup_file=%s\n' "$(date -Is)" "$backup_file" | tee -a "$CRM_DEPLOY_TRANSCRIPT"
+else
+  printf 'first-standard-deploy-no-prior-database\n' | tee backup-skipped.txt
+  printf '%s backup_skipped=first-standard-deploy-no-prior-database\n' "$(date -Is)" | tee -a "$CRM_DEPLOY_TRANSCRIPT"
+fi
+```
+
+If backup is skipped because PostgreSQL is not yet running for the first clean
+deployment, continue only after Infrastructure Ops records that fact in the G11
+evidence.
+
+### 8. Load app images and pull the pinned PostgreSQL runtime
+
+```bash
+bash deploy/scripts/load-images.sh /opt/crm-system/releases/66d2531
+```
+
+### 9. Verify loaded image IDs and commit labels
+
+```bash
+bash deploy/scripts/verify-loaded-images.sh /opt/crm-system/releases/66d2531
+```
+
+This fails if any app image ID differs from `.env.release` or if any app image
+does not carry `org.opencontainers.image.revision=66d2531`.
+
+### 10. Run image-only Compose
+
+```bash
+bash deploy/scripts/compose-up-release.sh /opt/crm-system/releases/66d2531
+```
+
+The wrapper runs `docker compose ... up -d` with the release env file and the
+secret env loaded in the shell. It does not build.
+
+### 11. Run migrations from release artifacts
+
+```bash
+bash deploy/scripts/migrate-release-artifacts.sh /opt/crm-system/releases/66d2531 up
+```
+
+Migration SQL is read from
+`/opt/crm-system/releases/66d2531/migrations/`, mounted into the postgres
+container as `/release-migrations`. No source checkout is used.
+
+### 12. Apply host Nginx config and reload
+
+```bash
+bash deploy/scripts/apply-nginx-runtime-config.sh /opt/crm-system/releases/66d2531
+```
+
+The generated host Nginx config keeps 80/443 ownership scoped to the CRM
+`server_name`, proxies API traffic to `127.0.0.1:8080`, and proxies the SPA to
+`127.0.0.1:8081`.
+
+### 13. Run health checks and negative port checks
+
+```bash
+bash deploy/scripts/health-check-release.sh /opt/crm-system/releases/66d2531
+bash deploy/healthcheck/check_endpoint.sh
+```
+
+From an off-host network path, record both expected failures:
+
+```bash
+nc -zv 118.196.44.193 8080
+nc -zv 118.196.44.193 5432
+```
+
+### 14. Freeze G11 evidence and mark current-good only after G11 review
+
+Copy these into the G11 evidence package:
+
+- CI test logs and Playwright artifacts from `test-results/`;
+- `image-manifest.json`, `image-manifest.sha256`, `.env.release`;
+- `/opt/crm-system/releases/66d2531/deploy-transcript.log`;
+- `rollback-point.txt`, backup filename, backup checksum, offsite copy result;
+- `docker compose ps`, health-check output, endpoint smoke output, negative
+  public-port check output;
+- Infrastructure Ops signoff for ingress, disk, secret, backup, monitoring, and
+  public IP.
+
+After Integration Owner confirms the evidence is complete, Infrastructure Ops
+may update the previous-good pointer:
+
+```bash
+ln -sfn /opt/crm-system/releases/66d2531 /opt/crm-system/releases/current-good
+```
 
 ## Rollback
 
-If migrations or smoke fail:
-```bash
-docker compose -f docker-compose.prod.yml down
-# restore the DB from the step-2 backup (decrypt + psql restore per deploy/backup/restore-rehearsal.md)
-git checkout <PREVIOUS_STABLE_COMMIT>
-docker compose -f docker-compose.prod.yml up -d --build
-```
-Backup + restore rehearsal was proven during G12 (TASK-040), so rollback is exercised.
+Rollback also uses image-only release artifacts. Do not build on the production
+host.
 
-## Notes
-
-- gateway-bff is the only published port and is bound to `127.0.0.1:8080` (loopback);
-  it is reachable only through the host Nginx reverse proxy. Postgres + the other 9 Go
-  services are on the internal Docker network and are never published.
-- Do not take over host port 80/443 ownership beyond the CRM `server_name`; the host runs
-  unrelated personal workloads (co-location constraint).
+1. Stop the current compose project from the failed release directory.
+2. Restore the database from the backup recorded in step 7, following
+   `deploy/backup/restore-rehearsal.md`.
+3. Load the previous-good bundle named in `rollback-point.txt`.
+4. Run its `verify-release-bundle.sh`, `load-images.sh`,
+   `verify-loaded-images.sh`, `compose-up-release.sh`, and health checks.
+5. Record the rollback transcript and backup restore evidence for Claude G12.

@@ -1,0 +1,415 @@
+name: CRM CI/CD release bundle
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/cicd-release.yml"
+      - "deploy/**"
+      - "docker-compose.prod.yml"
+      - "delivery/cicd-release-evidence-template.md"
+
+env:
+  RELEASE_COMMIT: "66d2531"
+  RELEASE_SOURCE_DIR: "release-source"
+  RELEASE_BUNDLE_PARENT: "dist"
+  CRM_E2E_COMPOSE_PROJECT: "crm-ci-e2e-${{ github.run_id }}-${{ github.run_attempt }}"
+  GO_VERSION: "1.26.3"
+  NODE_VERSION: "24"
+
+jobs:
+  build-test-image-export:
+    name: Build, test, image, export
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout pipeline implementation
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout release source commit
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RELEASE_SOURCE_DIR" "$RELEASE_COMMIT"
+          actual="$(git -C "$RELEASE_SOURCE_DIR" rev-parse --short=7 HEAD)"
+          test "$actual" = "$RELEASE_COMMIT"
+          test -z "$(git -C "$RELEASE_SOURCE_DIR" status --porcelain)"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "${{ env.RELEASE_SOURCE_DIR }}/services/*/go.sum"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: "${{ env.RELEASE_SOURCE_DIR }}/frontend/package-lock.json"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Stamp image metadata
+        run: |
+          set -euo pipefail
+          compose_file="$RUNNER_TEMP/crm-e2e-compose.yml"
+          {
+            echo "IMAGE_CREATED=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "CRM_E2E_COMPOSE_FILE=$compose_file"
+            echo "COMPOSE_FILE=$compose_file"
+            echo "COMPOSE_PROJECT_NAME=$CRM_E2E_COMPOSE_PROJECT"
+          } >> "$GITHUB_ENV"
+
+      - name: Run 10 Go service test suites
+        run: |
+          set -euo pipefail
+          services=(
+            gateway-bff
+            identity-authz
+            lead
+            account
+            opportunity
+            commercial
+            work
+            audit-history
+            reporting
+            import-export
+          )
+          mkdir -p test-results/backend
+          for service in "${services[@]}"; do
+            (
+              cd "$RELEASE_SOURCE_DIR/services/$service"
+              go test ./...
+            ) 2>&1 | tee "test-results/backend/${service}.log"
+          done
+
+      - name: Frontend build
+        working-directory: ${{ env.RELEASE_SOURCE_DIR }}/frontend
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build 2>&1 | tee "../../test-results/frontend-build.log"
+
+      - name: Build 10 Go service images for e2e backend
+        env:
+          REPO_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -euo pipefail
+          services=(
+            gateway-bff
+            identity-authz
+            lead
+            account
+            opportunity
+            commercial
+            work
+            audit-history
+            reporting
+            import-export
+          )
+          for service in "${services[@]}"; do
+            docker build \
+              --platform linux/amd64 \
+              --build-arg RELEASE_COMMIT="$RELEASE_COMMIT" \
+              --build-arg SERVICE_NAME="$service" \
+              --build-arg IMAGE_SOURCE="$REPO_SOURCE" \
+              --build-arg IMAGE_CREATED="$IMAGE_CREATED" \
+              --label "org.opencontainers.image.revision=$RELEASE_COMMIT" \
+              --label "org.opencontainers.image.source=$REPO_SOURCE" \
+              --label "org.opencontainers.image.created=$IMAGE_CREATED" \
+              --label "com.crm.release.content=$RELEASE_COMMIT" \
+              --label "com.crm.service=$service" \
+              -f deploy/docker/go-service.Dockerfile \
+              -t "crm-system/$service:$RELEASE_COMMIT" \
+              "$RELEASE_SOURCE_DIR/services/$service"
+          done
+
+      - name: Install Playwright browsers
+        working-directory: ${{ env.RELEASE_SOURCE_DIR }}/frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Start e2e backend stack
+        run: |
+          set -euo pipefail
+          release_source_abs="$(cd "$RELEASE_SOURCE_DIR" && pwd)"
+
+          cat > "$CRM_E2E_COMPOSE_FILE" <<EOF
+          x-go-healthcheck: &go-healthcheck
+            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null 2>&1"]
+            interval: 5s
+            timeout: 3s
+            retries: 24
+
+          x-go-service-defaults: &go-service-defaults
+            restart: unless-stopped
+            read_only: true
+            tmpfs:
+              - /tmp
+            cap_drop:
+              - ALL
+            security_opt:
+              - no-new-privileges:true
+            expose:
+              - "8080"
+            healthcheck: *go-healthcheck
+            depends_on:
+              postgres:
+                condition: service_healthy
+            networks:
+              - crm_internal
+
+          services:
+            postgres:
+              image: postgres:16-alpine
+              restart: unless-stopped
+              environment:
+                POSTGRES_DB: crm_system
+                POSTGRES_USER: crm_admin
+                POSTGRES_PASSWORD: crm_admin_dev_password
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+                - "$release_source_abs:/ci-source:ro"
+              healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U crm_admin -d crm_system"]
+                interval: 5s
+                timeout: 3s
+                retries: 24
+              networks:
+                - crm_internal
+
+            gateway-bff:
+              <<: *go-service-defaults
+              image: crm-system/gateway-bff:66d2531
+              read_only: false
+              environment:
+                SERVICE_NAME: gateway-bff
+                PORT: "8080"
+                IDENTITY_AUTHZ_URL: http://identity-authz:8080
+                LEAD_SERVICE_URL: http://lead:8080
+                ACCOUNT_SERVICE_URL: http://account:8080
+                OPPORTUNITY_SERVICE_URL: http://opportunity:8080
+                COMMERCIAL_SERVICE_URL: http://commercial:8080
+                WORK_SERVICE_URL: http://work:8080
+                REPORTING_SERVICE_URL: http://reporting:8080
+                IMPORT_EXPORT_SERVICE_URL: http://import-export:8080
+                AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+              ports:
+                - "127.0.0.1:8080:8080"
+              networks:
+                - crm_internal
+                - crm_edge
+
+            identity-authz:
+              <<: *go-service-defaults
+              image: crm-system/identity-authz:66d2531
+              environment:
+                SERVICE_NAME: identity-authz
+                PORT: "8080"
+                COOKIE_SECURE: "true"
+                DATABASE_URL: postgres://crm_identity_authz_user:crm_identity_authz_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=identity_authz
+                SERVICE_ID: identity-authz
+                SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+                AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+
+            lead:
+              <<: *go-service-defaults
+              image: crm-system/lead:66d2531
+              environment:
+                SERVICE_NAME: lead
+                SERVICE_ID: lead
+                PORT: "8080"
+                DATABASE_URL: postgres://crm_lead_user:crm_lead_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=lead
+                ACCOUNT_SERVICE_URL: http://account:8080
+                OPPORTUNITY_SERVICE_URL: http://opportunity:8080
+                AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+                REPORTING_SERVICE_URL: http://reporting:8080
+                SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+
+            account:
+              <<: *go-service-defaults
+              image: crm-system/account:66d2531
+              environment:
+                SERVICE_NAME: account
+                SERVICE_ID: account
+                PORT: "8080"
+                DATABASE_URL: postgres://crm_account_user:crm_account_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=account
+                SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+                AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+                REPORTING_SERVICE_URL: http://reporting:8080
+                WORK_SERVICE_URL: http://work:8080
+
+            opportunity:
+              <<: *go-service-defaults
+              image: crm-system/opportunity:66d2531
+              environment:
+                SERVICE_NAME: opportunity
+                SERVICE_ID: opportunity
+                PORT: "8080"
+                DATABASE_URL: postgres://crm_opportunity_user:crm_opportunity_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=opportunity
+                SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+                AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+                REPORTING_SERVICE_URL: http://reporting:8080
+                COMMERCIAL_SERVICE_URL: http://commercial:8080
+
+            commercial:
+              <<: *go-service-defaults
+              image: crm-system/commercial:66d2531
+              environment:
+                SERVICE_NAME: commercial
+                SERVICE_ID: commercial
+                PORT: "8080"
+                DATABASE_URL: postgres://crm_commercial_user:crm_commercial_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=commercial
+                SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+                AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+                REPORTING_SERVICE_URL: http://reporting:8080
+
+            work:
+              <<: *go-service-defaults
+              image: crm-system/work:66d2531
+              environment:
+                SERVICE_NAME: work
+                SERVICE_ID: work
+                PORT: "8080"
+                DATABASE_URL: postgres://crm_work_user:crm_work_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=work
+                SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+                AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+                COMMERCIAL_SERVICE_URL: http://commercial:8080
+
+            audit-history:
+              <<: *go-service-defaults
+              image: crm-system/audit-history:66d2531
+              environment:
+                SERVICE_NAME: audit-history
+                PORT: "8080"
+                DATABASE_URL: postgres://crm_audit_history_user:crm_audit_history_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=audit_history
+                SERVICE_ID: audit-history
+                SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+
+            reporting:
+              <<: *go-service-defaults
+              image: crm-system/reporting:66d2531
+              environment:
+                SERVICE_NAME: reporting
+                SERVICE_ID: reporting
+                PORT: "8080"
+                DATABASE_URL: postgres://crm_reporting_user:crm_reporting_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=reporting
+                SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+                AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+
+            import-export:
+              <<: *go-service-defaults
+              image: crm-system/import-export:66d2531
+              environment:
+                SERVICE_NAME: import-export
+                PORT: "8080"
+                DATABASE_URL: postgres://crm_import_export_user:crm_import_export_dev_password@postgres:5432/crm_system?sslmode=disable&search_path=import_export
+                LEAD_SERVICE_URL: http://lead:8080
+                AUDIT_HISTORY_SERVICE_URL: http://audit-history:8080
+                SERVICE_ID: import-export
+                SERVICE_TOKEN_SECRET: crm_dev_service_token_secret
+
+          networks:
+            crm_internal:
+              internal: true
+            crm_edge:
+
+          volumes:
+            postgres_data:
+          EOF
+
+          docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" up -d postgres
+
+          for attempt in {1..60}; do
+            if docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" exec -T postgres pg_isready -U crm_admin -d crm_system >/dev/null 2>&1; then
+              break
+            fi
+            if [[ "$attempt" -eq 60 ]]; then
+              docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" logs --no-color postgres
+              exit 1
+            fi
+            sleep 2
+          done
+
+          mapfile -t migrations < <(find "$RELEASE_SOURCE_DIR/services" -path '*/migrations/*.up.sql' -type f | sort)
+          for file in "${migrations[@]}"; do
+            rel="${file#$RELEASE_SOURCE_DIR/}"
+            docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" exec -T postgres \
+              psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system -f "/ci-source/$rel"
+          done
+
+          docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" up -d \
+            gateway-bff \
+            identity-authz \
+            lead \
+            account \
+            opportunity \
+            commercial \
+            work \
+            audit-history \
+            reporting \
+            import-export
+
+          for attempt in {1..90}; do
+            if curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1 \
+              && curl -fsS \
+                -H 'Content-Type: application/json' \
+                --data '{"email":"admin@example.com","password":"AdminChangeMe-001!"}' \
+                http://127.0.0.1:8080/auth/sign-in >/dev/null 2>&1; then
+              docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" ps
+              exit 0
+            fi
+            if [[ "$attempt" -eq 90 ]]; then
+              docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" ps
+              docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" logs --no-color
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Run existing Playwright e2e
+        working-directory: ${{ env.RELEASE_SOURCE_DIR }}/frontend
+        run: |
+          set -euo pipefail
+          npm run test:e2e -- --workers=2 --retries=1
+
+      - name: Collect e2e backend logs
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "$RELEASE_SOURCE_DIR/frontend/test-results/backend-stack"
+          if [[ -f "$CRM_E2E_COMPOSE_FILE" ]]; then
+            docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" ps \
+              > "$RELEASE_SOURCE_DIR/frontend/test-results/backend-stack/compose-ps.txt" || true
+            docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" logs --no-color \
+              > "$RELEASE_SOURCE_DIR/frontend/test-results/backend-stack/compose-logs.txt" || true
+          fi
+
+      - name: Stop e2e backend stack
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -f "$CRM_E2E_COMPOSE_FILE" ]]; then
+            docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" down -v || true
+          fi
+
+      - name: Build images and release bundle
+        env:
+          RELEASE_SOURCE_DIR: ${{ env.RELEASE_SOURCE_DIR }}
+          RELEASE_BUNDLE_PARENT: ${{ env.RELEASE_BUNDLE_PARENT }}
+          REPO_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: bash deploy/release/build-release-bundle.sh
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-crm-system-${{ env.RELEASE_COMMIT }}
+          path: |
+            dist/release-crm-system-${{ env.RELEASE_COMMIT }}
+            dist/release-crm-system-${{ env.RELEASE_COMMIT }}.tar.gz
+            dist/release-crm-system-${{ env.RELEASE_COMMIT }}.tar.gz.sha256
+          retention-days: 30

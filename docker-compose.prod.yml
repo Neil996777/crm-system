@@ -4,6 +4,12 @@ x-go-healthcheck: &go-healthcheck
   timeout: 5s
   retries: 12
 
+x-frontend-healthcheck: &frontend-healthcheck
+  test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null 2>&1"]
+  interval: 10s
+  timeout: 5s
+  retries: 12
+
 x-go-service-defaults: &go-service-defaults
   restart: unless-stopped
   read_only: true
@@ -24,7 +30,7 @@ x-go-service-defaults: &go-service-defaults
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: ${CRM_IMAGE_POSTGRES:?CRM_IMAGE_POSTGRES required}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB required}
@@ -32,37 +38,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
     volumes:
       - /opt/crm-system/volumes/postgres:/var/lib/postgresql/data
-      - /opt/crm-system/current/services/identity-authz/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/001_identity_authz.sql:ro
-      - /opt/crm-system/current/services/identity-authz/migrations/0002_users_sessions.up.sql:/docker-entrypoint-initdb.d/002_identity_authz_users_sessions.sql:ro
-      - /opt/crm-system/current/services/identity-authz/migrations/0003_permission_policy.up.sql:/docker-entrypoint-initdb.d/003_identity_authz_permission_policy.sql:ro
-      - /opt/crm-system/current/services/lead/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/004_lead.sql:ro
-      - /opt/crm-system/current/services/account/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/005_account.sql:ro
-      - /opt/crm-system/current/services/account/migrations/0002_accounts.up.sql:/docker-entrypoint-initdb.d/006_account_accounts.sql:ro
-      - /opt/crm-system/current/services/account/migrations/0003_contacts.up.sql:/docker-entrypoint-initdb.d/007_account_contacts.sql:ro
-      - /opt/crm-system/current/services/opportunity/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/008_opportunity.sql:ro
-      - /opt/crm-system/current/services/opportunity/migrations/0002_opportunities.up.sql:/docker-entrypoint-initdb.d/009_opportunity_opportunities.sql:ro
-      - /opt/crm-system/current/services/commercial/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/010_commercial.sql:ro
-      - /opt/crm-system/current/services/commercial/migrations/0002_quotes.up.sql:/docker-entrypoint-initdb.d/011_commercial_quotes.sql:ro
-      - /opt/crm-system/current/services/commercial/migrations/0003_contracts.up.sql:/docker-entrypoint-initdb.d/012_commercial_contracts.sql:ro
-      - /opt/crm-system/current/services/commercial/migrations/0004_payments.up.sql:/docker-entrypoint-initdb.d/013_commercial_payments.sql:ro
-      - /opt/crm-system/current/services/work/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/014_work.sql:ro
-      - /opt/crm-system/current/services/audit-history/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/015_audit_history.sql:ro
-      - /opt/crm-system/current/services/audit-history/migrations/0002_history_oplog.up.sql:/docker-entrypoint-initdb.d/016_audit_history_events.sql:ro
-      - /opt/crm-system/current/services/audit-history/migrations/0003_retention_metadata.up.sql:/docker-entrypoint-initdb.d/016b_audit_history_retention.sql:ro
-      - /opt/crm-system/current/services/reporting/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/017_reporting.sql:ro
-      - /opt/crm-system/current/services/import-export/migrations/0001_init_schema.up.sql:/docker-entrypoint-initdb.d/018_import_export.sql:ro
-      - /opt/crm-system/current/services/lead/migrations/0002_leads.up.sql:/docker-entrypoint-initdb.d/019_lead_leads.sql:ro
-      - /opt/crm-system/current/services/lead/migrations/0003_lead_qualification.up.sql:/docker-entrypoint-initdb.d/020_lead_qualification.sql:ro
-      - /opt/crm-system/current/services/account/migrations/0004_duplicate_warnings.up.sql:/docker-entrypoint-initdb.d/021_account_duplicate_warnings.sql:ro
-      - /opt/crm-system/current/services/account/migrations/0005_archive.up.sql:/docker-entrypoint-initdb.d/022_account_archive.sql:ro
-      - /opt/crm-system/current/services/lead/migrations/0004_duplicate_warnings.up.sql:/docker-entrypoint-initdb.d/023_lead_duplicate_warnings.sql:ro
-      - /opt/crm-system/current/services/work/migrations/0002_work.up.sql:/docker-entrypoint-initdb.d/024_work_items.sql:ro
-      - /opt/crm-system/current/services/lead/migrations/0005_archive.up.sql:/docker-entrypoint-initdb.d/025_lead_archive.sql:ro
-      - /opt/crm-system/current/services/opportunity/migrations/0003_archive.up.sql:/docker-entrypoint-initdb.d/026_opportunity_archive.sql:ro
-      - /opt/crm-system/current/services/commercial/migrations/0005_archive.up.sql:/docker-entrypoint-initdb.d/027_commercial_archive.sql:ro
-      - /opt/crm-system/current/services/reporting/migrations/0002_reporting_projections.up.sql:/docker-entrypoint-initdb.d/028_reporting_projections.sql:ro
-      - /opt/crm-system/current/services/import-export/migrations/0002_import_export_runs.up.sql:/docker-entrypoint-initdb.d/029_import_export_runs.sql:ro
-      - /opt/crm-system/current/services/import-export/migrations/0003_export_runs.up.sql:/docker-entrypoint-initdb.d/030_export_runs.sql:ro
+      - /opt/crm-system/releases/${CRM_RELEASE_COMMIT:?CRM_RELEASE_COMMIT required}/migrations:/release-migrations:ro
     expose:
       - "5432"
     healthcheck:
@@ -75,10 +51,7 @@ services:
 
   gateway-bff:
     <<: *go-service-defaults
-    build:
-      context: ./services/gateway-bff
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/gateway-bff:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_GATEWAY_BFF:?CRM_IMAGE_GATEWAY_BFF required}
     read_only: false
     environment:
       SERVICE_NAME: gateway-bff
@@ -102,10 +75,7 @@ services:
 
   identity-authz:
     <<: *go-service-defaults
-    build:
-      context: ./services/identity-authz
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/identity-authz:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_IDENTITY_AUTHZ:?CRM_IMAGE_IDENTITY_AUTHZ required}
     environment:
       SERVICE_NAME: identity-authz
       PORT: "8080"
@@ -119,10 +89,7 @@ services:
 
   lead:
     <<: *go-service-defaults
-    build:
-      context: ./services/lead
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/lead:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_LEAD:?CRM_IMAGE_LEAD required}
     environment:
       SERVICE_NAME: lead
       SERVICE_ID: lead
@@ -138,10 +105,7 @@ services:
 
   account:
     <<: *go-service-defaults
-    build:
-      context: ./services/account
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/account:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_ACCOUNT:?CRM_IMAGE_ACCOUNT required}
     environment:
       SERVICE_NAME: account
       SERVICE_ID: account
@@ -156,10 +120,7 @@ services:
 
   opportunity:
     <<: *go-service-defaults
-    build:
-      context: ./services/opportunity
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/opportunity:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_OPPORTUNITY:?CRM_IMAGE_OPPORTUNITY required}
     environment:
       SERVICE_NAME: opportunity
       SERVICE_ID: opportunity
@@ -174,10 +135,7 @@ services:
 
   commercial:
     <<: *go-service-defaults
-    build:
-      context: ./services/commercial
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/commercial:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_COMMERCIAL:?CRM_IMAGE_COMMERCIAL required}
     environment:
       SERVICE_NAME: commercial
       SERVICE_ID: commercial
@@ -191,10 +149,7 @@ services:
 
   work:
     <<: *go-service-defaults
-    build:
-      context: ./services/work
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/work:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_WORK:?CRM_IMAGE_WORK required}
     environment:
       SERVICE_NAME: work
       SERVICE_ID: work
@@ -208,10 +163,7 @@ services:
 
   audit-history:
     <<: *go-service-defaults
-    build:
-      context: ./services/audit-history
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/audit-history:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_AUDIT_HISTORY:?CRM_IMAGE_AUDIT_HISTORY required}
     environment:
       SERVICE_NAME: audit-history
       PORT: "8080"
@@ -223,10 +175,7 @@ services:
 
   reporting:
     <<: *go-service-defaults
-    build:
-      context: ./services/reporting
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/reporting:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_REPORTING:?CRM_IMAGE_REPORTING required}
     environment:
       SERVICE_NAME: reporting
       PORT: "8080"
@@ -236,10 +185,7 @@ services:
 
   import-export:
     <<: *go-service-defaults
-    build:
-      context: ./services/import-export
-      dockerfile: ../../deploy/docker/go-service.Dockerfile
-    image: crm-system/import-export:${CRM_IMAGE_TAG:-latest}
+    image: ${CRM_IMAGE_IMPORT_EXPORT:?CRM_IMAGE_IMPORT_EXPORT required}
     environment:
       SERVICE_NAME: import-export
       PORT: "8080"
@@ -250,6 +196,24 @@ services:
       SERVICE_TOKEN_SECRET: ${SERVICE_TOKEN_SECRET:?SERVICE_TOKEN_SECRET required}
     volumes:
       - /opt/crm-system/logs/import-export:/var/log/crm-system
+
+  frontend-web:
+    image: ${CRM_IMAGE_FRONTEND_WEB:?CRM_IMAGE_FRONTEND_WEB required}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:8081:8080"
+    healthcheck: *frontend-healthcheck
+    networks:
+      - crm_edge
 
 networks:
   crm_internal:

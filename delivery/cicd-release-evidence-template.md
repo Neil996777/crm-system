@@ -22,6 +22,7 @@ record secret values.
 |---|---|---|---|
 | Backend Go tests | `<fill>` | `<pass/fail>` | `<path>` |
 | Frontend build | `npm run build` from `frontend/` | `<pass/fail>` | `<path>` |
+| Playwright backend stack | Postgres + 10 Go service images + gateway health/auth probe before e2e | `<pass/fail>` | `<path>` |
 | Playwright e2e | `npm run test:e2e` from `frontend/` | `<pass/fail>` | `<path>` |
 | Static release checks | no host-build commands; no `latest`; no `build:` | `<pass/fail>` | `<path>` |
 
