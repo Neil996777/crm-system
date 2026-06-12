@@ -110,18 +110,37 @@ export function RecordIdentity({
   icon,
   title,
   subtitle,
-  tone = 'sky'
+  tone = 'sky',
+  onTitleClick,
+  titleAriaLabel
 }: {
   icon?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
   tone?: 'sky' | 'mint' | 'peach' | 'purple' | 'primary';
+  onTitleClick?: () => void;
+  titleAriaLabel?: string;
 }) {
   return (
     <div className="recordIdentity">
       {icon ? <span className={tone === 'primary' ? 'icon' : `icon ${tone}`}>{icon}</span> : null}
       <div>
-        <span className="primaryLink">{title}</span>
+        {onTitleClick ? (
+          <button
+            aria-label={titleAriaLabel}
+            className="recordLinkButton"
+            data-row-interactive="true"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onTitleClick();
+            }}
+          >
+            <span className="primaryLink">{title}</span>
+          </button>
+        ) : (
+          <span className="primaryLink">{title}</span>
+        )}
         {subtitle ? <span className="subMeta">{subtitle}</span> : null}
       </div>
     </div>

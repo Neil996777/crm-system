@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, CreditCard, Plus, RotateCcw } from 'lucide-react';
+import { CreditCard, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { Contract, getContract } from '../../api/contracts';
 import { createPaymentPlan, listPaymentContracts } from '../../api/payments';
@@ -157,7 +157,21 @@ export function PaymentList({ targetRecordId, onTargetHandled }: { targetRecordI
           getRowAriaLabel={(contract) => `打开回款合同 ${contract.id}`}
           empty="没有符合当前筛选条件的回款合同。"
           columns={[
-            { key: 'contract', header: '合同', width: '230px', render: (contract) => <RecordIdentity icon={<CreditCard size={17} aria-hidden="true" />} title={contract.opportunityId} subtitle={contract.id} tone="mint" /> },
+            {
+              key: 'contract',
+              header: '合同',
+              width: '230px',
+              render: (contract) => (
+                <RecordIdentity
+                  icon={<CreditCard size={17} aria-hidden="true" />}
+                  title={contract.opportunityId}
+                  titleAriaLabel={`打开回款合同 ${contract.id}`}
+                  subtitle={contract.id}
+                  tone="mint"
+                  onTitleClick={() => void selectPayment(contract.id)}
+                />
+              )
+            },
             { key: 'status', header: '合同状态', render: (contract) => <StatusPill tone={contract.status === 'Signed' || contract.status === 'Active' || contract.status === 'Completed' ? 'success' : 'warning'}>{labelFor(contractStatusLabel, contract.status)}</StatusPill> },
             { key: 'payment', header: '回款状态', render: () => <StatusPill>{labelFor(paymentStatusLabel, 'No plan')}</StatusPill> },
             { key: 'amount', header: '合同金额', align: 'right', render: (contract) => <span className="amountText">{money(contract.amount)}</span> },
@@ -165,7 +179,6 @@ export function PaymentList({ targetRecordId, onTargetHandled }: { targetRecordI
           ]}
           actions={(contract) => (
             <div className="rowActions">
-              <button className="rowAction" type="button" aria-label={`查看回款 ${contract.id}`} onClick={() => { setError(''); setSelected(contract); setMode('detail'); }}><ArrowRight size={16} aria-hidden="true" /></button>
               <ActionMenu
                 label={`打开回款 ${contract.id} 的行操作菜单`}
                 items={[

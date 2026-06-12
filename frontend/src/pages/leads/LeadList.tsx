@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, ListChecks, Plus, RotateCcw } from 'lucide-react';
+import { ListChecks, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { DuplicateWarningResult } from '../../api/duplicates';
 import { ConversionResult, Lead, archiveLead, checkLeadDuplicate, createLead, getLead, listLeads, transferLeadOwner } from '../../api/leads';
@@ -350,7 +350,15 @@ export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?:
               key: 'lead',
               header: '线索',
               width: '250px',
-              render: (lead) => <RecordIdentity icon={<ListChecks size={17} aria-hidden="true" />} title={lead.companyName || lead.leadName || lead.id} subtitle={`${lead.archived ? '已归档 · ' : ''}${lead.source || '未填写来源'}`} />
+              render: (lead) => (
+                <RecordIdentity
+                  icon={<ListChecks size={17} aria-hidden="true" />}
+                  title={lead.companyName || lead.leadName || lead.id}
+                  titleAriaLabel={`打开线索 ${lead.companyName || lead.leadName || lead.id}`}
+                  subtitle={`${lead.archived ? '已归档 · ' : ''}${lead.source || '未填写来源'}`}
+                  onTitleClick={() => void selectLead(lead.id)}
+                />
+              )
             },
             { key: 'contact', header: '联系方式', render: (lead) => lead.email || lead.phone || '未填写' },
             { key: 'status', header: '状态', render: (lead) => <StatusPill tone={leadTone(lead.status)}>{labelFor(leadStatusLabel, lead.status)}</StatusPill> },
@@ -359,9 +367,6 @@ export function LeadList({ targetRecordId, onTargetHandled }: { targetRecordId?:
           ]}
           actions={(lead) => (
             <div className="rowActions">
-              <button className="rowAction" type="button" aria-label={`查看 ${lead.companyName || lead.leadName || lead.id}`} onClick={() => void selectLead(lead.id)}>
-                <ArrowRight size={16} aria-hidden="true" />
-              </button>
               <ActionMenu
                 label={`打开 ${lead.companyName || lead.leadName || lead.id} 的行操作菜单`}
                 items={[

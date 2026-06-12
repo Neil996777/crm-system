@@ -9,7 +9,8 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes
 } from 'react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   CheckCircle2,
@@ -364,6 +365,7 @@ export type ActionMenuItem = {
 
 export function ActionMenu({ label, items }: { label: string; items: ActionMenuItem[] }) {
   const [open, setOpen] = useState(false);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuId = useId();
@@ -380,6 +382,48 @@ export function ActionMenu({ label, items }: { label: string; items: ActionMenuI
     return () => document.removeEventListener('pointerdown', closeFromOutside);
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+
+    let frame = 0;
+    const updatePosition = () => {
+      const button = buttonRef.current;
+      if (!button) return;
+
+      const buttonRect = button.getBoundingClientRect();
+      const menu = menuRef.current;
+      const menuWidth = menu?.offsetWidth ?? 192;
+      const menuHeight = menu?.offsetHeight ?? 0;
+      const margin = 8;
+      const gap = 6;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const maxLeft = Math.max(margin, viewportWidth - menuWidth - margin);
+      const left = Math.min(Math.max(margin, buttonRect.right - menuWidth), maxLeft);
+      const spaceBelow = viewportHeight - buttonRect.bottom - margin - gap;
+      const spaceAbove = buttonRect.top - margin - gap;
+      const placeAbove = menuHeight > 0 && spaceBelow < menuHeight && spaceAbove > spaceBelow;
+      const rawTop = placeAbove ? buttonRect.top - menuHeight - gap : buttonRect.bottom + gap;
+      const top = Math.min(Math.max(margin, rawTop), Math.max(margin, viewportHeight - margin - Math.min(menuHeight, viewportHeight - margin * 2)));
+      const maxHeight = placeAbove ? Math.max(96, buttonRect.top - margin - gap) : Math.max(96, viewportHeight - top - margin);
+
+      setPanelStyle({ left, top, maxHeight });
+    };
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(updatePosition);
+    };
+
+    updatePosition();
+    window.addEventListener('resize', scheduleUpdate);
+    window.addEventListener('scroll', scheduleUpdate, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', scheduleUpdate);
+      window.removeEventListener('scroll', scheduleUpdate, true);
+    };
+  }, [open]);
+
   function closeOnEscape(event: KeyboardEvent) {
     if (event.key !== 'Escape') return;
     event.stopPropagation();
@@ -394,6 +438,35 @@ export function ActionMenu({ label, items }: { label: string; items: ActionMenuI
   }
 
   const visibleItems: ActionMenuItem[] = items.length > 0 ? items : [{ label: '暂无可用操作', disabled: true, reason: '当前记录没有可执行的行操作。' }];
+  const menu = open && typeof document !== 'undefined' ? createPortal(
+    <div
+      className="actionMenuPanel"
+      data-row-interactive="true"
+      id={menuId}
+      ref={menuRef}
+      role="menu"
+      style={panelStyle ?? { left: 0, top: 0, visibility: 'hidden' }}
+      onClick={(event: MouseEvent) => event.stopPropagation()}
+      onKeyDown={closeOnEscape}
+    >
+      {visibleItems.map((item) => (
+        <button
+          aria-disabled={item.disabled || undefined}
+          className={cx('actionMenuItem', item.tone === 'danger' && 'dangerText')}
+          disabled={item.disabled}
+          key={item.label}
+          role="menuitem"
+          title={item.reason}
+          type="button"
+          onClick={() => select(item)}
+        >
+          <span>{item.label}</span>
+          {item.reason ? <small>{item.reason}</small> : null}
+        </button>
+      ))}
+    </div>,
+    document.body
+  ) : null;
 
   return (
     <div className="actionMenu" data-row-interactive="true" onClick={(event: MouseEvent) => event.stopPropagation()} onKeyDown={closeOnEscape}>
@@ -409,25 +482,7 @@ export function ActionMenu({ label, items }: { label: string; items: ActionMenuI
       >
         <MoreHorizontal size={16} aria-hidden="true" />
       </button>
-      {open ? (
-        <div className="actionMenuPanel" id={menuId} ref={menuRef} role="menu">
-          {visibleItems.map((item) => (
-            <button
-              aria-disabled={item.disabled || undefined}
-              className={cx('actionMenuItem', item.tone === 'danger' && 'dangerText')}
-              disabled={item.disabled}
-              key={item.label}
-              role="menuitem"
-              title={item.reason}
-              type="button"
-              onClick={() => select(item)}
-            >
-              <span>{item.label}</span>
-              {item.reason ? <small>{item.reason}</small> : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      {menu}
     </div>
   );
 }

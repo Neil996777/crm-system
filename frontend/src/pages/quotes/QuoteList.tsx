@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, FileText, Plus, RotateCcw } from 'lucide-react';
+import { FileText, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { Quote, changeQuoteStatus, createQuote, getQuote, listQuotes } from '../../api/quotes';
 import {
@@ -192,7 +192,21 @@ export function QuoteList({ targetRecordId, onTargetHandled }: { targetRecordId?
           getRowAriaLabel={(quote) => `打开报价 ${quote.id}`}
           empty="没有符合当前筛选条件的报价。"
           columns={[
-            { key: 'quote', header: '报价', width: '220px', render: (quote) => <RecordIdentity icon={<FileText size={17} aria-hidden="true" />} title={quote.opportunityId} subtitle={quote.id} tone="purple" /> },
+            {
+              key: 'quote',
+              header: '报价',
+              width: '220px',
+              render: (quote) => (
+                <RecordIdentity
+                  icon={<FileText size={17} aria-hidden="true" />}
+                  title={quote.opportunityId}
+                  titleAriaLabel={`打开报价 ${quote.id}`}
+                  subtitle={quote.id}
+                  tone="purple"
+                  onTitleClick={() => void selectQuote(quote.id)}
+                />
+              )
+            },
             { key: 'customer', header: '客户', render: (quote) => quote.customerId },
             { key: 'status', header: '状态', render: (quote) => <StatusPill tone={quoteTone(quote.status)}>{labelFor(quoteStatusLabel, quote.status)}</StatusPill> },
             { key: 'amount', header: '金额', align: 'right', render: (quote) => <span className="amountText">{money(quote.amount)}</span> },
@@ -201,7 +215,6 @@ export function QuoteList({ targetRecordId, onTargetHandled }: { targetRecordId?
           ]}
           actions={(quote) => (
             <div className="rowActions">
-              <button className="rowAction" type="button" aria-label={`查看报价 ${quote.id}`} onClick={() => void selectQuote(quote.id)}><ArrowRight size={16} aria-hidden="true" /></button>
               <ActionMenu
                 label={`打开报价 ${quote.id} 的行操作菜单`}
                 items={[

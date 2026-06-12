@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, BriefcaseBusiness, Plus, RotateCcw } from 'lucide-react';
+import { BriefcaseBusiness, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { Opportunity, archiveOpportunity, changeOpportunityStage, createOpportunity, getOpportunity, listOpportunities, updateOpportunity } from '../../api/opportunities';
 import {
@@ -395,8 +395,10 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
                 <RecordIdentity
                   icon={<BriefcaseBusiness size={17} aria-hidden="true" />}
                   title={opportunity.title || opportunity.id}
+                  titleAriaLabel={`打开商机 ${opportunity.title || opportunity.id}`}
                   subtitle={`${opportunity.archived ? '已归档 · ' : ''}更新于 ${formatDate(opportunity.updatedAt)}`}
                   tone={identityTone(opportunity.stage)}
+                  onTitleClick={() => void selectOpportunity(opportunity.id)}
                 />
               )
             },
@@ -413,9 +415,6 @@ export function OpportunityList({ targetRecordId, onTargetHandled }: { targetRec
           ]}
           actions={(opportunity) => (
             <div className="rowActions">
-              <button className="rowAction" type="button" aria-label={`查看 ${opportunity.title || opportunity.id}`} onClick={() => void selectOpportunity(opportunity.id)}>
-                <ArrowRight size={16} aria-hidden="true" />
-              </button>
               <ActionMenu
                 label={`打开 ${opportunity.title || opportunity.id} 的行操作菜单`}
                 items={[

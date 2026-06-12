@@ -33,7 +33,7 @@ test('TEST-NAV-RETRIEVE-001 lists and details contacts from the primary navigati
   await expect(page.getByRole('heading', { name: '联系人' })).toBeVisible();
   await page.getByLabel('搜索').fill(contactName);
   await page.getByRole('button', { name: '应用筛选' }).click();
-  await page.getByRole('button', { name: new RegExp(`查看 ${escapeRegExp(contactName)}`) }).click();
+  await page.getByRole('button', { name: new RegExp(`打开联系人 ${escapeRegExp(contactName)}`) }).click();
   await expect(page.getByLabel('联系人详情')).toContainText(contactName);
   await expect(page.getByLabel('联系人详情')).toContainText(companyName);
 });

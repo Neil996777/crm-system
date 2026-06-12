@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Building2, Plus, RotateCcw } from 'lucide-react';
+import { Building2, Plus, RotateCcw } from 'lucide-react';
 import { Account, archiveAccount, checkAccountDuplicate, createAccount, getAccount, listAccounts } from '../../api/accounts';
 import { ApiError } from '../../api/client';
 import { DuplicateWarningResult } from '../../api/duplicates';
@@ -281,7 +281,16 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
               key: 'account',
               header: '客户',
               width: '250px',
-              render: (account) => <RecordIdentity icon={<Building2 size={17} aria-hidden="true" />} title={account.companyName} subtitle={`${account.archived ? '已归档 · ' : ''}更新于 ${formatDate(account.updatedAt)}`} tone={account.archived ? 'peach' : 'sky'} />
+              render: (account) => (
+                <RecordIdentity
+                  icon={<Building2 size={17} aria-hidden="true" />}
+                  title={account.companyName}
+                  titleAriaLabel={`打开客户 ${account.companyName}`}
+                  subtitle={`${account.archived ? '已归档 · ' : ''}更新于 ${formatDate(account.updatedAt)}`}
+                  tone={account.archived ? 'peach' : 'sky'}
+                  onTitleClick={() => void selectAccount(account.id)}
+                />
+              )
             },
             { key: 'status', header: '状态', render: (account) => <StatusPill tone={account.archived ? 'warning' : accountTone(account.customerStatus)}>{account.archived ? labelFor(archiveStatusLabel, 'Archived') : labelFor(accountStatusLabel, account.customerStatus)}</StatusPill> },
             { key: 'owner', header: '负责人', render: (account) => account.ownerId },
@@ -290,9 +299,6 @@ export function AccountList({ targetRecordId, onTargetHandled }: { targetRecordI
           ]}
           actions={(account) => (
             <div className="rowActions">
-              <button className="rowAction" type="button" aria-label={`查看 ${account.companyName}`} onClick={() => void selectAccount(account.id)}>
-                <ArrowRight size={16} aria-hidden="true" />
-              </button>
               <ActionMenu
                 label={`打开 ${account.companyName} 的行操作菜单`}
                 items={[

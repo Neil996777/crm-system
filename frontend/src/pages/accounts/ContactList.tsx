@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Plus, RotateCcw, UserRound } from 'lucide-react';
+import { Plus, RotateCcw, UserRound } from 'lucide-react';
 import { Contact, createContact, getContact, listAllContacts } from '../../api/accounts';
 import { ApiError } from '../../api/client';
 import {
@@ -208,17 +208,26 @@ export function ContactList({ targetRecordId, onTargetHandled }: { targetRecordI
           getRowAriaLabel={(contact) => `打开联系人 ${contact.contactName}`}
           empty="没有符合当前筛选条件的联系人。"
           columns={[
-            { key: 'name', header: '联系人', width: '220px', render: (contact) => <RecordIdentity icon={<UserRound size={17} aria-hidden="true" />} title={contact.contactName} subtitle={contact.accountName || contact.accountId} tone="mint" /> },
+            {
+              key: 'name',
+              header: '联系人',
+              width: '220px',
+              render: (contact) => (
+                <RecordIdentity
+                  icon={<UserRound size={17} aria-hidden="true" />}
+                  title={contact.contactName}
+                  titleAriaLabel={`打开联系人 ${contact.contactName}`}
+                  subtitle={contact.accountName || contact.accountId}
+                  tone="mint"
+                  onTitleClick={() => void selectContact(contact.id)}
+                />
+              )
+            },
             { key: 'email', header: '邮箱', render: (contact) => contact.email || '无' },
             { key: 'phone', header: '电话', render: (contact) => contact.phone || '无' },
             { key: 'role', header: '角色备注', render: (contact) => contact.roleNote || '无' },
             { key: 'updated', header: '更新时间', align: 'right', sortable: true, sortDirection: 'desc', render: (contact) => formatDate(contact.updatedAt) }
           ]}
-          actions={(contact) => (
-            <div className="rowActions">
-              <button className="rowAction" type="button" aria-label={`查看 ${contact.contactName}`} onClick={() => void selectContact(contact.id)}><ArrowRight size={16} aria-hidden="true" /></button>
-            </div>
-          )}
         />
       }
       pagination={<CrudPagination slice={slice} onPageChange={setPage} onPageSizeChange={(next) => { setPageSize(next); setPage(1); }} />}

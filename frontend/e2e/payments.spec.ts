@@ -33,7 +33,7 @@ test('TEST-PAYMENT-RECORD-002 creates overdue plan and records partial payment w
   await openPayments(page);
   await page.getByLabel('搜索').fill(contract.opportunityId);
   await page.getByRole('button', { name: '应用筛选' }).click();
-  await page.getByRole('button', { name: `查看回款 ${contract.id}` }).click();
+  await page.getByRole('button', { name: `打开回款合同 ${contract.id}` }).click();
 
   await page.getByLabel('计划金额').fill('10000.00');
   await page.getByLabel('计划到期日').fill('2026-01-01');
@@ -57,7 +57,7 @@ test('TEST-PAYMENT-GUARD-003 blocks zero amount and contract overpayment', async
   await openPayments(page);
   await page.getByLabel('搜索').fill(contract.opportunityId);
   await page.getByRole('button', { name: '应用筛选' }).click();
-  await page.getByRole('button', { name: `查看回款 ${contract.id}` }).click();
+  await page.getByRole('button', { name: `打开回款合同 ${contract.id}` }).click();
 
   await page.getByLabel('计划金额').fill('10000.00');
   await page.getByLabel('计划到期日').fill('2027-08-01');

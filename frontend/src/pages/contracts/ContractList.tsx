@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, FileSignature, Plus, RotateCcw } from 'lucide-react';
+import { FileSignature, Plus, RotateCcw } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { Contract, archiveContract, changeContractStatus, createContract, getContract, listContracts } from '../../api/contracts';
 import {
@@ -221,7 +221,21 @@ export function ContractList({ targetRecordId, onTargetHandled }: { targetRecord
           getRowAriaLabel={(contract) => `打开合同 ${contract.id}`}
           empty="没有符合当前筛选条件的合同。"
           columns={[
-            { key: 'contract', header: '合同', width: '220px', render: (contract) => <RecordIdentity icon={<FileSignature size={17} aria-hidden="true" />} title={contract.opportunityId} subtitle={`${contract.archived ? '已归档 · ' : ''}${contract.id}`} tone="peach" /> },
+            {
+              key: 'contract',
+              header: '合同',
+              width: '220px',
+              render: (contract) => (
+                <RecordIdentity
+                  icon={<FileSignature size={17} aria-hidden="true" />}
+                  title={contract.opportunityId}
+                  titleAriaLabel={`打开合同 ${contract.id}`}
+                  subtitle={`${contract.archived ? '已归档 · ' : ''}${contract.id}`}
+                  tone="peach"
+                  onTitleClick={() => void selectContract(contract.id)}
+                />
+              )
+            },
             { key: 'quote', header: '报价', render: (contract) => contract.quoteId },
             { key: 'status', header: '状态', render: (contract) => <StatusPill tone={contractTone(contract.status)}>{labelFor(contractStatusLabel, contract.status)}</StatusPill> },
             { key: 'amount', header: '金额', align: 'right', render: (contract) => <span className="amountText">{money(contract.amount)}</span> },
@@ -230,7 +244,6 @@ export function ContractList({ targetRecordId, onTargetHandled }: { targetRecord
           ]}
           actions={(contract) => (
             <div className="rowActions">
-              <button className="rowAction" type="button" aria-label={`查看合同 ${contract.id}`} onClick={() => void selectContract(contract.id)}><ArrowRight size={16} aria-hidden="true" /></button>
               <ActionMenu
                 label={`打开合同 ${contract.id} 的行操作菜单`}
                 items={[

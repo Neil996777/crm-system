@@ -20,7 +20,7 @@ test('TEST-ARCHIVE-001/003/004 TEST-INV-ARCHIVEBLOCK-001 and TEST-ABUSE-ARCHIVED
   await page.getByRole('button', { name: '公司/客户' }).click();
   await page.getByLabel('搜索').fill(companyName);
   await page.getByRole('button', { name: '应用筛选' }).click();
-  await page.getByRole('button', { name: new RegExp(`查看 ${escapeRegExp(companyName)}`) }).click();
+  await page.getByRole('button', { name: new RegExp(`打开客户 ${escapeRegExp(companyName)}`) }).click();
 
   await page.getByRole('button', { name: '归档', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('仍有未完成事项');

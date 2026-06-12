@@ -111,7 +111,7 @@ async function reopenLead(page: import('@playwright/test').Page, companyName: st
   await page.getByRole('button', { name: '线索', exact: true }).click();
   await page.getByLabel('搜索').fill(companyName);
   await page.getByRole('button', { name: '应用筛选' }).click();
-  await page.getByRole('button', { name: new RegExp(`查看 ${escapeRegExp(companyName)}`) }).click();
+  await page.getByRole('button', { name: new RegExp(`打开线索 ${escapeRegExp(companyName)}`) }).click();
 }
 
 function escapeRegExp(value: string) {
