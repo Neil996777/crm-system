@@ -65,9 +65,56 @@ jobs:
             echo "COMPOSE_PROJECT_NAME=$CRM_E2E_COMPOSE_PROJECT"
           } >> "$GITHUB_ENV"
 
+      - name: Prepare Postgres readiness image for Go testcontainers
+        run: |
+          set -euo pipefail
+          postgres_ready_dir="$RUNNER_TEMP/postgres-ready"
+          mkdir -p "$postgres_ready_dir"
+          docker pull postgres:16-alpine
+          docker tag postgres:16-alpine postgres:16-alpine-upstream
+
+          cat > "$postgres_ready_dir/Dockerfile" <<'EOF'
+          FROM postgres:16-alpine-upstream
+          USER root
+          RUN apk add --no-cache socat
+          COPY ready-entrypoint.sh /usr/local/bin/ready-entrypoint.sh
+          RUN chmod +x /usr/local/bin/ready-entrypoint.sh
+          ENTRYPOINT ["ready-entrypoint.sh"]
+          CMD ["postgres"]
+          EOF
+
+          cat > "$postgres_ready_dir/ready-entrypoint.sh" <<'EOF'
+          #!/bin/sh
+          set -eu
+
+          if [ "${1:-}" = "postgres" ] || [ "${1#-}" != "$1" ]; then
+            /usr/local/bin/docker-entrypoint.sh "$@" -p 15432 &
+            postgres_pid="$!"
+            trap 'kill "$postgres_pid" 2>/dev/null || true; wait "$postgres_pid" 2>/dev/null || true' INT TERM
+
+            until pg_isready -h 127.0.0.1 -p 15432 -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-postgres}" >/dev/null 2>&1; do
+              if ! kill -0 "$postgres_pid" 2>/dev/null; then
+                wait "$postgres_pid"
+                exit "$?"
+              fi
+              sleep 1
+            done
+
+            socat TCP-LISTEN:5432,fork,reuseaddr TCP:127.0.0.1:15432 &
+            proxy_pid="$!"
+            wait "$postgres_pid"
+            status="$?"
+            kill "$proxy_pid" 2>/dev/null || true
+            exit "$status"
+          fi
+
+          exec /usr/local/bin/docker-entrypoint.sh "$@"
+          EOF
+
+          docker build -t postgres:16-alpine "$postgres_ready_dir"
+
       - name: Run 10 Go service test suites
         env:
-          TESTCONTAINERS_RYUK_DISABLED: "true"
           TESTCONTAINERS_HOST_OVERRIDE: "127.0.0.1"
         run: |
           set -euo pipefail
@@ -84,27 +131,11 @@ jobs:
             import-export
           )
           mkdir -p test-results/backend
-          docker pull postgres:16-alpine
-
-          cleanup_testcontainers() {
-            docker ps -aq --filter "label=org.testcontainers=true" \
-              | xargs -r docker rm -f -v
-            docker network ls -q --filter "label=org.testcontainers=true" \
-              | xargs -r docker network rm || true
-            docker volume ls -q --filter "label=org.testcontainers=true" \
-              | xargs -r docker volume rm || true
-          }
-
           for service in "${services[@]}"; do
-            if ! (
+            (
               cd "$RELEASE_SOURCE_DIR/services/$service"
               go test -p 1 -count=1 ./...
-            ) 2>&1 | tee "test-results/backend/${service}.log"; then
-              docker ps -a
-              cleanup_testcontainers
-              exit 1
-            fi
-            cleanup_testcontainers
+            ) 2>&1 | tee "test-results/backend/${service}.log"
           done
 
       - name: Frontend build
