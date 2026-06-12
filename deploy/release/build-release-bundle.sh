@@ -223,14 +223,14 @@ evidence_file="$BUNDLE_DIR/evidence/cicd-release-evidence-$RELEASE_COMMIT.md"
 cp "$PIPELINE_ROOT/delivery/cicd-release-evidence-template.md" "$evidence_file"
 {
   printf '\n## CI Artifact Pointers\n\n'
-  printf '- Release commit: `%s`\n' "$RELEASE_COMMIT"
-  printf '- Image manifest: `image-manifest.json`\n'
-  printf '- Manifest checksum: `image-manifest.sha256`\n'
-  printf '- Backend test logs: `test-results/backend/*.log`\n'
-  printf '- Frontend build log: `test-results/frontend-build/build.log`\n'
-  printf '- Playwright artifacts: `test-results/e2e/`\n'
-  printf '- Deployment transcript: fill during G11 from `/opt/crm-system/releases/%s/deploy-transcript.log`.\n' "$RELEASE_COMMIT"
-  printf '- Rollback point: fill during G11 before running deployment.\n'
+  printf '%s\n' "- Release commit: \`$RELEASE_COMMIT\`"
+  printf '%s\n' '- Image manifest: `image-manifest.json`'
+  printf '%s\n' '- Manifest checksum: `image-manifest.sha256`'
+  printf '%s\n' '- Backend test logs: `test-results/backend/*.log`'
+  printf '%s\n' '- Frontend build log: `test-results/frontend-build/build.log`'
+  printf '%s\n' '- Playwright artifacts: `test-results/e2e/`'
+  printf '%s\n' "- Deployment transcript: fill during G11 from \`/opt/crm-system/releases/$RELEASE_COMMIT/deploy-transcript.log\`."
+  printf '%s\n' '- Rollback point: fill during G11 before running deployment.'
 } >> "$evidence_file"
 
 (
