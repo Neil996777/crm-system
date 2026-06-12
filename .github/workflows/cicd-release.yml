@@ -65,57 +65,52 @@ jobs:
             echo "COMPOSE_PROJECT_NAME=$CRM_E2E_COMPOSE_PROJECT"
           } >> "$GITHUB_ENV"
 
-      - name: Prepare Postgres readiness image for Go testcontainers
+      - name: Patch testcontainers host-port readiness for CI
         run: |
           set -euo pipefail
-          postgres_ready_dir="$RUNNER_TEMP/postgres-ready"
-          mkdir -p "$postgres_ready_dir"
-          docker pull postgres:16-alpine
-          docker tag postgres:16-alpine postgres:16-alpine-upstream
+          services=(
+            gateway-bff
+            identity-authz
+            lead
+            account
+            opportunity
+            commercial
+            work
+            audit-history
+            reporting
+            import-export
+          )
 
-          cat > "$postgres_ready_dir/Dockerfile" <<'EOF'
-          FROM postgres:16-alpine-upstream
-          USER root
-          RUN apk add --no-cache socat
-          COPY ready-entrypoint.sh /usr/local/bin/ready-entrypoint.sh
-          RUN chmod +x /usr/local/bin/ready-entrypoint.sh
-          ENTRYPOINT ["ready-entrypoint.sh"]
-          CMD ["postgres"]
-          EOF
+          for service in "${services[@]}"; do
+            (
+              cd "$RELEASE_SOURCE_DIR/services/$service"
+              go mod download github.com/testcontainers/testcontainers-go || true
+            )
+          done
 
-          cat > "$postgres_ready_dir/ready-entrypoint.sh" <<'EOF'
-          #!/bin/sh
-          set -eu
-
-          if [ "${1:-}" = "postgres" ] || [ "${1#-}" != "$1" ]; then
-            /usr/local/bin/docker-entrypoint.sh "$@" -p 15432 &
-            postgres_pid="$!"
-            trap 'kill "$postgres_pid" 2>/dev/null || true; wait "$postgres_pid" 2>/dev/null || true' INT TERM
-
-            until pg_isready -h 127.0.0.1 -p 15432 -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-postgres}" >/dev/null 2>&1; do
-              if ! kill -0 "$postgres_pid" 2>/dev/null; then
-                wait "$postgres_pid"
-                exit "$?"
-              fi
-              sleep 1
-            done
-
-            socat TCP-LISTEN:5432,fork,reuseaddr TCP:127.0.0.1:15432 &
-            proxy_pid="$!"
-            wait "$postgres_pid"
-            status="$?"
-            kill "$proxy_pid" 2>/dev/null || true
-            exit "$status"
-          fi
-
-          exec /usr/local/bin/docker-entrypoint.sh "$@"
-          EOF
-
-          docker build -t postgres:16-alpine "$postgres_ready_dir"
+          patched=0
+          for file in "$(go env GOMODCACHE)"/github.com/testcontainers/testcontainers-go@v*/wait/host_port.go; do
+            [[ -f "$file" ]] || continue
+            chmod u+w "$file"
+            ruby -0pi -e '
+              marker = "\treturn nil\n}\n\nfunc externalCheck"
+              replacement = "\tif delayText := os.Getenv(\"TESTCONTAINERS_HOST_PORT_READY_DELAY\"); delayText != \"\" {\n\t\tif delay, err := time.ParseDuration(delayText); err == nil && delay > 0 {\n\t\t\ttimer := time.NewTimer(delay)\n\t\t\tselect {\n\t\t\tcase <-ctx.Done():\n\t\t\t\ttimer.Stop()\n\t\t\t\treturn ctx.Err()\n\t\t\tcase <-timer.C:\n\t\t\t}\n\t\t}\n\t}\n\n\treturn nil\n}\n\nfunc externalCheck"
+              if $_.include?("TESTCONTAINERS_HOST_PORT_READY_DELAY")
+                next
+              end
+              unless $_.include?(marker)
+                raise "host_port.go marker not found"
+              end
+              $_ = $_.sub(marker, replacement)
+            ' "$file"
+            patched=$((patched + 1))
+          done
+          [[ "$patched" -gt 0 ]]
 
       - name: Run 10 Go service test suites
         env:
           TESTCONTAINERS_HOST_OVERRIDE: "127.0.0.1"
+          TESTCONTAINERS_HOST_PORT_READY_DELAY: "5s"
         run: |
           set -euo pipefail
           services=(
@@ -131,17 +126,13 @@ jobs:
             import-export
           )
           mkdir -p test-results/backend
+          docker pull postgres:16-alpine
           for service in "${services[@]}"; do
             (
               cd "$RELEASE_SOURCE_DIR/services/$service"
               go test -p 1 -count=1 ./...
             ) 2>&1 | tee "test-results/backend/${service}.log"
           done
-
-      - name: Restore upstream Postgres image for runtime compose
-        run: |
-          set -euo pipefail
-          docker pull --platform linux/amd64 postgres:16-alpine
 
       - name: Frontend build
         working-directory: ${{ env.RELEASE_SOURCE_DIR }}/frontend
