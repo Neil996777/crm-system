@@ -138,6 +138,11 @@ jobs:
             ) 2>&1 | tee "test-results/backend/${service}.log"
           done
 
+      - name: Restore upstream Postgres image for runtime compose
+        run: |
+          set -euo pipefail
+          docker pull --platform linux/amd64 postgres:16-alpine
+
       - name: Frontend build
         working-directory: ${{ env.RELEASE_SOURCE_DIR }}/frontend
         run: |
