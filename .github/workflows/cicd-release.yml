@@ -66,6 +66,9 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Run 10 Go service test suites
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+          TESTCONTAINERS_HOST_OVERRIDE: "127.0.0.1"
         run: |
           set -euo pipefail
           services=(
@@ -81,11 +84,27 @@ jobs:
             import-export
           )
           mkdir -p test-results/backend
+          docker pull postgres:16-alpine
+
+          cleanup_testcontainers() {
+            docker ps -aq --filter "label=org.testcontainers=true" \
+              | xargs -r docker rm -f -v
+            docker network ls -q --filter "label=org.testcontainers=true" \
+              | xargs -r docker network rm || true
+            docker volume ls -q --filter "label=org.testcontainers=true" \
+              | xargs -r docker volume rm || true
+          }
+
           for service in "${services[@]}"; do
-            (
+            if ! (
               cd "$RELEASE_SOURCE_DIR/services/$service"
               go test -p 1 -count=1 ./...
-            ) 2>&1 | tee "test-results/backend/${service}.log"
+            ) 2>&1 | tee "test-results/backend/${service}.log"; then
+              docker ps -a
+              cleanup_testcontainers
+              exit 1
+            fi
+            cleanup_testcontainers
           done
 
       - name: Frontend build
