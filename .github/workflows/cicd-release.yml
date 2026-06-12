@@ -473,6 +473,49 @@ jobs:
             wait_for_gateway
           }
 
+          seed_legacy_oplog_fixture() {
+            docker compose -p "$CRM_E2E_COMPOSE_PROJECT" -f "$CRM_E2E_COMPOSE_FILE" exec -T postgres \
+              psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system <<'SQL'
+          INSERT INTO audit_history.events (
+            event_uid, event_id, event_version, producer_service, surfaces,
+            actor_user_id, actor_role, actor_display, action,
+            resource_type, resource_id, parent_resource_type, parent_resource_id,
+            result, reason_code, before_summary, after_summary, diff_classification,
+            scope_summary, safe_summary, correlation_id, causation_id, acceptance_ids,
+            occurred_at, prev_hash, event_hash
+          )
+          VALUES (
+            'evt_ci_oplog_admin_changed',
+            'EVT-USER-ADMIN-CHANGED',
+            1,
+            'identity-authz',
+            ARRAY['operation_log'],
+            'usr_seed_admin',
+            'Administrator',
+            'Seed Administrator',
+            'create_user',
+            'User',
+            'usr_ci_oplog_fixture',
+            '',
+            '',
+            'success',
+            '',
+            '{}'::jsonb,
+            '{"role":"Sales"}'::jsonb,
+            'Security Critical',
+            'administrator only',
+            'Administrator create_user on User',
+            'ci-oplog-fixture',
+            'ci-oplog-fixture',
+            ARRAY['ACC-022','TEST-OPLOG-001','TEST-OPLOG-002','TEST-OPLOG-005'],
+            now(),
+            COALESCE((SELECT event_hash FROM audit_history.events ORDER BY sequence_id DESC LIMIT 1), ''),
+            md5('evt_ci_oplog_admin_changed')
+          )
+          ON CONFLICT (event_uid) DO NOTHING;
+          SQL
+          }
+
           stable_specs=(
             e2e/accounts.spec.ts
             e2e/archive.spec.ts
@@ -508,6 +551,9 @@ jobs:
           for target in "${isolated_tests[@]}"; do
             echo "Resetting e2e database before isolated test: $target"
             reset_e2e_database
+            if [[ "$target" == "e2e/oplog.spec.ts:13" ]]; then
+              seed_legacy_oplog_fixture
+            fi
             npm run test:e2e -- --workers=2 --retries=1 "$target"
           done
 
