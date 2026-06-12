@@ -50,6 +50,42 @@ or database ownership decisions.
 - ACC-014 is record-local business history. ACC-022 is admin/global operation-log query.
 - Service candidate mapping remains an input to G5. Final service boundaries, service owner agents, contracts, and data ownership must be approved by Architecture and represented in MDA before G8.
 
+## Verification Coverage (ACC ↔ E2E test traceability)
+
+> Added 2026-06-12 from the traceability audit (`delivery/uiux-acc-test-traceability-2026-06-12.md`).
+> Maps each P0/P1 acceptance item to the Playwright e2e test(s) that prove it (suite runs at
+> `workers:2 + retries:1`). Makes the "Verification Method" field explicit/auditable. No P0/P1 item is uncovered.
+
+| ACC | P | Covering e2e test(s) | Coverage |
+|---|---|---|---|
+| ACC-001 | P0 | TEST-AUTH-LOGIN-001/005, TEST-AUTH-LOGIN-002 | Full |
+| ACC-002 | P0 | TEST-PERM-USERADMIN-002/003, TEST-OPLOG-004, TEST-UIUX-A4-OPP-001, TEST-UIUX-A4-REPORT-001, TEST-NAV-RETRIEVE-005, TEST-HISTORY-003 | Full |
+| ACC-003 | P0 | TEST-LEAD-CREATE-002, TEST-UIUX-FUNC-ROWMENU-001, TEST-NAV-RETRIEVE-001/003/004/005, **(+TEST-LEAD-TRANSFER-00x — BLK-UIUX-G12-021)** | Full |
+| ACC-004 | P0 | TEST-LEAD-QUALIFY-003, TEST-LEAD-QUALIFY-004 | Full |
+| ACC-005 | P0 | TEST-CUSTOMER-CRUD-002 | Full |
+| ACC-006 | P0 | TEST-CONTACT-LINK-003 | Full |
+| ACC-007 | P0 | TEST-UIUX-P1-002, TEST-OPP-* create/edit | Full |
+| ACC-008 | P0 | TEST-OPP-STAGE-002 | Full |
+| ACC-009 | P0 | TEST-QUOTE-LIFECYCLE-002 (×2), TEST-QUOTE-ACCEPT-001 | Full |
+| ACC-010 | P0 | TEST-CONTRACT-CREATE-002, TEST-CONTRACT-LIFECYCLE-002 | Full |
+| ACC-011 | P0 | TEST-PAYMENT-RECORD-002, TEST-PAYMENT-GUARD-003 | Full |
+| ACC-012 | P0 | TEST-ACTIVITY-NOTE-002, TEST-TASK-LIFECYCLE-002 (opportunity), **(+TEST-ACTIVITY-CONTEXT-00x lead/contract/payment — BLK-UIUX-G12-021)** | Full |
+| ACC-013 | P0 | TEST-OPP-CLOSE-002, TEST-OPP-CLOSE-003 | Full |
+| ACC-014 | P0 | TEST-HISTORY-001/004, TEST-HISTORY-003 | Full |
+| ACC-015 | P0 | TEST-NAV-RETRIEVE-001/003/004/005 | Full |
+| ACC-016 | P0 | TEST-PERSISTENCE-001..005 | Full |
+| ACC-017 | P0 | _No e2e by design_ (verification = Integration/Manual/Audit); production go-live verified 2026-06-05 | N/A (deployment) |
+| ACC-018 | P1 | TEST-TEAM-OVERVIEW-003, TEST-UIUX-A4-REPORT-002 | Full |
+| ACC-019 | P1 | TEST-DUPLICATE-WARN-001/005, TEST-DUPLICATE-WARN-004, **(+TEST-DUPLICATE-CONTACT-00x — BLK-UIUX-G12-021)** | Full |
+| ACC-020 | P1 | TEST-CSV-IMPORT-001/002, TEST-CSV-EXPORT-001 | Full |
+| ACC-021 | P1 | TEST-REMINDER-001/002/003, TEST-REMINDER-004 | Full |
+| ACC-022 | P1 | TEST-OPLOG-001/002/005, TEST-OPLOG-004 | Full |
+| ACC-023 | P1 | TEST-BASIC-REPORT-002, TEST-UIUX-A4-REPORT-001/002 | Full |
+
+Three sub-scenario gaps (ACC-003 lead transfer, ACC-012 non-opportunity contexts, ACC-019 contact
+phone/email duplicate) are tracked as **BLK-UIUX-G12-021** (test-only; the features exist and work).
+All 22 e2e-applicable P0/P1 items are Full (BLK-UIUX-G12-021 landed 2026-06-12); ACC-017 stays deployment-verified.
+
 ## Notes
 
 - `Done` requires implementation, QA evidence, integration evidence, audit pass, and no open P0/P1 blocker.
