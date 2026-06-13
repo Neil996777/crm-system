@@ -65,10 +65,12 @@ Attach the full transcript, not a summary:
 | `docker load` | `<path>` |
 | Loaded image digest verification | `<path>` |
 | Pre-migration backup | `<path>` |
-| Image-only `docker compose up -d` | `<path>` |
+| PostgreSQL-only `docker compose up -d postgres` | `<path>` |
 | Migration from release artifact SQL | `<path>` |
+| Application-service `docker compose up -d ...` after migrations | `<path>` |
 | Nginx config test and reload | `<path>` |
 | Health checks | `<path>` |
+| Service startup logs since deploy start | `<path>` |
 
 Transcript must not contain secret values.
 
@@ -86,6 +88,7 @@ Transcript must not contain secret values.
 | Frontend loopback | `frontend-web` only loopback/internal | `<fill>` | `<path>` |
 | Secret handling | `prod.env` and `backup.passphrase` paths exist; required variable names present; values not printed | `<fill>` | `<path>` |
 | Service DB role secrets | `CRM_DB_PASSWORD_*` variables are injected during migrations without command-line or transcript exposure | `<fill>` | `<path>` |
+| Startup race scan | Service logs since deployment start contain 0 `28P01`, 0 password-authentication failures, and 0 `502` evidence | `<fill>` | `<path>` |
 
 ## 5. Rollback Point
 

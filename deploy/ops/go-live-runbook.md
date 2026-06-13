@@ -83,7 +83,7 @@ All commands in this runbook that execute a deployment step go through
 operator attempts source checkout, frontend build, Docker image build, Compose
 build, or Compose up with build flags on the production host.
 
-## Fourteen-Step Deployment
+## Fifteen-Step Deployment
 
 Run as `crm-deploy` unless a command explicitly uses `sudo`.
 
@@ -200,14 +200,16 @@ and verifies that loaded config-blob digest plus the
 `org.opencontainers.image.revision=66d2531` and
 `com.crm.release.content=66d2531` labels.
 
-### 10. Run image-only Compose
+### 10. Start PostgreSQL only and wait for readiness
 
 ```bash
-bash deploy/scripts/compose-up-release.sh /opt/crm-system/releases/66d2531
+bash deploy/scripts/compose-up-release.sh /opt/crm-system/releases/66d2531 postgres
 ```
 
-The wrapper runs `docker compose ... up -d` with the release env file and the
-secret env loaded in the shell. It does not build.
+The wrapper records `deploy-start.iso`, runs image-only
+`docker compose ... up -d postgres`, and waits for PostgreSQL readiness. It does
+not start application services before migrations create the service database
+roles.
 
 ### 11. Run migrations from release artifacts
 
@@ -224,7 +226,18 @@ file afterward. The transcript records the command and temporary path only; secr
 values are not passed on the command line and are not printed. No source checkout
 is used.
 
-### 12. Apply host Nginx config and reload
+### 12. Start application services after migrations
+
+```bash
+bash deploy/scripts/compose-up-release.sh /opt/crm-system/releases/66d2531 apps
+```
+
+This starts `gateway-bff`, the nine Go service containers, and `frontend-web`
+only after the role-creating migrations have completed. This ordering is required
+to avoid the startup race where services connect as `crm_*_user` before those
+roles exist.
+
+### 13. Apply host Nginx config and reload
 
 ```bash
 bash deploy/scripts/apply-nginx-runtime-config.sh /opt/crm-system/releases/66d2531
@@ -234,11 +247,12 @@ The generated host Nginx config keeps 80/443 ownership scoped to the CRM
 `server_name`, proxies API traffic to `127.0.0.1:8080`, and proxies the SPA to
 `127.0.0.1:8081`.
 
-### 13. Run health checks and negative port checks
+### 14. Run health checks, negative port checks, and service-log startup scan
 
 ```bash
 bash deploy/scripts/health-check-release.sh /opt/crm-system/releases/66d2531
 bash deploy/healthcheck/check_endpoint.sh
+bash deploy/scripts/collect-service-logs.sh /opt/crm-system/releases/66d2531
 ```
 
 From an off-host network path, record both expected failures:
@@ -255,7 +269,13 @@ random renewal sleep so the operational step is deterministic:
 sudo certbot renew --no-random-sleep-on-renew --deploy-hook "systemctl reload nginx"
 ```
 
-### 14. Freeze G11 evidence and mark current-good only after G11 review
+`collect-service-logs.sh` captures `docker compose logs --since deploy-start.iso`
+for every CRM container and fails if service logs contain startup `28P01`,
+password-authentication failures, or `502` evidence. This scan is required for
+BLK-CICD-G11-004 closure because the race appears in service logs, not only in
+the deploy transcript.
+
+### 15. Freeze G11 evidence and mark current-good only after G11 review
 
 Copy these into the G11 evidence package:
 
@@ -265,6 +285,7 @@ Copy these into the G11 evidence package:
 - `rollback-point.txt`, backup filename, backup checksum, offsite copy result;
 - `docker compose ps`, health-check output, endpoint smoke output, negative
   public-port check output;
+- service logs from `evidence/service-logs/` plus `service-log-scan.txt`;
 - Infrastructure Ops signoff for ingress, disk, secret, backup, monitoring, and
   public IP.
 
