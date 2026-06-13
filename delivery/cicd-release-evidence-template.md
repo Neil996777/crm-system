@@ -84,7 +84,8 @@ Transcript must not contain secret values.
 | Public gateway negative check | `8080` not public | `<fill>` | `<path>` |
 | Public PostgreSQL negative check | `5432` not public | `<fill>` | `<path>` |
 | Frontend loopback | `frontend-web` only loopback/internal | `<fill>` | `<path>` |
-| Secret handling | secret path exists; values not printed | `<fill>` | `<path>` |
+| Secret handling | `prod.env` and `backup.passphrase` paths exist; required variable names present; values not printed | `<fill>` | `<path>` |
+| Service DB role secrets | `CRM_DB_PASSWORD_*` variables are injected during migrations without command-line or transcript exposure | `<fill>` | `<path>` |
 
 ## 5. Rollback Point
 
@@ -115,6 +116,8 @@ previous-good rollback point for the next release.
 | `docker-compose.prod.yml` contains no `build:` | `<pass/fail>` | `<path>` |
 | Host runtime does not require `/opt/crm-system/current/.git` | `<pass/fail>` | `<path>` |
 | Migrations read from release artifact, not Git checkout | `<pass/fail>` | `<path>` |
+| Release migrations contain no `_dev_password` literals | `<pass/fail>` | `<path>` |
+| Deployment transcript contains no `CRM_DB_PASSWORD_` values | `<pass/fail>` | `<path>` |
 
 ## 7. G11 Return Notes
 

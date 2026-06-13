@@ -26,6 +26,42 @@ go_services=(
 
 app_images=("${go_services[@]}" frontend-web)
 
+db_role_names=(
+  crm_identity_authz_user
+  crm_lead_user
+  crm_account_user
+  crm_opportunity_user
+  crm_commercial_user
+  crm_work_user
+  crm_audit_history_user
+  crm_reporting_user
+  crm_import_export_user
+)
+
+db_role_old_passwords=(
+  crm_identity_authz_dev_password
+  crm_lead_dev_password
+  crm_account_dev_password
+  crm_opportunity_dev_password
+  crm_commercial_dev_password
+  crm_work_dev_password
+  crm_audit_history_dev_password
+  crm_reporting_dev_password
+  crm_import_export_dev_password
+)
+
+db_role_secret_vars=(
+  CRM_DB_PASSWORD_IDENTITY_AUTHZ
+  CRM_DB_PASSWORD_LEAD
+  CRM_DB_PASSWORD_ACCOUNT
+  CRM_DB_PASSWORD_OPPORTUNITY
+  CRM_DB_PASSWORD_COMMERCIAL
+  CRM_DB_PASSWORD_WORK
+  CRM_DB_PASSWORD_AUDIT_HISTORY
+  CRM_DB_PASSWORD_REPORTING
+  CRM_DB_PASSWORD_IMPORT_EXPORT
+)
+
 die() {
   printf 'ERROR: %s\n' "$*" >&2
   exit 1
@@ -41,6 +77,37 @@ sha256_file() {
 
 service_var_name() {
   printf '%s' "$1" | tr '[:lower:]' '[:upper:]' | tr '-' '_'
+}
+
+parameterize_db_role_passwords() {
+  local i role old_password secret_var file
+
+  for i in "${!db_role_names[@]}"; do
+    role="${db_role_names[$i]}"
+    old_password="${db_role_old_passwords[$i]}"
+    secret_var="${db_role_secret_vars[$i]}"
+
+    while IFS= read -r file; do
+      ROLE="$role" OLD_PASSWORD="$old_password" SECRET_VAR="$secret_var" perl -0pi -e '
+        my $role = $ENV{"ROLE"};
+        my $old_password = $ENV{"OLD_PASSWORD"};
+        my $secret_var = $ENV{"SECRET_VAR"};
+        my $needle = "CREATE ROLE $role LOGIN PASSWORD " . chr(39) . "$old_password" . chr(39) . ";";
+        my $replacement = "CREATE ROLE $role LOGIN PASSWORD :" . chr(39) . "$secret_var" . chr(39) . ";";
+        s/\Q$needle\E/$replacement/g;
+      ' "$file"
+    done < <(find "$BUNDLE_DIR/migrations" -type f -name '*.up.sql' -print)
+  done
+
+  if grep -RIn '_dev_password' "$BUNDLE_DIR/migrations" >/dev/null; then
+    grep -RIn '_dev_password' "$BUNDLE_DIR/migrations" >&2
+    die "release migrations still contain development database role passwords"
+  fi
+
+  for secret_var in "${db_role_secret_vars[@]}"; do
+    grep -RIn ":'$secret_var'" "$BUNDLE_DIR/migrations" >/dev/null \
+      || die "release migrations do not reference $secret_var"
+  done
 }
 
 expected_full="$(git -C "$SOURCE_DIR" rev-parse "$RELEASE_COMMIT^{commit}")"
@@ -90,6 +157,8 @@ for migrations_dir in "$SOURCE_DIR"/services/*/migrations; do
   mkdir -p "$BUNDLE_DIR/migrations/$service"
   cp "$migrations_dir"/*.sql "$BUNDLE_DIR/migrations/$service/"
 done
+
+parameterize_db_role_passwords
 
 (
   cd "$BUNDLE_DIR/migrations"

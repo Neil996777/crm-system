@@ -7,6 +7,7 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 transcript="${CRM_DEPLOY_TRANSCRIPT:-/opt/crm-system/releases/66d2531/deploy-transcript.log}"
+stdin_file="${CRM_RELEASE_STDIN_FILE:-}"
 mkdir -p "$(dirname "$transcript")"
 
 die() {
@@ -39,6 +40,12 @@ fi
 {
   printf '+'
   printf ' %q' "$@"
-  printf '\n'
-  "$@"
+  if [[ -n "$stdin_file" ]]; then
+    [[ -f "$stdin_file" ]] || die "stdin file not found: $stdin_file"
+    printf ' < %q\n' "$stdin_file"
+    "$@" < "$stdin_file"
+  else
+    printf '\n'
+    "$@"
+  fi
 } 2>&1 | tee -a "$transcript"

@@ -36,6 +36,46 @@
 | `/opt/crm-system/backups/postgres/` | local encrypted backup output |
 | `/opt/crm-system/logs/` | deployment, Nginx, app, and backup logs |
 
+`prod.env` must define the runtime PostgreSQL admin variables, service database
+URLs, service-to-service secret, and the production database-role passwords used
+by the release migrations. The release bundle must not contain development role
+passwords. Secret values must not be printed in the transcript or copied into
+evidence.
+
+Required variable names in `prod.env`:
+
+```text
+POSTGRES_DB
+POSTGRES_USER
+POSTGRES_PASSWORD
+SERVICE_TOKEN_SECRET
+IDENTITY_AUTHZ_DATABASE_URL
+LEAD_DATABASE_URL
+ACCOUNT_DATABASE_URL
+OPPORTUNITY_DATABASE_URL
+COMMERCIAL_DATABASE_URL
+WORK_DATABASE_URL
+AUDIT_HISTORY_DATABASE_URL
+REPORTING_DATABASE_URL
+IMPORT_EXPORT_DATABASE_URL
+CRM_DB_PASSWORD_IDENTITY_AUTHZ
+CRM_DB_PASSWORD_LEAD
+CRM_DB_PASSWORD_ACCOUNT
+CRM_DB_PASSWORD_OPPORTUNITY
+CRM_DB_PASSWORD_COMMERCIAL
+CRM_DB_PASSWORD_WORK
+CRM_DB_PASSWORD_AUDIT_HISTORY
+CRM_DB_PASSWORD_REPORTING
+CRM_DB_PASSWORD_IMPORT_EXPORT
+```
+
+`prod.env` is sourced by Bash during deployment. Quote values that contain shell
+metacharacters, especially database URLs containing `&`, for example:
+
+```text
+LEAD_DATABASE_URL='postgres://crm_lead_user:<redacted>@postgres:5432/crm_system?sslmode=disable&search_path=lead'
+```
+
 ## Forbidden Production Actions
 
 All commands in this runbook that execute a deployment step go through
@@ -94,6 +134,9 @@ test -f /opt/crm-system/secrets/prod.env
 test -f /opt/crm-system/secrets/backup.passphrase
 printf '%s secret_path_verified path=/opt/crm-system/secrets/prod.env\n' "$(date -Is)" | tee -a "$CRM_DEPLOY_TRANSCRIPT"
 ```
+
+Do not print `prod.env`. The migration script validates that all required
+variables exist and that forbidden development secret values are not used.
 
 ### 6. Record Infrastructure Ops preflight
 
@@ -167,9 +210,12 @@ secret env loaded in the shell. It does not build.
 bash deploy/scripts/migrate-release-artifacts.sh /opt/crm-system/releases/66d2531 up
 ```
 
-Migration SQL is read from
-`/opt/crm-system/releases/66d2531/migrations/`, mounted into the postgres
-container as `/release-migrations`. No source checkout is used.
+Migration SQL is read from `/opt/crm-system/releases/66d2531/migrations/`.
+Service database-role passwords are parameterized in the release migration
+artifacts and injected from `prod.env` through a temporary local psql input
+file. The transcript records the command and temporary path only; secret values
+are not passed on the command line and are not printed. No source checkout is
+used.
 
 ### 12. Apply host Nginx config and reload
 

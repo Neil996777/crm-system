@@ -109,7 +109,8 @@ consume their outputs during G10/G11.
   - `docker load` app images.
   - verify loaded image IDs/digests and labels.
   - `docker compose up -d` without `--build`.
-  - run migrations from release artifact SQL.
+  - run migrations from release artifact SQL with database-role passwords
+    injected from `prod.env` without printing or command-line exposure.
   - validate Nginx config and reload.
   - run health and negative public-port checks.
   - record full transcript.
@@ -131,6 +132,7 @@ consume their outputs during G10/G11.
   - health checks.
   - rollback point.
   - no secret values.
+  - release migrations contain no fixed development database-role passwords.
 - Evidence template: `delivery/cicd-release-evidence-template.md`.
 
 ### M6 - Running Digest Verification

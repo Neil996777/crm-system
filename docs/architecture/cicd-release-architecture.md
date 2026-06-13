@@ -90,7 +90,10 @@ release-crm-system-66d2531/
 
 The migration SQL in this bundle is a release artifact derived from commit
 `66d2531`; it is not a Git checkout and is not used for building on the
-production host.
+production host. Service database-role passwords in the migration release
+artifact are parameterized at bundle generation time and resolved from the
+production `prod.env` during G11. The bundle must not ship fixed development
+role passwords.
 
 ## M3 Image-Only `docker-compose.prod.yml` Design
 
@@ -161,7 +164,9 @@ The G9 runbook replaces host checkout/build with load-and-run:
 10. Run image-only Compose:
     `docker compose -f docker-compose.prod.yml --env-file .env.release up -d`
     with no `--build`.
-11. Run migrations from release artifact SQL only; do not read from Git.
+11. Run migrations from release artifact SQL only; do not read from Git. Inject
+    production database-role passwords from `prod.env` without passing secret
+    values on the command line or writing them to the transcript.
 12. Apply host Nginx runtime config through a deployment script after `nginx -t`;
     keep public 80/443 scoped to the CRM `server_name`.
 13. Run health checks and negative public-port checks.

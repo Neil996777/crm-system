@@ -52,6 +52,18 @@ services=(
   frontend-web
 )
 
+db_role_secret_vars=(
+  CRM_DB_PASSWORD_IDENTITY_AUTHZ
+  CRM_DB_PASSWORD_LEAD
+  CRM_DB_PASSWORD_ACCOUNT
+  CRM_DB_PASSWORD_OPPORTUNITY
+  CRM_DB_PASSWORD_COMMERCIAL
+  CRM_DB_PASSWORD_WORK
+  CRM_DB_PASSWORD_AUDIT_HISTORY
+  CRM_DB_PASSWORD_REPORTING
+  CRM_DB_PASSWORD_IMPORT_EXPORT
+)
+
 for service in "${services[@]}"; do
   tar_file="images/$service-$release_commit.tar"
   [[ -f "$tar_file" ]] || die "image archive missing: $tar_file"
@@ -60,5 +72,15 @@ done
 
 [[ -f migrations/migration-manifest.sha256 ]] || die "migration manifest missing"
 (cd migrations && sha256sum -c migration-manifest.sha256)
+
+if grep -RIn '_dev_password' migrations >/dev/null; then
+  grep -RIn '_dev_password' migrations >&2
+  die "release migrations contain development database role passwords"
+fi
+
+for secret_var in "${db_role_secret_vars[@]}"; do
+  grep -RIn ":'$secret_var'" migrations >/dev/null \
+    || die "release migrations do not reference $secret_var"
+done
 
 printf 'release bundle verified: %s\n' "$bundle_dir"

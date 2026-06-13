@@ -15,6 +15,7 @@ Release content commit: `66d2531`
 | M2 image metadata | `deploy/docker/go-service.Dockerfile`, `deploy/docker/frontend-web.Dockerfile`, and `deploy/release/build-release-bundle.sh` apply `org.opencontainers.image.revision=66d2531`, `com.crm.release.content=66d2531`, `com.crm.service`, source, and created labels. |
 | M3 image-only compose | `docker-compose.prod.yml` uses required `.env.release` image variables for all 10 Go services plus `frontend-web`; contains no `build:` key and no moving image fallback; Postgres uses `CRM_IMAGE_POSTGRES` digest reference; migrations mount from `/opt/crm-system/releases/66d2531/migrations`. |
 | M4 load-and-run deployment | `deploy/ops/go-live-runbook.md` is a 14-step checksum/load/verify/run/migrate/nginx/health/rollback runbook. Deployment scripts live under `deploy/release/` and use `run-release-step.sh` to fail fast on source checkout or host build attempts. |
+| M4 production secret-safe migrations | `deploy/release/build-release-bundle.sh` rewrites copied migration release artifacts so database-role passwords use `CRM_DB_PASSWORD_*` psql variables instead of fixed development literals. `deploy/release/migrate-release-artifacts.sh` reads those values from `/opt/crm-system/secrets/prod.env`, rejects known development secret values, feeds psql through a 0600 temporary stdin file, and does not place secret values on the command line or in the transcript. |
 | Frontend nginx runtime | `deploy/docker/frontend-web.Dockerfile`, `docker-compose.prod.yml`, `deploy/nginx/crm.conf`, and `deploy/release/apply-nginx-runtime-config.sh` route the SPA through loopback `127.0.0.1:8081`. |
 | Release evidence generation | `deploy/release/build-release-bundle.sh` copies `delivery/cicd-release-evidence-template.md` into the bundle and creates `evidence/cicd-release-evidence-66d2531.md` with CI artifact pointers. G11 must fill deploy transcript, health checks, rollback point, and Infrastructure Ops signoff. |
 
@@ -39,6 +40,7 @@ Release content commit: `66d2531`
 | CI workflow parse | PASS: `.github/workflows/cicd-release.yml` parses as YAML; extracted backend-stack heredoc is unindented correctly for shell execution |
 | Compose host-build scan | PASS: no `build:` key in `docker-compose.prod.yml` |
 | Moving-tag/source-dependence scan | PASS: no `CRM_IMAGE_TAG`, `latest`, or `/opt/crm-system/current` in `docker-compose.prod.yml`, `deploy/ops/go-live-runbook.md`, `deploy/nginx/crm.conf`, or `deploy/backup/backup.sh` |
+| Secret-safe migration scan | PASS required before G11: generated release bundle must contain `CRM_DB_PASSWORD_*` placeholders in migrations and no `_dev_password` literals under `migrations/` |
 
 ## Pending G10/G11 Evidence
 
