@@ -1,0 +1,27 @@
+Checking TLS certificate validity for /etc/letsencrypt/live/118.196.44.193/fullchain.pem
+TLS certificate has at least 172800 seconds remaining.
+issuer=C = US, O = Let's Encrypt, CN = YE2
+notBefore=Jun 13 03:02:25 2026 GMT
+notAfter=Jun 19 19:02:24 2026 GMT
+X509v3 Subject Alternative Name: critical
+    IP Address:118.196.44.193
+final_listeners
+State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                                                                                                                                            
+LISTEN 0      511          0.0.0.0:443        0.0.0.0:*    users:(("nginx",pid=3472409,fd=17),("nginx",pid=3472408,fd=17),("nginx",pid=3472407,fd=17),("nginx",pid=3472406,fd=17),("nginx",pid=148337,fd=17))
+LISTEN 0      511        127.0.0.1:18789      0.0.0.0:*    users:(("openclaw-gatewa",pid=874,fd=22))                                                                                                         
+LISTEN 0      511          0.0.0.0:80         0.0.0.0:*    users:(("nginx",pid=3472409,fd=14),("nginx",pid=3472408,fd=14),("nginx",pid=3472407,fd=14),("nginx",pid=3472406,fd=14),("nginx",pid=148337,fd=14))
+LISTEN 0      4096      127.0.0.54:53         0.0.0.0:*    users:(("systemd-resolve",pid=577,fd=17))                                                                                                         
+LISTEN 0      4096       127.0.0.1:8080       0.0.0.0:*    users:(("docker-proxy",pid=3406779,fd=7))                                                                                                         
+LISTEN 0      4096       127.0.0.1:8081       0.0.0.0:*    users:(("docker-proxy",pid=3406035,fd=7))                                                                                                         
+LISTEN 0      4096   127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=577,fd=15))                                                                                                         
+LISTEN 0      4096       127.0.0.1:41215      0.0.0.0:*    users:(("containerd",pid=1906,fd=14))                                                                                                             
+LISTEN 0      511        127.0.0.1:34499      0.0.0.0:*    users:(("openclaw-gatewa",pid=874,fd=24))                                                                                                         
+LISTEN 0      4096               *:22               *:*    users:(("sshd",pid=966,fd=3),("systemd",pid=1,fd=84))                                                                                             
+LISTEN 0      511            [::1]:18789         [::]:*    users:(("openclaw-gatewa",pid=874,fd=23))                                                                                                         
+final_disk
+Filesystem     Type  Size  Used Avail Use% Mounted on
+/dev/vda2      ext4   40G   13G   26G  33% /
+/dev/vda2      ext4   40G   13G   26G  33% /
+final_failed_services
+fwupd-refresh.service loaded failed failed Refresh fwupd metadata and update motd
+fwupd.service         loaded failed failed Firmware update daemon

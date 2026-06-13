@@ -1,0 +1,8 @@
+frontend_tmpfs_inspect
+tmpfs={"/tmp":"","/var/cache/nginx":"uid=101,gid=101,mode=0770","/var/run":""} readonly=true user=nginx
+uid=101(nginx) gid=101(nginx) groups=101(nginx)
+101:101 770 /var/cache/nginx
+101:101 777 /var/run
+0:0 1777 /tmp
+drwx------    2 nginx    nginx           40 Jun 13 09:38 /var/cache/nginx/client_temp
+ok

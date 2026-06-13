@@ -1,0 +1,10 @@
+role	login_result	current_user
+crm_identity_authz_user	PASS	crm_identity_authz_user
+crm_lead_user	PASS	crm_lead_user
+crm_account_user	PASS	crm_account_user
+crm_opportunity_user	PASS	crm_opportunity_user
+crm_commercial_user	PASS	crm_commercial_user
+crm_work_user	PASS	crm_work_user
+crm_audit_history_user	PASS	crm_audit_history_user
+crm_reporting_user	PASS	crm_reporting_user
+crm_import_export_user	PASS	crm_import_export_user
