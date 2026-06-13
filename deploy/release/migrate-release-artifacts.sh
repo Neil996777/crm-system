@@ -21,6 +21,18 @@ db_role_secret_vars=(
   CRM_DB_PASSWORD_IMPORT_EXPORT
 )
 
+db_role_secret_tokens=(
+  __CRM_DB_PASSWORD_IDENTITY_AUTHZ__
+  __CRM_DB_PASSWORD_LEAD__
+  __CRM_DB_PASSWORD_ACCOUNT__
+  __CRM_DB_PASSWORD_OPPORTUNITY__
+  __CRM_DB_PASSWORD_COMMERCIAL__
+  __CRM_DB_PASSWORD_WORK__
+  __CRM_DB_PASSWORD_AUDIT_HISTORY__
+  __CRM_DB_PASSWORD_REPORTING__
+  __CRM_DB_PASSWORD_IMPORT_EXPORT__
+)
+
 runtime_secret_vars=(
   POSTGRES_PASSWORD
   SERVICE_TOKEN_SECRET
@@ -80,21 +92,60 @@ reject_development_secret() {
   esac
 }
 
-psql_meta_quote() {
+sql_literal_escape() {
   local value="$1"
+  local quote="'"
 
-  value="${value//\\/\\\\}"
-  value="${value//\'/\\\'}"
+  value="${value//"$quote"/"$quote$quote"}"
   printf '%s' "$value"
 }
 
-write_psql_secret_vars() {
-  local var_name value
+cleanup_tmp_dir() {
+  local file
 
-  for var_name in "${db_role_secret_vars[@]}"; do
+  [[ -n "${tmp_dir:-}" && -d "$tmp_dir" ]] || return 0
+
+  if command -v shred >/dev/null 2>&1; then
+    find "$tmp_dir" -type f -exec shred -u {} + 2>/dev/null || true
+  else
+    while IFS= read -r file; do
+      : > "$file" || true
+      rm -f "$file" || true
+    done < <(find "$tmp_dir" -type f -print)
+  fi
+
+  rm -rf "$tmp_dir"
+}
+
+render_release_sql() {
+  local source_file="$1"
+  local dest_file="$2"
+  local rel="$3"
+  local sql i token var_name value escaped
+
+  sql="$(<"$source_file")"
+
+  if [[ "$sql" == *"_dev_password"* ]]; then
+    die "release migration contains forbidden development password literal: $rel"
+  fi
+
+  for i in "${!db_role_secret_tokens[@]}"; do
+    token="${db_role_secret_tokens[$i]}"
+    var_name="${db_role_secret_vars[$i]}"
     value="${!var_name}"
-    printf "\\set %s '%s'\n" "$var_name" "$(psql_meta_quote "$value")"
+    escaped="$(sql_literal_escape "$value")"
+    sql="${sql//"$token"/"$escaped"}"
   done
+
+  if [[ "$sql" == *"__CRM_DB_PASSWORD_"* ]]; then
+    die "release migration still contains an unrendered database password token: $rel"
+  fi
+
+  {
+    printf '\\echo running release migration %s\n' "$rel"
+    printf '%s\n' "$sql"
+  } > "$dest_file"
+  chmod 600 "$dest_file"
 }
 
 require_var POSTGRES_DB
@@ -119,19 +170,15 @@ fi
 
 tmp_dir="$(mktemp -d)"
 chmod 700 "$tmp_dir"
-trap 'rm -rf "$tmp_dir"' EXIT
+umask 077
+trap cleanup_tmp_dir EXIT
 
 for file in "${files[@]}"; do
   rel="${file#$migrations_dir/}"
   safe_rel="$(printf '%s' "$rel" | tr '/.' '__')"
   stdin_file="$tmp_dir/$safe_rel.sql"
 
-  {
-    write_psql_secret_vars
-    printf '\\echo running release migration %s\n' "$rel"
-    cat "$file"
-  } > "$stdin_file"
-  chmod 600 "$stdin_file"
+  render_release_sql "$file" "$stdin_file" "$rel"
 
   CRM_RELEASE_STDIN_FILE="$stdin_file" "$script_dir/run-release-step.sh" \
     docker compose \

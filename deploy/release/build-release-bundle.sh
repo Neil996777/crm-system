@@ -62,6 +62,18 @@ db_role_secret_vars=(
   CRM_DB_PASSWORD_IMPORT_EXPORT
 )
 
+db_role_secret_tokens=(
+  __CRM_DB_PASSWORD_IDENTITY_AUTHZ__
+  __CRM_DB_PASSWORD_LEAD__
+  __CRM_DB_PASSWORD_ACCOUNT__
+  __CRM_DB_PASSWORD_OPPORTUNITY__
+  __CRM_DB_PASSWORD_COMMERCIAL__
+  __CRM_DB_PASSWORD_WORK__
+  __CRM_DB_PASSWORD_AUDIT_HISTORY__
+  __CRM_DB_PASSWORD_REPORTING__
+  __CRM_DB_PASSWORD_IMPORT_EXPORT__
+)
+
 die() {
   printf 'ERROR: %s\n' "$*" >&2
   exit 1
@@ -80,33 +92,39 @@ service_var_name() {
 }
 
 parameterize_db_role_passwords() {
-  local i role old_password secret_var file
+  local i role old_password secret_token file count
 
   for i in "${!db_role_names[@]}"; do
     role="${db_role_names[$i]}"
     old_password="${db_role_old_passwords[$i]}"
-    secret_var="${db_role_secret_vars[$i]}"
+    secret_token="${db_role_secret_tokens[$i]}"
 
     while IFS= read -r file; do
-      ROLE="$role" OLD_PASSWORD="$old_password" SECRET_VAR="$secret_var" perl -0pi -e '
+      ROLE="$role" OLD_PASSWORD="$old_password" SECRET_TOKEN="$secret_token" perl -0pi -e '
         my $role = $ENV{"ROLE"};
         my $old_password = $ENV{"OLD_PASSWORD"};
-        my $secret_var = $ENV{"SECRET_VAR"};
+        my $secret_token = $ENV{"SECRET_TOKEN"};
         my $needle = "CREATE ROLE $role LOGIN PASSWORD " . chr(39) . "$old_password" . chr(39) . ";";
-        my $replacement = "CREATE ROLE $role LOGIN PASSWORD :" . chr(39) . "$secret_var" . chr(39) . ";";
+        my $replacement = "CREATE ROLE $role LOGIN PASSWORD " . chr(39) . "$secret_token" . chr(39) . ";";
         s/\Q$needle\E/$replacement/g;
       ' "$file"
     done < <(find "$BUNDLE_DIR/migrations" -type f -name '*.up.sql' -print)
   done
 
   if grep -RIn '_dev_password' "$BUNDLE_DIR/migrations" >/dev/null; then
-    grep -RIn '_dev_password' "$BUNDLE_DIR/migrations" >&2
+    grep -RIl '_dev_password' "$BUNDLE_DIR/migrations" >&2
     die "release migrations still contain development database role passwords"
   fi
 
-  for secret_var in "${db_role_secret_vars[@]}"; do
-    grep -RIn ":'$secret_var'" "$BUNDLE_DIR/migrations" >/dev/null \
-      || die "release migrations do not reference $secret_var"
+  if grep -RIl ":'CRM_DB_PASSWORD_" "$BUNDLE_DIR/migrations" >/dev/null; then
+    grep -RIl ":'CRM_DB_PASSWORD_" "$BUNDLE_DIR/migrations" >&2
+    die "release migrations still contain psql secret variables instead of render tokens"
+  fi
+
+  for secret_token in "${db_role_secret_tokens[@]}"; do
+    count="$( (grep -RohF "$secret_token" "$BUNDLE_DIR/migrations" || true) | wc -l | tr -d '[:space:]')"
+    [[ "$count" == "1" ]] \
+      || die "release migrations contain $count occurrences of $secret_token; expected 1"
   done
 }
 

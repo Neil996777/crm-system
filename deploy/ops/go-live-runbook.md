@@ -186,14 +186,19 @@ evidence.
 bash deploy/scripts/load-images.sh /opt/crm-system/releases/66d2531
 ```
 
-### 9. Verify loaded image IDs and commit labels
+### 9. Verify loaded image archive/config digests and commit labels
 
 ```bash
 bash deploy/scripts/verify-loaded-images.sh /opt/crm-system/releases/66d2531
 ```
 
-This fails if any app image ID differs from `.env.release` or if any app image
-does not carry `org.opencontainers.image.revision=66d2531`.
+This uses a store-independent check that works with both classic Docker image
+stores and containerd snapshotter stores: it verifies each original archive
+SHA-256 against `.env.release`, verifies the archive config-blob digest against
+the manifest image digest, saves each loaded image tag back to a temporary archive,
+and verifies that loaded config-blob digest plus the
+`org.opencontainers.image.revision=66d2531` and
+`com.crm.release.content=66d2531` labels.
 
 ### 10. Run image-only Compose
 
@@ -211,11 +216,13 @@ bash deploy/scripts/migrate-release-artifacts.sh /opt/crm-system/releases/66d253
 ```
 
 Migration SQL is read from `/opt/crm-system/releases/66d2531/migrations/`.
-Service database-role passwords are parameterized in the release migration
-artifacts and injected from `prod.env` through a temporary local psql input
-file. The transcript records the command and temporary path only; secret values
-are not passed on the command line and are not printed. No source checkout is
-used.
+Service database-role passwords are represented by unique
+`__CRM_DB_PASSWORD_*__` tokens in the release migration artifacts. The migration
+script reads the matching values from `prod.env`, renders a 0600 temporary SQL
+file, feeds that file to psql through stdin, and securely deletes the temporary
+file afterward. The transcript records the command and temporary path only; secret
+values are not passed on the command line and are not printed. No source checkout
+is used.
 
 ### 12. Apply host Nginx config and reload
 
@@ -239,6 +246,13 @@ From an off-host network path, record both expected failures:
 ```bash
 nc -zv 118.196.44.193 8080
 nc -zv 118.196.44.193 5432
+```
+
+If certificate renewal is needed during the deployment window, avoid certbot's
+random renewal sleep so the operational step is deterministic:
+
+```bash
+sudo certbot renew --no-random-sleep-on-renew --deploy-hook "systemctl reload nginx"
 ```
 
 ### 14. Freeze G11 evidence and mark current-good only after G11 review

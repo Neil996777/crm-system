@@ -64,6 +64,29 @@ db_role_secret_vars=(
   CRM_DB_PASSWORD_IMPORT_EXPORT
 )
 
+db_role_secret_tokens=(
+  __CRM_DB_PASSWORD_IDENTITY_AUTHZ__
+  __CRM_DB_PASSWORD_LEAD__
+  __CRM_DB_PASSWORD_ACCOUNT__
+  __CRM_DB_PASSWORD_OPPORTUNITY__
+  __CRM_DB_PASSWORD_COMMERCIAL__
+  __CRM_DB_PASSWORD_WORK__
+  __CRM_DB_PASSWORD_AUDIT_HISTORY__
+  __CRM_DB_PASSWORD_REPORTING__
+  __CRM_DB_PASSWORD_IMPORT_EXPORT__
+)
+
+is_expected_secret_token() {
+  local candidate="$1"
+  local token
+
+  for token in "${db_role_secret_tokens[@]}"; do
+    [[ "$candidate" == "$token" ]] && return 0
+  done
+
+  return 1
+}
+
 for service in "${services[@]}"; do
   tar_file="images/$service-$release_commit.tar"
   [[ -f "$tar_file" ]] || die "image archive missing: $tar_file"
@@ -74,13 +97,34 @@ done
 (cd migrations && sha256sum -c migration-manifest.sha256)
 
 if grep -RIn '_dev_password' migrations >/dev/null; then
-  grep -RIn '_dev_password' migrations >&2
+  grep -RIl '_dev_password' migrations >&2
   die "release migrations contain development database role passwords"
 fi
 
-for secret_var in "${db_role_secret_vars[@]}"; do
-  grep -RIn ":'$secret_var'" migrations >/dev/null \
-    || die "release migrations do not reference $secret_var"
+if grep -RIl ":'CRM_DB_PASSWORD_" migrations >/dev/null; then
+  grep -RIl ":'CRM_DB_PASSWORD_" migrations >&2
+  die "release migrations contain psql secret variables; DO-block migrations require render tokens"
+fi
+
+for secret_token in "${db_role_secret_tokens[@]}"; do
+  count="$( (grep -RohF "$secret_token" migrations || true) | wc -l | tr -d '[:space:]')"
+  [[ "$count" == "1" ]] \
+    || die "release migrations contain $count occurrences of $secret_token; expected 1"
 done
+
+bad_password_files=()
+while IFS= read -r sql_file; do
+  while IFS= read -r password_literal; do
+    if ! is_expected_secret_token "$password_literal"; then
+      bad_password_files+=("$sql_file")
+      break
+    fi
+  done < <(perl -nle 'while (/PASSWORD\s+'\''([^'\'']*)'\''/g) { print $1 }' "$sql_file")
+done < <(find migrations -type f -name '*.sql' -print)
+
+if [[ "${#bad_password_files[@]}" -gt 0 ]]; then
+  printf '%s\n' "${bad_password_files[@]}" | sort -u >&2
+  die "release migrations contain unexpected password literals"
+fi
 
 printf 'release bundle verified: %s\n' "$bundle_dir"

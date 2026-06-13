@@ -586,6 +586,9 @@ jobs:
           REPO_SOURCE: ${{ github.server_url }}/${{ github.repository }}
         run: bash deploy/release/build-release-bundle.sh
 
+      - name: Verify release bundle
+        run: bash deploy/release/verify-release-bundle.sh "dist/release-crm-system-$RELEASE_COMMIT"
+
       - name: Upload release bundle
         uses: actions/upload-artifact@v4
         with:
