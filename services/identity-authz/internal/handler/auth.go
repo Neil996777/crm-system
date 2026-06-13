@@ -105,7 +105,7 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 	user, err := h.users.FindByEmail(ctx, strings.TrimSpace(request.Email))
 	if errors.Is(err, repo.ErrNotFound) {
 		_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte(request.Password))
-		if err := h.appendAccessDenied(ctx, "", "login_failed"); err != nil {
+		if err := h.appendAccessDenied(ctx, auditActorAnonymous(), auditAccessDeniedOptions{ReasonCode: "login_failed"}); err != nil {
 			writeDependencyUnavailable(w)
 			return
 		}
@@ -117,7 +117,7 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password)) != nil || !user.Active() {
-		if err := h.appendAccessDenied(ctx, user.ID, "login_failed"); err != nil {
+		if err := h.appendAccessDenied(ctx, auditActorFromUser(user), auditAccessDeniedOptions{ReasonCode: "login_failed"}); err != nil {
 			writeDependencyUnavailable(w)
 			return
 		}
@@ -182,12 +182,11 @@ func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		txSessions := repo.NewSessionRepoTx(tx)
+		txUsers := repo.NewUserRepoTx(tx)
 		txOutbox := event.NewOutboxTx(tx)
 		if userID, revokeErr := txSessions.Revoke(ctx, cookie.Value, now); revokeErr == nil {
-			if err := txOutbox.Append(ctx, event.UserSignedOut, userID, map[string]any{
-				"actorId": userID,
-				"result":  "success",
-			}); err != nil {
+			actor := auditActorFromUserID(ctx, txUsers, userID)
+			if err := txOutbox.Append(ctx, event.UserSignedOut, userID, signOutPayload(actor)); err != nil {
 				_ = tx.Rollback()
 				log.Printf("append sign-out event: %v", err)
 				writeErrorCode(w, http.StatusServiceUnavailable, "DEPENDENCY_UNAVAILABLE", "dependency", "A required dependency is unavailable.")
@@ -227,14 +226,14 @@ func (h *AuthHandler) currentUser(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) authenticate(ctx context.Context, r *http.Request) (domain.User, string, string, bool) {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil || cookie.Value == "" {
-		if err := h.appendAccessDenied(ctx, "", "unauthenticated"); err != nil {
+		if err := h.appendAccessDenied(ctx, auditActorAnonymous(), auditAccessDeniedOptions{ReasonCode: "unauthenticated"}); err != nil {
 			return domain.User{}, "", "DEPENDENCY_UNAVAILABLE", false
 		}
 		return domain.User{}, "", "AUTHENTICATION_FAILED", false
 	}
 	session, err := h.sessions.FindByID(ctx, cookie.Value)
 	if err != nil || !session.Active(time.Now().UTC()) {
-		if err := h.appendAccessDenied(ctx, "", "invalid_session"); err != nil {
+		if err := h.appendAccessDenied(ctx, auditActorAnonymous(), auditAccessDeniedOptions{ReasonCode: "invalid_session"}); err != nil {
 			return domain.User{}, "", "DEPENDENCY_UNAVAILABLE", false
 		}
 		return domain.User{}, "", "AUTHENTICATION_FAILED", false
@@ -243,7 +242,11 @@ func (h *AuthHandler) authenticate(ctx context.Context, r *http.Request) (domain
 	if err != nil || !user.Active() {
 		now := time.Now().UTC()
 		_, _ = h.sessions.Revoke(ctx, session.ID, now)
-		if err := h.appendAccessDenied(ctx, session.UserID, "inactive_user"); err != nil {
+		actor := auditActorFromUser(user)
+		if err != nil {
+			actor = auditActorFromUserID(ctx, h.users, session.UserID)
+		}
+		if err := h.appendAccessDenied(ctx, actor, auditAccessDeniedOptions{ReasonCode: "inactive_user"}); err != nil {
 			return domain.User{}, "", "DEPENDENCY_UNAVAILABLE", false
 		}
 		return domain.User{}, "", "AUTHENTICATION_FAILED", false
@@ -251,7 +254,7 @@ func (h *AuthHandler) authenticate(ctx context.Context, r *http.Request) (domain
 	if user.AuthzVersion != session.AuthzVersionAtIssue {
 		now := time.Now().UTC()
 		_, _ = h.sessions.Revoke(ctx, session.ID, now)
-		if err := h.appendAccessDenied(ctx, session.UserID, "authz_version_stale"); err != nil {
+		if err := h.appendAccessDenied(ctx, auditActorFromUser(user), auditAccessDeniedOptions{ReasonCode: "authz_version_stale"}); err != nil {
 			return domain.User{}, "", "DEPENDENCY_UNAVAILABLE", false
 		}
 		return domain.User{}, "", "AUTHZ_VERSION_STALE", false
@@ -259,18 +262,21 @@ func (h *AuthHandler) authenticate(ctx context.Context, r *http.Request) (domain
 	return user, session.ID, "", true
 }
 
-func (h *AuthHandler) appendAccessDenied(ctx context.Context, userID, reason string) error {
+func (h *AuthHandler) appendAccessDenied(ctx context.Context, actor auditActor, options auditAccessDeniedOptions) error {
 	tx, err := h.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("begin access-denied audit tx: %v", err)
 		return err
 	}
 	txOutbox := event.NewOutboxTx(tx)
-	if err := txOutbox.Append(ctx, event.UserAccessDenied, userID, map[string]any{
-		"actorId": userID,
-		"reason":  reason,
-		"result":  "denied",
-	}); err != nil {
+	payload := accessDeniedPayload(actor, options)
+	resourceID, _ := payload["resourceId"].(string)
+	aggregateID := actor.ID
+	if aggregateID == auditActorAnonymousID || aggregateID == auditActorUnknownID {
+		aggregateID = resourceID
+	}
+	aggregateID = firstAuditNonEmpty(aggregateID, resourceID, auditAuthResourceID)
+	if err := txOutbox.Append(ctx, event.UserAccessDenied, aggregateID, payload); err != nil {
 		_ = tx.Rollback()
 		log.Printf("append access-denied event: %v", err)
 		return err

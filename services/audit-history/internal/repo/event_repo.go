@@ -96,7 +96,7 @@ func (r *EventRepo) ByRecord(ctx context.Context, resourceType, resourceID strin
 	return r.query(ctx, `
 		SELECT event_uid, event_id, event_version, producer_service,
 			actor_user_id, actor_role, actor_display, action, resource_type, resource_id,
-			result, before_summary, after_summary, diff_classification, retention_policy, retain_until,
+			result, reason_code, before_summary, after_summary, diff_classification, retention_policy, retain_until,
 			safe_summary, occurred_at, prev_hash, event_hash
 		FROM audit_history.events
 		WHERE resource_type = $1 AND resource_id = $2 AND 'record_history' = ANY(surfaces)
@@ -108,7 +108,7 @@ func (r *EventRepo) OperationLog(ctx context.Context) ([]domain.Event, error) {
 	return r.query(ctx, `
 		SELECT event_uid, event_id, event_version, producer_service,
 			actor_user_id, actor_role, actor_display, action, resource_type, resource_id,
-			result, before_summary, after_summary, diff_classification, retention_policy, retain_until,
+			result, reason_code, before_summary, after_summary, diff_classification, retention_policy, retain_until,
 			safe_summary, occurred_at, prev_hash, event_hash
 		FROM audit_history.events
 		WHERE 'operation_log' = ANY(surfaces)
@@ -139,6 +139,7 @@ func (r *EventRepo) query(ctx context.Context, query string, args ...any) ([]dom
 			&event.ResourceType,
 			&event.ResourceID,
 			&event.Result,
+			&event.ReasonCode,
 			&beforeBytes,
 			&afterBytes,
 			&event.DiffClassification,

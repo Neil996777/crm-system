@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -20,6 +21,28 @@ type Config struct {
 type AuditHandler struct {
 	events *repo.EventRepo
 	config Config
+}
+
+type appendEventRequest struct {
+	EventUID           string         `json:"eventUid"`
+	EventID            string         `json:"eventId"`
+	EventVersion       int            `json:"eventVersion"`
+	Surfaces           []string       `json:"surfaces"`
+	Action             string         `json:"action"`
+	ResourceType       string         `json:"resourceType"`
+	ResourceID         string         `json:"resourceId"`
+	ParentResourceType string         `json:"parentResourceType"`
+	ParentResourceID   string         `json:"parentResourceId"`
+	Result             string         `json:"result"`
+	ReasonCode         string         `json:"reasonCode"`
+	BeforeSummary      map[string]any `json:"beforeSummary"`
+	AfterSummary       map[string]any `json:"afterSummary"`
+	DiffClassification string         `json:"diffClassification"`
+	ScopeSummary       string         `json:"scopeSummary"`
+	SafeSummary        string         `json:"safeSummary"`
+	CorrelationID      string         `json:"correlationId"`
+	CausationID        string         `json:"causationId"`
+	AcceptanceIDs      []string       `json:"acceptanceIds"`
 }
 
 func NewAuditServer(db *sql.DB, config Config) http.Handler {
@@ -40,32 +63,14 @@ func (h *AuditHandler) appendEvent(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, http.StatusUnauthorized, "SERVICE_AUTH_FAILED", "authentication", "Service authentication failed.")
 		return
 	}
-	var request struct {
-		EventUID           string         `json:"eventUid"`
-		EventID            string         `json:"eventId"`
-		EventVersion       int            `json:"eventVersion"`
-		Surfaces           []string       `json:"surfaces"`
-		Action             string         `json:"action"`
-		ResourceType       string         `json:"resourceType"`
-		ResourceID         string         `json:"resourceId"`
-		ParentResourceType string         `json:"parentResourceType"`
-		ParentResourceID   string         `json:"parentResourceId"`
-		Result             string         `json:"result"`
-		ReasonCode         string         `json:"reasonCode"`
-		BeforeSummary      map[string]any `json:"beforeSummary"`
-		AfterSummary       map[string]any `json:"afterSummary"`
-		DiffClassification string         `json:"diffClassification"`
-		ScopeSummary       string         `json:"scopeSummary"`
-		SafeSummary        string         `json:"safeSummary"`
-		CorrelationID      string         `json:"correlationId"`
-		CausationID        string         `json:"causationId"`
-		AcceptanceIDs      []string       `json:"acceptanceIds"`
-	}
+	var request appendEventRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		logAppendRejection("json_decode", claims.Issuer, appendEventRequest{}, r, nil, []string{"json"})
 		writeErrorCode(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
 		return
 	}
-	if request.EventID == "" || request.EventVersion == 0 || request.Action == "" || request.ResourceType == "" || request.ResourceID == "" || request.Result == "" || request.SafeSummary == "" || len(request.Surfaces) == 0 || len(request.AcceptanceIDs) == 0 {
+	if missing := missingAppendBodyFields(request); len(missing) > 0 {
+		logAppendRejection("body_required_fields", claims.Issuer, request, r, missing, nil)
 		writeErrorCode(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
 		return
 	}
@@ -95,12 +100,14 @@ func (h *AuditHandler) appendEvent(w http.ResponseWriter, r *http.Request) {
 	event.CorrelationID = firstNonEmpty(request.CorrelationID, r.Header.Get("X-Correlation-Id"))
 	event.CausationID = request.CausationID
 	event.AcceptanceIDs = request.AcceptanceIDs
-	if event.ActorUserID == "" || event.ActorRole == "" || event.ActorDisplay == "" {
+	if missing := missingActorHeaderFields(event); len(missing) > 0 {
+		logAppendRejection("actor_headers", claims.Issuer, request, r, missing, nil)
 		writeErrorCode(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
 		return
 	}
 	stored, err := h.events.Append(r.Context(), event)
 	if err != nil {
+		logAppendRejection("repo_append", claims.Issuer, request, r, nil, []string{"repo_append_failed"})
 		writeErrorCode(w, http.StatusBadRequest, "INVALID_REQUEST", "validation", "The request is invalid.")
 		return
 	}
@@ -180,6 +187,7 @@ func eventDTO(event domain.Event) map[string]any {
 		"resourceType":    event.ResourceType,
 		"resourceId":      event.ResourceID,
 		"result":          event.Result,
+		"reasonCode":      event.ReasonCode,
 		"classification":  event.DiffClassification,
 		"retentionPolicy": event.RetentionPolicy,
 		"retainUntil":     event.RetainUntil.Format(time.RFC3339),
@@ -223,4 +231,81 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func missingAppendBodyFields(request appendEventRequest) []string {
+	var missing []string
+	if strings.TrimSpace(request.EventID) == "" {
+		missing = append(missing, "eventId")
+	}
+	if request.EventVersion == 0 {
+		missing = append(missing, "eventVersion")
+	}
+	if strings.TrimSpace(request.Action) == "" {
+		missing = append(missing, "action")
+	}
+	if strings.TrimSpace(request.ResourceType) == "" {
+		missing = append(missing, "resourceType")
+	}
+	if strings.TrimSpace(request.ResourceID) == "" {
+		missing = append(missing, "resourceId")
+	}
+	if strings.TrimSpace(request.Result) == "" {
+		missing = append(missing, "result")
+	}
+	if strings.TrimSpace(request.SafeSummary) == "" {
+		missing = append(missing, "safeSummary")
+	}
+	if len(request.Surfaces) == 0 {
+		missing = append(missing, "surfaces")
+	}
+	if len(request.AcceptanceIDs) == 0 {
+		missing = append(missing, "acceptanceIds")
+	}
+	return missing
+}
+
+func missingActorHeaderFields(event domain.Event) []string {
+	var missing []string
+	if strings.TrimSpace(event.ActorUserID) == "" {
+		missing = append(missing, "actorUserId")
+	}
+	if strings.TrimSpace(event.ActorRole) == "" {
+		missing = append(missing, "actorRole")
+	}
+	if strings.TrimSpace(event.ActorDisplay) == "" {
+		missing = append(missing, "actorDisplay")
+	}
+	return missing
+}
+
+func logAppendRejection(stage, producerService string, request appendEventRequest, r *http.Request, missingFields, invalidFields []string) {
+	log.Printf(
+		"audit append rejected stage=%s producerService=%s eventUid=%s correlationId=%s missingFields=%s invalidFields=%s",
+		safeDiagnosticValue(stage),
+		safeDiagnosticValue(producerService),
+		safeDiagnosticValue(request.EventUID),
+		safeDiagnosticValue(firstNonEmpty(request.CorrelationID, r.Header.Get("X-Correlation-Id"))),
+		safeDiagnosticList(missingFields),
+		safeDiagnosticList(invalidFields),
+	)
+}
+
+func safeDiagnosticValue(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "-"
+	}
+	return strings.NewReplacer(" ", "_", "\n", "_", "\r", "_", "\t", "_").Replace(value)
+}
+
+func safeDiagnosticList(values []string) string {
+	if len(values) == 0 {
+		return "-"
+	}
+	cleaned := make([]string, 0, len(values))
+	for _, value := range values {
+		cleaned = append(cleaned, safeDiagnosticValue(value))
+	}
+	return strings.Join(cleaned, ",")
 }

@@ -168,20 +168,33 @@ func deliverAuditEvent(ctx context.Context, config DispatchConfig, serviceID str
 
 func auditAppendBody(item outboxEvent) map[string]any {
 	eventID, action := auditEventContract(item.EventType, item.Payload)
+	beforeSummary := map[string]any{"value": payloadString(item.Payload, "before", "")}
+	if summary, ok := payloadMap(item.Payload, "beforeSummary"); ok {
+		beforeSummary = summary
+	}
+	afterSummary := item.Payload
+	if summary, ok := payloadMap(item.Payload, "afterSummary"); ok {
+		afterSummary = summary
+	}
+	resourceID := payloadString(item.Payload, "resourceId", item.AggregateID)
+	if strings.TrimSpace(resourceID) == "" {
+		resourceID = "unknown"
+	}
 	return map[string]any{
 		"eventUid":           item.ID,
 		"eventId":            eventID,
 		"eventVersion":       1,
 		"surfaces":           []string{"operation_log"},
 		"action":             action,
-		"resourceType":       "User",
-		"resourceId":         item.AggregateID,
+		"resourceType":       payloadString(item.Payload, "resourceType", "User"),
+		"resourceId":         resourceID,
 		"result":             payloadString(item.Payload, "result", "success"),
-		"beforeSummary":      map[string]any{"value": payloadString(item.Payload, "before", "")},
-		"afterSummary":       item.Payload,
-		"diffClassification": "Security Critical",
-		"scopeSummary":       "administrator only",
-		"safeSummary":        safeSummary(action),
+		"reasonCode":         payloadString(item.Payload, "reasonCode", payloadString(item.Payload, "reason", "")),
+		"beforeSummary":      beforeSummary,
+		"afterSummary":       afterSummary,
+		"diffClassification": payloadString(item.Payload, "diffClassification", "Security Critical"),
+		"scopeSummary":       payloadString(item.Payload, "scopeSummary", "administrator only"),
+		"safeSummary":        payloadString(item.Payload, "safeSummary", safeSummary(action)),
 		"correlationId":      payloadString(item.Payload, "correlationId", item.ID),
 		"causationId":        item.ID,
 		"acceptanceIds":      []string{"ACC-022", "TEST-OPLOG-001", "TEST-OPLOG-002", "TEST-OPLOG-005"},
@@ -207,7 +220,7 @@ func auditEventContract(eventType string, payload map[string]any) (string, strin
 	case UserSignedOut:
 		return "EVT-USER-SIGNED-OUT", "sign_out"
 	case UserAccessDenied:
-		if payloadString(payload, "reason", "") == "login_failed" {
+		if payloadString(payload, "reasonCode", payloadString(payload, "reason", "")) == "login_failed" {
 			return "EVT-AUTH-LOGIN-FAILED", "login_failed"
 		}
 		return "EVT-AUTH-ACCESS-DENIED", "access_denied"
@@ -221,6 +234,13 @@ func payloadString(payload map[string]any, key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func payloadMap(payload map[string]any, key string) (map[string]any, bool) {
+	if value, ok := payload[key].(map[string]any); ok {
+		return value, true
+	}
+	return nil, false
 }
 
 func safeSummary(action string) string {

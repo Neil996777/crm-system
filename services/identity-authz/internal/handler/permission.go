@@ -3,9 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"crm-system/services/identity-authz/internal/domain"
-	"crm-system/services/identity-authz/internal/event"
 )
 
 func (h *AuthHandler) permissionCheck(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +33,13 @@ func (h *AuthHandler) permissionCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	actor, err := h.users.FindByID(r.Context(), request.ActorID)
 	if err != nil {
-		if err := h.appendAccessDenied(r.Context(), request.ActorID, "actor_not_found"); err != nil {
+		if err := h.appendAccessDenied(r.Context(), auditActorUnknown(), auditAccessDeniedOptions{
+			ReasonCode:    "actor_not_found",
+			ResourceType:  auditPermissionResourceType(request.Resource.Type),
+			ResourceID:    auditPermissionResourceID,
+			ScopeSummary:  "permission denied",
+			CorrelationID: request.CorrelationID,
+		}); err != nil {
 			writeDependencyUnavailable(w)
 			return
 		}
@@ -54,30 +60,26 @@ func (h *AuthHandler) permissionCheck(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if !decision.Allowed {
-		tx, err := h.db.BeginTx(r.Context(), nil)
-		if err != nil {
-			writeDependencyUnavailable(w)
-			return
-		}
-		txOutbox := event.NewOutboxTx(tx)
-		if err := txOutbox.Append(r.Context(), event.UserAccessDenied, actor.ID, map[string]any{
-			"actorId":       request.ActorID,
-			"action":        request.Action,
-			"resource":      map[string]any{"type": request.Resource.Type},
-			"result":        "denied",
-			"reason":        decision.DenialCategory,
-			"correlationId": request.CorrelationID,
+		if err := h.appendAccessDenied(r.Context(), auditActorFromUser(actor), auditAccessDeniedOptions{
+			ReasonCode:    decision.DenialCategory,
+			ResourceType:  auditPermissionResourceType(request.Resource.Type),
+			ResourceID:    auditPermissionResourceID,
+			ScopeSummary:  "permission denied",
+			CorrelationID: request.CorrelationID,
 		}); err != nil {
-			_ = tx.Rollback()
-			writeDependencyUnavailable(w)
-			return
-		}
-		if err := tx.Commit(); err != nil {
 			writeDependencyUnavailable(w)
 			return
 		}
 	}
 	writeJSON(w, http.StatusOK, permissionResponse(decision))
+}
+
+func auditPermissionResourceType(resourceType string) string {
+	resourceType = strings.TrimSpace(resourceType)
+	if resourceType == "" {
+		return "Permission"
+	}
+	return resourceType
 }
 
 func permissionResponse(decision domain.PermissionDecision) map[string]any {

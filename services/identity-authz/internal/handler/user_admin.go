@@ -242,7 +242,12 @@ func (h *AuthHandler) requireAdministrator(w http.ResponseWriter, r *http.Reques
 		return domain.User{}, "", false
 	}
 	if actor.Role != domain.RoleAdministrator {
-		if err := h.appendAccessDenied(r.Context(), actor.ID, "user_admin_denied"); err != nil {
+		if err := h.appendAccessDenied(r.Context(), auditActorFromUser(actor), auditAccessDeniedOptions{
+			ReasonCode:   "user_admin_denied",
+			ResourceType: "User",
+			ResourceID:   auditAdminUsersResourceID,
+			ScopeSummary: "administrator only",
+		}); err != nil {
 			writeDependencyUnavailable(w)
 			return domain.User{}, "", false
 		}

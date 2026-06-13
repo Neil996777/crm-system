@@ -88,6 +88,15 @@ func TestPermissionScopeAndS2SAcceptance(t *testing.T) {
 		if denied.Body.String() == "restricted-lead-name-must-not-leak" {
 			t.Fatal("permission denial leaked restricted resource id")
 		}
+		_, payload := latestOutboxPayload(t, db, "UserAccessDenied", salesID)
+		requirePayloadString(t, payload, "actorId", salesID)
+		requirePayloadString(t, payload, "actorRole", "Sales")
+		requirePayloadString(t, payload, "reasonCode", "scope_denied")
+		requirePayloadString(t, payload, "resourceType", "lead")
+		requirePayloadString(t, payload, "resourceId", "permission-check")
+		requirePayloadString(t, payload, "result", "denied")
+		requirePayloadEmptySummary(t, payload, "beforeSummary")
+		requirePayloadEmptySummary(t, payload, "afterSummary")
 	})
 
 	t.Run("TEST-AUTHZ-SCOPE-006 and TEST-INV-NODELETE-001 hard delete denied for every role", func(t *testing.T) {

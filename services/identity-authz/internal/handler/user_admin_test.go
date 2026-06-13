@@ -14,7 +14,7 @@ func TestUserAdminGuardsAndPermissions(t *testing.T) {
 	adminEmail := "admin-useradmin-" + randomSuffix(t) + "@example.com"
 	adminID := insertUser(t, db, adminEmail, "pw", "Administrator", "Active")
 	salesEmail := "sales-useradmin-" + randomSuffix(t) + "@example.com"
-	insertUser(t, db, salesEmail, "pw", "Sales", "Active")
+	salesID := insertUser(t, db, salesEmail, "pw", "Sales", "Active")
 
 	adminCookie := requireSessionCookie(t, postJSON(app, "/auth/sign-in", map[string]string{"email": adminEmail, "password": "pw"}, nil))
 	salesCookie := requireSessionCookie(t, postJSON(app, "/auth/sign-in", map[string]string{"email": salesEmail, "password": "pw"}, nil))
@@ -47,6 +47,16 @@ func TestUserAdminGuardsAndPermissions(t *testing.T) {
 		if strings.Contains(rec.Body.String(), "Forbidden User") {
 			t.Fatal("denial leaked requested user details")
 		}
+		_, payload := latestOutboxPayload(t, db, "UserAccessDenied", salesID)
+		requirePayloadString(t, payload, "actorId", salesID)
+		requirePayloadString(t, payload, "actorRole", "Sales")
+		requirePayloadString(t, payload, "actorDisplay", salesEmail)
+		requirePayloadString(t, payload, "reasonCode", "user_admin_denied")
+		requirePayloadString(t, payload, "resourceType", "User")
+		requirePayloadString(t, payload, "resourceId", "admin-users")
+		requirePayloadString(t, payload, "result", "denied")
+		requirePayloadEmptySummary(t, payload, "beforeSummary")
+		requirePayloadEmptySummary(t, payload, "afterSummary")
 	})
 
 	t.Run("TEST-USER-ADMIN-002/003/004 role and status changes persist", func(t *testing.T) {

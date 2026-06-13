@@ -6,10 +6,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -128,6 +130,174 @@ func TestAppendIsIdempotentByProducerEventUID(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("expected exactly one stored event for duplicate eventUid, got %d", count)
 	}
+}
+
+func TestAppendRejectionLogsStructuredReasonWithoutSensitivePayload(t *testing.T) {
+	_, serviceDB := newAuditTestDB(t)
+	app := NewAuditServer(serviceDB, Config{ServiceID: "audit-history", ServiceTokenSecret: []byte("audit-secret")})
+	token := signTestServiceToken(t, []byte("audit-secret"), "identity-authz", "audit-history", "audit.append")
+
+	var logs bytes.Buffer
+	previousLogOutput := log.Writer()
+	log.SetOutput(&logs)
+	t.Cleanup(func() {
+		log.SetOutput(previousLogOutput)
+	})
+
+	bodyMissingFields := map[string]any{
+		"eventUid":      "evt_bad_body",
+		"eventId":       "EVT-AUTH-ACCESS-DENIED",
+		"eventVersion":  1,
+		"surfaces":      []string{"operation_log"},
+		"action":        "access_denied",
+		"resourceType":  "Auth",
+		"result":        "denied",
+		"reasonCode":    "user_admin_denied",
+		"beforeSummary": map[string]any{"password": "secret-pass"},
+		"afterSummary":  map[string]any{"token": "secret-token"},
+		"acceptanceIds": []string{"ACC-022"},
+		"correlationId": "corr-bad-body",
+	}
+	rec := appendEvent(t, app, token, bodyMissingFields, map[string]string{
+		"X-Service-Id":     "identity-authz",
+		"X-Actor-User-Id":  "sales-1",
+		"X-Actor-Role":     "Sales",
+		"X-Actor-Display":  "Sales One",
+		"X-Correlation-Id": "corr-bad-body",
+	})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected malformed append 400, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	requireErrorCode(t, rec, "INVALID_REQUEST")
+
+	logText := logs.String()
+	for _, expected := range []string{
+		"audit append rejected",
+		"stage=body_required_fields",
+		"producerService=identity-authz",
+		"eventUid=evt_bad_body",
+		"correlationId=corr-bad-body",
+		"missingFields=resourceId,safeSummary",
+	} {
+		if !strings.Contains(logText, expected) {
+			t.Fatalf("expected log to contain %q, got %s", expected, logText)
+		}
+	}
+	for _, forbidden := range []string{"secret-pass", "secret-token", "Bearer ", token} {
+		if strings.Contains(logText, forbidden) || strings.Contains(rec.Body.String(), forbidden) {
+			t.Fatalf("sensitive value %q leaked log=%s body=%s", forbidden, logText, rec.Body.String())
+		}
+	}
+
+	logs.Reset()
+	validBody := map[string]any{
+		"eventUid":      "evt_bad_actor",
+		"eventId":       "EVT-AUTH-ACCESS-DENIED",
+		"eventVersion":  1,
+		"surfaces":      []string{"operation_log"},
+		"action":        "access_denied",
+		"resourceType":  "User",
+		"resourceId":    "admin-users",
+		"result":        "denied",
+		"reasonCode":    "user_admin_denied",
+		"safeSummary":   "Identity authorization denied: user_admin_denied",
+		"acceptanceIds": []string{"ACC-022"},
+		"correlationId": "corr-bad-actor",
+	}
+	rec = appendEvent(t, app, token, validBody, map[string]string{
+		"X-Service-Id":     "identity-authz",
+		"X-Actor-User-Id":  "sales-1",
+		"X-Correlation-Id": "corr-bad-actor",
+	})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected missing actor header 400, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	logText = logs.String()
+	for _, expected := range []string{
+		"stage=actor_headers",
+		"producerService=identity-authz",
+		"eventUid=evt_bad_actor",
+		"correlationId=corr-bad-actor",
+		"missingFields=actorRole,actorDisplay",
+	} {
+		if !strings.Contains(logText, expected) {
+			t.Fatalf("expected actor-header log to contain %q, got %s", expected, logText)
+		}
+	}
+}
+
+func TestAccessDeniedAppendPreservesHashChainAndSafeSummaries(t *testing.T) {
+	adminDB, serviceDB := newAuditTestDB(t)
+	app := NewAuditServer(serviceDB, Config{ServiceID: "audit-history", ServiceTokenSecret: []byte("audit-secret")})
+	token := signTestServiceToken(t, []byte("audit-secret"), "identity-authz", "audit-history", "audit.append")
+	adminHeaders := actorHeaders("admin-1", "Administrator", "Admin One")
+	adminHeaders["X-Service-Id"] = "identity-authz"
+	salesHeaders := actorHeaders("sales-1", "Sales", "Sales One")
+	salesHeaders["X-Service-Id"] = "identity-authz"
+
+	first := appendEvent(t, app, token, map[string]any{
+		"eventUid":      "evt_success_login",
+		"eventId":       "EVT-AUTH-LOGIN-SUCCEEDED",
+		"eventVersion":  1,
+		"surfaces":      []string{"operation_log"},
+		"action":        "sign_in",
+		"resourceType":  "Auth",
+		"resourceId":    "auth",
+		"result":        "success",
+		"safeSummary":   "Identity authorization sign_in",
+		"acceptanceIds": []string{"ACC-022"},
+	}, adminHeaders)
+	if first.Code != http.StatusCreated {
+		t.Fatalf("expected first append 201, got %d body=%s", first.Code, first.Body.String())
+	}
+	firstBody := decodeJSON(t, first)
+	firstHash, ok := firstBody["eventHash"].(string)
+	if !ok || firstHash == "" {
+		t.Fatalf("expected first event hash, got %#v", firstBody)
+	}
+
+	second := appendEvent(t, app, token, map[string]any{
+		"eventUid":      "evt_access_denied_hash",
+		"eventId":       "EVT-AUTH-ACCESS-DENIED",
+		"eventVersion":  1,
+		"surfaces":      []string{"operation_log"},
+		"action":        "access_denied",
+		"resourceType":  "User",
+		"resourceId":    "admin-users",
+		"result":        "denied",
+		"reasonCode":    "user_admin_denied",
+		"beforeSummary": map[string]any{},
+		"afterSummary":  map[string]any{},
+		"safeSummary":   "Identity authorization denied: user_admin_denied",
+		"acceptanceIds": []string{"ACC-022", "ACC-AUDIT-002"},
+	}, salesHeaders)
+	if second.Code != http.StatusCreated {
+		t.Fatalf("expected second append 201, got %d body=%s", second.Code, second.Body.String())
+	}
+	secondBody := decodeJSON(t, second)
+	requireJSONValue(t, secondBody, "prevHash", firstHash)
+	secondHash, ok := secondBody["eventHash"].(string)
+	if !ok || secondHash == "" {
+		t.Fatalf("expected second event hash, got %#v", secondBody)
+	}
+
+	var actorRole, actorDisplay, reasonCode, safeSummary, prevHash, eventHash string
+	var beforeBytes, afterBytes []byte
+	if err := adminDB.QueryRow(`
+		SELECT actor_role, actor_display, reason_code, safe_summary, before_summary, after_summary, prev_hash, event_hash
+		FROM audit_history.events
+		WHERE event_uid = $1
+	`, "evt_access_denied_hash").Scan(&actorRole, &actorDisplay, &reasonCode, &safeSummary, &beforeBytes, &afterBytes, &prevHash, &eventHash); err != nil {
+		t.Fatalf("read denied event row: %v", err)
+	}
+	if actorRole != "Sales" || actorDisplay != "Sales One" || reasonCode != "user_admin_denied" {
+		t.Fatalf("unexpected denied row actor/reason role=%q display=%q reason=%q", actorRole, actorDisplay, reasonCode)
+	}
+	if safeSummary == "" || prevHash != firstHash || eventHash == "" {
+		t.Fatalf("unexpected denied row chain/safe summary safe=%q prev=%q event=%q first=%q", safeSummary, prevHash, eventHash, firstHash)
+	}
+	requireEmptyJSONSummary(t, beforeBytes, "beforeSummary")
+	requireEmptyJSONSummary(t, afterBytes, "afterSummary")
 }
 
 func newAuditTestDB(t *testing.T) (*sql.DB, *sql.DB) {
@@ -283,5 +453,16 @@ func requireErrorCode(t *testing.T, rec *httptest.ResponseRecorder, expected str
 	}
 	if code != expected {
 		t.Fatalf("expected error code %q, got %q body=%s", expected, code, rec.Body.String())
+	}
+}
+
+func requireEmptyJSONSummary(t *testing.T, raw []byte, label string) {
+	t.Helper()
+	var summary map[string]any
+	if err := json.Unmarshal(raw, &summary); err != nil {
+		t.Fatalf("decode %s %q: %v", label, string(raw), err)
+	}
+	if len(summary) != 0 {
+		t.Fatalf("expected empty %s, got %#v", label, summary)
 	}
 }

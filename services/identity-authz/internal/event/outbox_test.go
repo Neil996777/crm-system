@@ -91,6 +91,64 @@ func TestOutboxDispatcherDeliversAuditHistoryAndRetries(t *testing.T) {
 	}
 }
 
+func TestOutboxDispatcherDeliversAccessDeniedEnvelopeAndDrains(t *testing.T) {
+	db := newEventTestDB(t)
+	outbox := NewOutbox(db)
+	if err := outbox.Append(context.Background(), UserAccessDenied, "usr_sales", map[string]any{
+		"actorId":            "usr_sales",
+		"actorRole":          "Sales",
+		"actorDisplay":       "Sales One",
+		"action":             "access_denied",
+		"resourceType":       "User",
+		"resourceId":         "admin-users",
+		"result":             "denied",
+		"reason":             "user_admin_denied",
+		"reasonCode":         "user_admin_denied",
+		"beforeSummary":      map[string]any{},
+		"afterSummary":       map[string]any{},
+		"diffClassification": "Security Critical",
+		"scopeSummary":       "administrator only",
+		"safeSummary":        "Identity authorization denied: user_admin_denied",
+		"correlationId":      "corr-denied-1",
+	}); err != nil {
+		t.Fatalf("append denied event: %v", err)
+	}
+
+	var delivered map[string]any
+	audit := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Actor-User-Id") != "usr_sales" ||
+			r.Header.Get("X-Actor-Role") != "Sales" ||
+			r.Header.Get("X-Actor-Display") != "Sales One" {
+			t.Fatalf("access denied event used incomplete actor headers: %#v", r.Header)
+		}
+		if r.Header.Get("X-Actor-Role") == "System" {
+			t.Fatal("access denied event must not rely on dispatcher System fallback")
+		}
+		if err := json.NewDecoder(r.Body).Decode(&delivered); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		w.WriteHeader(http.StatusCreated)
+	}))
+	t.Cleanup(audit.Close)
+
+	if err := outbox.DispatchOnce(context.Background(), DispatchConfig{
+		ServiceID:              "identity-authz",
+		ServiceTokenSecret:     []byte("secret"),
+		AuditHistoryServiceURL: audit.URL,
+		BatchSize:              10,
+	}); err != nil {
+		t.Fatalf("dispatch denied event: %v", err)
+	}
+	requireUnpublishedCount(t, db, 0)
+	if delivered["eventId"] != "EVT-AUTH-ACCESS-DENIED" ||
+		delivered["reasonCode"] != "user_admin_denied" ||
+		delivered["resourceId"] != "admin-users" {
+		t.Fatalf("unexpected delivered denied body: %#v", delivered)
+	}
+	requireEmptySummary(t, delivered, "beforeSummary")
+	requireEmptySummary(t, delivered, "afterSummary")
+}
+
 func TestIdentityAuditCatalogEventIDs(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -147,6 +205,44 @@ func TestIdentityAuditCatalogEventIDs(t *testing.T) {
 				t.Fatalf("expected %s, got %#v body=%#v", tc.expected, body["eventId"], body)
 			}
 		})
+	}
+}
+
+func TestAccessDeniedAppendBodyUsesCompleteSafeEnvelope(t *testing.T) {
+	body := auditAppendBody(outboxEvent{
+		ID:          "evt_access_denied",
+		EventType:   UserAccessDenied,
+		AggregateID: "auth",
+		Payload: map[string]any{
+			"actorId":            "anonymous",
+			"actorRole":          "Unauthenticated",
+			"actorDisplay":       "Unauthenticated actor",
+			"resourceType":       "Auth",
+			"resourceId":         "auth",
+			"result":             "failed",
+			"reason":             "login_failed",
+			"reasonCode":         "login_failed",
+			"beforeSummary":      map[string]any{},
+			"afterSummary":       map[string]any{},
+			"diffClassification": "Security Critical",
+			"scopeSummary":       "authentication",
+			"safeSummary":        "Identity authorization denied: login_failed",
+		},
+	})
+
+	if body["eventId"] != "EVT-AUTH-LOGIN-FAILED" || body["action"] != "login_failed" {
+		t.Fatalf("unexpected access-denied catalog mapping: %#v", body)
+	}
+	if body["resourceType"] != "Auth" || body["resourceId"] != "auth" {
+		t.Fatalf("expected non-empty auth resource, got %#v", body)
+	}
+	if body["reasonCode"] != "login_failed" {
+		t.Fatalf("expected reasonCode to be promoted, got %#v", body["reasonCode"])
+	}
+	requireEmptySummary(t, body, "beforeSummary")
+	requireEmptySummary(t, body, "afterSummary")
+	if body["safeSummary"] == "" {
+		t.Fatalf("expected safeSummary, got %#v", body)
 	}
 }
 
@@ -207,5 +303,16 @@ func requireUnpublishedCount(t *testing.T, db *sql.DB, expected int) {
 	}
 	if count != expected {
 		t.Fatalf("expected %d unpublished events, got %d", expected, count)
+	}
+}
+
+func requireEmptySummary(t *testing.T, body map[string]any, key string) {
+	t.Helper()
+	summary, ok := body[key].(map[string]any)
+	if !ok {
+		t.Fatalf("expected %s object, got %#v", key, body[key])
+	}
+	if len(summary) != 0 {
+		t.Fatalf("expected empty %s, got %#v", key, summary)
 	}
 }

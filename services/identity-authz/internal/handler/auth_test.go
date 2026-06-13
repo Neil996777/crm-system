@@ -183,6 +183,89 @@ func TestDenialAuditOutboxFailureIsSurfaced(t *testing.T) {
 	requireErrorCode(t, rec, "DEPENDENCY_UNAVAILABLE")
 }
 
+func TestIdentityAuditEnvelopeForAuthEvents(t *testing.T) {
+	db := newAuthTestDB(t)
+	app := NewAuthServer(db, Config{
+		CookieSecure:   true,
+		SessionTTL:     12 * time.Hour,
+		IdleSessionTTL: 30 * time.Minute,
+	})
+
+	t.Run("unknown login failure uses audit-only actor and non-empty auth resource", func(t *testing.T) {
+		rec := postJSON(app, "/auth/sign-in", map[string]string{
+			"email":    "missing-" + randomSuffix(t) + "@example.com",
+			"password": "wrong-password",
+		}, nil)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d body=%s", rec.Code, rec.Body.String())
+		}
+
+		aggregateID, payload := latestOutboxPayload(t, db, "UserAccessDenied", "auth")
+		if aggregateID == "" {
+			t.Fatalf("expected non-empty aggregate id for unknown login failure")
+		}
+		requirePayloadString(t, payload, "actorId", "anonymous")
+		requirePayloadString(t, payload, "actorRole", "Unauthenticated")
+		requirePayloadString(t, payload, "actorDisplay", "Unauthenticated actor")
+		requirePayloadString(t, payload, "reasonCode", "login_failed")
+		requirePayloadString(t, payload, "resourceType", "Auth")
+		requirePayloadString(t, payload, "resourceId", "auth")
+		requirePayloadString(t, payload, "result", "failed")
+		requirePayloadEmptySummary(t, payload, "beforeSummary")
+		requirePayloadEmptySummary(t, payload, "afterSummary")
+		if payload["safeSummary"] == "" {
+			t.Fatalf("expected safeSummary, got %#v", payload)
+		}
+	})
+
+	t.Run("known login failure carries persisted actor role and display", func(t *testing.T) {
+		email := "known-denied-" + randomSuffix(t) + "@example.com"
+		userID := insertUser(t, db, email, "correct-password", "Sales", "Active")
+
+		rec := postJSON(app, "/auth/sign-in", map[string]string{
+			"email":    email,
+			"password": "wrong-password",
+		}, nil)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d body=%s", rec.Code, rec.Body.String())
+		}
+
+		_, payload := latestOutboxPayload(t, db, "UserAccessDenied", userID)
+		requirePayloadString(t, payload, "actorId", userID)
+		requirePayloadString(t, payload, "actorRole", "Sales")
+		requirePayloadString(t, payload, "actorDisplay", email)
+		requirePayloadString(t, payload, "reasonCode", "login_failed")
+		requirePayloadString(t, payload, "resourceType", "Auth")
+		requirePayloadString(t, payload, "resourceId", "auth")
+		requirePayloadString(t, payload, "result", "failed")
+		requirePayloadEmptySummary(t, payload, "beforeSummary")
+		requirePayloadEmptySummary(t, payload, "afterSummary")
+	})
+
+	t.Run("sign-out event carries complete actor envelope", func(t *testing.T) {
+		email := "signout-envelope-" + randomSuffix(t) + "@example.com"
+		userID := insertUser(t, db, email, "correct-password", "Sales Manager", "Active")
+		login := postJSON(app, "/auth/sign-in", map[string]string{
+			"email":    email,
+			"password": "correct-password",
+		}, nil)
+		cookie := requireSessionCookie(t, login)
+
+		logout := postJSON(app, "/auth/sign-out", nil, cookie)
+		if logout.Code != http.StatusNoContent {
+			t.Fatalf("expected sign-out 204, got %d body=%s", logout.Code, logout.Body.String())
+		}
+
+		_, payload := latestOutboxPayload(t, db, "UserSignedOut", userID)
+		requirePayloadString(t, payload, "actorId", userID)
+		requirePayloadString(t, payload, "actorRole", "Sales Manager")
+		requirePayloadString(t, payload, "actorDisplay", email)
+		requirePayloadString(t, payload, "resourceType", "Auth")
+		requirePayloadString(t, payload, "resourceId", "auth")
+		requirePayloadString(t, payload, "result", "success")
+	})
+}
+
 func newAuthTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	ctx := context.Background()
@@ -458,6 +541,53 @@ func requireEvent(t *testing.T, db *sql.DB, eventType, aggregateID string) {
 	}
 	if count == 0 {
 		t.Fatalf("expected outbox event %s aggregate=%s", eventType, aggregateID)
+	}
+}
+
+func latestOutboxPayload(t *testing.T, db *sql.DB, eventType, aggregateID string) (string, map[string]any) {
+	t.Helper()
+	query := `
+		SELECT aggregate_id, payload
+		FROM identity_authz.outbox_events
+		WHERE event_type = $1
+	`
+	args := []any{eventType}
+	if aggregateID != "" {
+		query += ` AND aggregate_id = $2`
+		args = append(args, aggregateID)
+	}
+	query += ` ORDER BY occurred_at DESC, id DESC LIMIT 1`
+	var storedAggregateID string
+	var payloadBytes []byte
+	if err := db.QueryRow(query, args...).Scan(&storedAggregateID, &payloadBytes); err != nil {
+		t.Fatalf("read latest outbox payload event=%s aggregate=%s: %v", eventType, aggregateID, err)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
+		t.Fatalf("decode outbox payload %q: %v", string(payloadBytes), err)
+	}
+	return storedAggregateID, payload
+}
+
+func requirePayloadString(t *testing.T, payload map[string]any, key, expected string) {
+	t.Helper()
+	value, ok := payload[key].(string)
+	if !ok {
+		t.Fatalf("expected payload %s string, got %#v in %#v", key, payload[key], payload)
+	}
+	if value != expected {
+		t.Fatalf("expected payload %s=%q, got %q in %#v", key, expected, value, payload)
+	}
+}
+
+func requirePayloadEmptySummary(t *testing.T, payload map[string]any, key string) {
+	t.Helper()
+	value, ok := payload[key].(map[string]any)
+	if !ok {
+		t.Fatalf("expected payload %s object, got %#v in %#v", key, payload[key], payload)
+	}
+	if len(value) != 0 {
+		t.Fatalf("expected empty %s, got %#v", key, value)
 	}
 }
 
