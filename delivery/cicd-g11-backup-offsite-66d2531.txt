@@ -1,0 +1,4 @@
+rollback_point=first-standard-deploy-no-prior-g12-approved-runtime
+backup_file=/opt/crm-system/backups/postgres/crm-postgres-20260613T112341Z.sql.gz.enc
+backup_sha256=cf960acefabe379a974789aa52d0e00120fbd42eae2c03af4c99ad596a88a06b
+offsite_copy_result=/opt/crm-system/backups/postgres/crm-postgres-20260613T112341Z.sql.gz.enc: OK

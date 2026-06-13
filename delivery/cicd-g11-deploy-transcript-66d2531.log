@@ -1,0 +1,499 @@
+2026-06-13T19:23:23+08:00 release=66d2531 run=27464903082 script_commit=1ee5dda host=srv-volcengine-sh-01
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml down
+ Container crm-system-gateway-bff-1  Stopping
+ Container crm-system-opportunity-1  Stopping
+ Container crm-system-commercial-1  Stopping
+ Container crm-system-account-1  Stopping
+ Container crm-system-work-1  Stopping
+ Container crm-system-import-export-1  Stopping
+ Container crm-system-audit-history-1  Stopping
+ Container crm-system-frontend-web-1  Stopping
+ Container crm-system-reporting-1  Stopping
+ Container crm-system-lead-1  Stopping
+ Container crm-system-identity-authz-1  Stopping
+ Container crm-system-lead-1  Stopped
+ Container crm-system-lead-1  Removing
+ Container crm-system-lead-1  Removed
+ Container crm-system-work-1  Stopped
+ Container crm-system-work-1  Removing
+ Container crm-system-work-1  Removed
+ Container crm-system-identity-authz-1  Stopped
+ Container crm-system-identity-authz-1  Removing
+ Container crm-system-audit-history-1  Stopped
+ Container crm-system-audit-history-1  Removing
+ Container crm-system-identity-authz-1  Removed
+ Container crm-system-audit-history-1  Removed
+ Container crm-system-frontend-web-1  Stopped
+ Container crm-system-frontend-web-1  Removing
+ Container crm-system-frontend-web-1  Removed
+ Container crm-system-opportunity-1  Stopped
+ Container crm-system-opportunity-1  Removing
+ Container crm-system-account-1  Stopped
+ Container crm-system-account-1  Removing
+ Container crm-system-opportunity-1  Removed
+ Container crm-system-reporting-1  Stopped
+ Container crm-system-reporting-1  Removing
+ Container crm-system-account-1  Removed
+ Container crm-system-reporting-1  Removed
+ Container crm-system-import-export-1  Stopped
+ Container crm-system-import-export-1  Removing
+ Container crm-system-commercial-1  Stopped
+ Container crm-system-commercial-1  Removing
+ Container crm-system-import-export-1  Removed
+ Container crm-system-commercial-1  Removed
+ Container crm-system-gateway-bff-1  Stopped
+ Container crm-system-gateway-bff-1  Removing
+ Container crm-system-gateway-bff-1  Removed
+ Container crm-system-postgres-1  Stopping
+ Container crm-system-postgres-1  Stopped
+ Container crm-system-postgres-1  Removing
+ Container crm-system-postgres-1  Removed
+ Network crm-system_crm_internal  Removing
+ Network crm-system_crm_edge  Removing
+ Network crm-system_crm_internal  Removed
+ Network crm-system_crm_edge  Removed
++ mv /opt/crm-system/volumes/postgres /opt/crm-system/volumes/postgres.redeploy-20260613T112438Z-g11-004
++ install -d -m 0700 /opt/crm-system/volumes/postgres
+2026-06-13T19:24:38+08:00 postgres_data_reset archive=/opt/crm-system/volumes/postgres.redeploy-20260613T112438Z-g11-004 fresh=/opt/crm-system/volumes/postgres
+2026-06-13T19:24:46+08:00 deploy_started_at=2026-06-13T11:24:46Z
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml up -d postgres
+ Network crm-system_crm_internal  Creating
+ Network crm-system_crm_internal  Created
+ Container crm-system-postgres-1  Creating
+ Container crm-system-postgres-1  Created
+ Container crm-system-postgres-1  Starting
+ Container crm-system-postgres-1  Started
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres pg_isready -U crm_admin -d crm_system
+/var/run/postgresql:5432 - no response
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres pg_isready -U crm_admin -d crm_system
+/var/run/postgresql:5432 - accepting connections
+2026-06-13T19:24:49+08:00 postgres_ready attempt=2
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/account_0001_init_schema_up_sql.sql
+running release migration account/0001_init_schema.up.sql
+CREATE SCHEMA
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/account_0002_accounts_up_sql.sql
+running release migration account/0002_accounts.up.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+GRANT
+REVOKE
+GRANT
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/account_0003_contacts_up_sql.sql
+running release migration account/0003_contacts.up.sql
+CREATE TABLE
+CREATE INDEX
+GRANT
+REVOKE
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/account_0004_duplicate_warnings_up_sql.sql
+running release migration account/0004_duplicate_warnings.up.sql
+CREATE TABLE
+CREATE INDEX
+GRANT
+REVOKE
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/account_0005_archive_up_sql.sql
+running release migration account/0005_archive.up.sql
+ALTER TABLE
+CREATE INDEX
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/account_0006_lead_conversion_idempotency_up_sql.sql
+running release migration account/0006_lead_conversion_idempotency.up.sql
+ALTER TABLE
+CREATE INDEX
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/audit-history_0001_init_schema_up_sql.sql
+running release migration audit-history/0001_init_schema.up.sql
+CREATE SCHEMA
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/audit-history_0002_history_oplog_up_sql.sql
+running release migration audit-history/0002_history_oplog.up.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+GRANT
+GRANT
+REVOKE
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/audit-history_0003_retention_metadata_up_sql.sql
+running release migration audit-history/0003_retention_metadata.up.sql
+ALTER TABLE
+CREATE INDEX
+GRANT
+REVOKE
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/commercial_0001_init_schema_up_sql.sql
+running release migration commercial/0001_init_schema.up.sql
+CREATE SCHEMA
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/commercial_0002_quotes_up_sql.sql
+running release migration commercial/0002_quotes.up.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+GRANT
+REVOKE
+GRANT
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/commercial_0003_contracts_up_sql.sql
+running release migration commercial/0003_contracts.up.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+GRANT
+REVOKE
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/commercial_0004_payments_up_sql.sql
+running release migration commercial/0004_payments.up.sql
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+GRANT
+GRANT
+REVOKE
+REVOKE
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/commercial_0005_archive_up_sql.sql
+running release migration commercial/0005_archive.up.sql
+ALTER TABLE
+ALTER TABLE
+CREATE INDEX
+CREATE INDEX
+GRANT
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/identity-authz_0001_init_schema_up_sql.sql
+running release migration identity-authz/0001_init_schema.up.sql
+CREATE SCHEMA
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/identity-authz_0002_users_sessions_up_sql.sql
+running release migration identity-authz/0002_users_sessions.up.sql
+CREATE TABLE
+INSERT 0 3
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+INSERT 0 1
+GRANT
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/identity-authz_0003_permission_policy_up_sql.sql
+running release migration identity-authz/0003_permission_policy.up.sql
+ALTER TABLE
+CREATE TABLE
+INSERT 0 8
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/import-export_0001_init_schema_up_sql.sql
+running release migration import-export/0001_init_schema.up.sql
+CREATE SCHEMA
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/import-export_0002_import_export_runs_up_sql.sql
+running release migration import-export/0002_import_export_runs.up.sql
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+GRANT
+GRANT
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/import-export_0003_export_runs_up_sql.sql
+running release migration import-export/0003_export_runs.up.sql
+CREATE TABLE
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/lead_0001_init_schema_up_sql.sql
+running release migration lead/0001_init_schema.up.sql
+CREATE SCHEMA
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/lead_0002_leads_up_sql.sql
+running release migration lead/0002_leads.up.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+GRANT
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/lead_0003_lead_qualification_up_sql.sql
+running release migration lead/0003_lead_qualification.up.sql
+ALTER TABLE
+DO
+CREATE INDEX
+GRANT
+REVOKE
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/lead_0004_duplicate_warnings_up_sql.sql
+running release migration lead/0004_duplicate_warnings.up.sql
+ALTER TABLE
+CREATE TABLE
+CREATE INDEX
+GRANT
+GRANT
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/lead_0005_archive_up_sql.sql
+running release migration lead/0005_archive.up.sql
+ALTER TABLE
+CREATE INDEX
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/opportunity_0001_init_schema_up_sql.sql
+running release migration opportunity/0001_init_schema.up.sql
+CREATE SCHEMA
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/opportunity_0002_opportunities_up_sql.sql
+running release migration opportunity/0002_opportunities.up.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+GRANT
+REVOKE
+GRANT
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/opportunity_0003_archive_up_sql.sql
+running release migration opportunity/0003_archive.up.sql
+ALTER TABLE
+CREATE INDEX
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/opportunity_0004_lead_conversion_idempotency_up_sql.sql
+running release migration opportunity/0004_lead_conversion_idempotency.up.sql
+ALTER TABLE
+CREATE INDEX
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/reporting_0001_init_schema_up_sql.sql
+running release migration reporting/0001_init_schema.up.sql
+CREATE SCHEMA
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/reporting_0002_reporting_projections_up_sql.sql
+running release migration reporting/0002_reporting_projections.up.sql
+CREATE TABLE
+CREATE INDEX
+GRANT
+GRANT
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/reporting_0003_reporting_outbox_up_sql.sql
+running release migration reporting/0003_reporting_outbox.up.sql
+CREATE TABLE
+CREATE INDEX
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/work_0001_init_schema_up_sql.sql
+running release migration work/0001_init_schema.up.sql
+CREATE SCHEMA
+DO
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U crm_admin -d crm_system < /tmp/tmp.HkLV69mMNw/work_0002_work_up_sql.sql
+running release migration work/0002_work.up.sql
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml up -d gateway-bff identity-authz lead account opportunity commercial work audit-history reporting import-export frontend-web
+ Network crm-system_crm_edge  Creating
+ Network crm-system_crm_edge  Created
+ Container crm-system-frontend-web-1  Creating
+ Container crm-system-postgres-1  Running
+ Container crm-system-account-1  Creating
+ Container crm-system-identity-authz-1  Creating
+ Container crm-system-lead-1  Creating
+ Container crm-system-work-1  Creating
+ Container crm-system-import-export-1  Creating
+ Container crm-system-commercial-1  Creating
+ Container crm-system-reporting-1  Creating
+ Container crm-system-opportunity-1  Creating
+ Container crm-system-gateway-bff-1  Creating
+ Container crm-system-audit-history-1  Creating
+ Container crm-system-frontend-web-1  Created
+ Container crm-system-work-1  Created
+ Container crm-system-identity-authz-1  Created
+ Container crm-system-lead-1  Created
+ Container crm-system-opportunity-1  Created
+ Container crm-system-reporting-1  Created
+ Container crm-system-import-export-1  Created
+ Container crm-system-account-1  Created
+ Container crm-system-audit-history-1  Created
+ Container crm-system-commercial-1  Created
+ Container crm-system-gateway-bff-1  Created
+ Container crm-system-frontend-web-1  Starting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-postgres-1  Waiting
+ Container crm-system-frontend-web-1  Started
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-gateway-bff-1  Starting
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-work-1  Starting
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-commercial-1  Starting
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-lead-1  Starting
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-import-export-1  Starting
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-reporting-1  Starting
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-account-1  Starting
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-opportunity-1  Starting
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-identity-authz-1  Starting
+ Container crm-system-postgres-1  Healthy
+ Container crm-system-audit-history-1  Starting
+ Container crm-system-account-1  Started
+ Container crm-system-audit-history-1  Started
+ Container crm-system-reporting-1  Started
+ Container crm-system-import-export-1  Started
+ Container crm-system-commercial-1  Started
+ Container crm-system-opportunity-1  Started
+ Container crm-system-identity-authz-1  Started
+ Container crm-system-work-1  Started
+ Container crm-system-gateway-bff-1  Started
+ Container crm-system-lead-1  Started
++ sudo install -m 0644 /tmp/tmp.ggqDykRpKD /etc/nginx/conf.d/crm.conf
++ sudo nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
++ sudo systemctl reload nginx
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml ps
+NAME                          IMAGE                                                                                        COMMAND                  SERVICE          CREATED          STATUS                    PORTS
+crm-system-account-1          crm-system/account:66d2531                                                                   "/app/server"            account          20 seconds ago   Up 18 seconds (healthy)   8080/tcp
+crm-system-audit-history-1    crm-system/audit-history:66d2531                                                             "/app/server"            audit-history    20 seconds ago   Up 18 seconds (healthy)   8080/tcp
+crm-system-commercial-1       crm-system/commercial:66d2531                                                                "/app/server"            commercial       20 seconds ago   Up 18 seconds (healthy)   8080/tcp
+crm-system-frontend-web-1     crm-system/frontend-web:66d2531                                                              "nginx -g 'daemon of…"   frontend-web     20 seconds ago   Up 19 seconds (healthy)   80/tcp, 127.0.0.1:8081->8080/tcp
+crm-system-gateway-bff-1      crm-system/gateway-bff:66d2531                                                               "/app/server"            gateway-bff      20 seconds ago   Up 18 seconds (healthy)   127.0.0.1:8080->8080/tcp
+crm-system-identity-authz-1   crm-system/identity-authz:66d2531                                                            "/app/server"            identity-authz   20 seconds ago   Up 18 seconds (healthy)   8080/tcp
+crm-system-import-export-1    crm-system/import-export:66d2531                                                             "/app/server"            import-export    20 seconds ago   Up 18 seconds (healthy)   8080/tcp
+crm-system-lead-1             crm-system/lead:66d2531                                                                      "/app/server"            lead             20 seconds ago   Up 18 seconds (healthy)   8080/tcp
+crm-system-opportunity-1      crm-system/opportunity:66d2531                                                               "/app/server"            opportunity      20 seconds ago   Up 18 seconds (healthy)   8080/tcp
+crm-system-postgres-1         postgres:16-alpine@sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229   "docker-entrypoint.s…"   postgres         44 seconds ago   Up 43 seconds (healthy)   5432/tcp
+crm-system-reporting-1        crm-system/reporting:66d2531                                                                 "/app/server"            reporting        20 seconds ago   Up 18 seconds (healthy)   8080/tcp
+crm-system-work-1             crm-system/work:66d2531                                                                      "/app/server"            work             20 seconds ago   Up 18 seconds (healthy)   8080/tcp
++ curl -fsS http://127.0.0.1:8080/health
+{"service":"gateway-bff","process":"up","database":"not_applicable","timestamp":"2026-06-13T11:25:30Z"}
++ curl -fsS http://127.0.0.1:8081/health
+ok
++ curl -kfsS https://118.196.44.193/health
+{"service":"gateway-bff","process":"up","database":"not_applicable","timestamp":"2026-06-13T11:25:30Z"}
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z postgres
+postgres-1  | 2026-06-13T11:24:46.750723021Z The files belonging to this database system will be owned by user "postgres".
+postgres-1  | 2026-06-13T11:24:46.750762715Z This user must also own the server process.
+postgres-1  | 2026-06-13T11:24:46.750767312Z
+postgres-1  | 2026-06-13T11:24:46.750775326Z The database cluster will be initialized with locale "en_US.utf8".
+postgres-1  | 2026-06-13T11:24:46.750778687Z The default database encoding has accordingly been set to "UTF8".
+postgres-1  | 2026-06-13T11:24:46.750784962Z The default text search configuration will be set to "english".
+postgres-1  | 2026-06-13T11:24:46.750788010Z
+postgres-1  | 2026-06-13T11:24:46.750790768Z Data page checksums are disabled.
+postgres-1  | 2026-06-13T11:24:46.750794916Z
+postgres-1  | 2026-06-13T11:24:46.750848055Z fixing permissions on existing directory /var/lib/postgresql/data ... ok
+postgres-1  | 2026-06-13T11:24:46.751369722Z creating subdirectories ... ok
+postgres-1  | 2026-06-13T11:24:46.751422656Z selecting dynamic shared memory implementation ... posix
+postgres-1  | 2026-06-13T11:24:46.769339146Z selecting default max_connections ... 100
+postgres-1  | 2026-06-13T11:24:46.788936980Z selecting default shared_buffers ... 128MB
+postgres-1  | 2026-06-13T11:24:46.844870613Z selecting default time zone ... UTC
+postgres-1  | 2026-06-13T11:24:46.845710232Z creating configuration files ... ok
+postgres-1  | 2026-06-13T11:24:46.969763511Z running bootstrap script ... ok
+postgres-1  | 2026-06-13T11:24:47.154039427Z sh: locale: not found
+postgres-1  | 2026-06-13T11:24:47.154079542Z 2026-06-13 11:24:47.154 UTC [42] WARNING:  no usable system locales were found
+postgres-1  | 2026-06-13T11:24:47.527509290Z performing post-bootstrap initialization ... ok
+postgres-1  | 2026-06-13T11:24:47.579509754Z syncing data to disk ... ok
+postgres-1  | 2026-06-13T11:24:47.579530469Z initdb: warning: enabling "trust" authentication for local connections
+postgres-1  | 2026-06-13T11:24:47.579534795Z
+postgres-1  | 2026-06-13T11:24:47.579537797Z initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+postgres-1  | 2026-06-13T11:24:47.579539463Z
+postgres-1  | 2026-06-13T11:24:47.579542987Z Success. You can now start the database server using:
+postgres-1  | 2026-06-13T11:24:47.579545666Z
+postgres-1  | 2026-06-13T11:24:47.579548064Z     pg_ctl -D /var/lib/postgresql/data -l logfile start
+postgres-1  | 2026-06-13T11:24:47.579551469Z
+postgres-1  | 2026-06-13T11:24:47.619583362Z waiting for server to start....2026-06-13 11:24:47.619 UTC [48] LOG:  starting PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres-1  | 2026-06-13T11:24:47.620563695Z 2026-06-13 11:24:47.620 UTC [48] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1  | 2026-06-13T11:24:47.623948990Z 2026-06-13 11:24:47.623 UTC [51] LOG:  database system was shut down at 2026-06-13 11:24:47 UTC
+postgres-1  | 2026-06-13T11:24:47.628507246Z 2026-06-13 11:24:47.628 UTC [48] LOG:  database system is ready to accept connections
+postgres-1  | 2026-06-13T11:24:47.702234584Z  done
+postgres-1  | 2026-06-13T11:24:47.702250575Z server started
+postgres-1  | 2026-06-13T11:24:47.759397319Z CREATE DATABASE
+postgres-1  | 2026-06-13T11:24:47.759487427Z
+postgres-1  | 2026-06-13T11:24:47.759668763Z
+postgres-1  | 2026-06-13T11:24:47.759780366Z /usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+postgres-1  | 2026-06-13T11:24:47.759784865Z
+postgres-1  | 2026-06-13T11:24:47.760663915Z waiting for server to shut down....2026-06-13 11:24:47.760 UTC [48] LOG:  received fast shutdown request
+postgres-1  | 2026-06-13T11:24:47.764342120Z 2026-06-13 11:24:47.761 UTC [48] LOG:  aborting any active transactions
+postgres-1  | 2026-06-13T11:24:47.764931251Z 2026-06-13 11:24:47.764 UTC [48] LOG:  background worker "logical replication launcher" (PID 54) exited with exit code 1
+postgres-1  | 2026-06-13T11:24:47.765061537Z 2026-06-13 11:24:47.765 UTC [49] LOG:  shutting down
+postgres-1  | 2026-06-13T11:24:47.765871265Z 2026-06-13 11:24:47.765 UTC [49] LOG:  checkpoint starting: shutdown immediate
+postgres-1  | 2026-06-13T11:24:47.784775632Z 2026-06-13 11:24:47.784 UTC [49] LOG:  checkpoint complete: wrote 926 buffers (5.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.012 s, sync=0.005 s, total=0.020 s; sync files=301, longest=0.001 s, average=0.001 s; distance=4272 kB, estimate=4272 kB; lsn=0/191E938, redo lsn=0/191E938
+postgres-1  | 2026-06-13T11:24:47.790339719Z 2026-06-13 11:24:47.790 UTC [48] LOG:  database system is shut down
+postgres-1  | 2026-06-13T11:24:47.860774353Z  done
+postgres-1  | 2026-06-13T11:24:47.860791339Z server stopped
+postgres-1  | 2026-06-13T11:24:47.861658887Z
+postgres-1  | 2026-06-13T11:24:47.861666338Z PostgreSQL init process complete; ready for start up.
+postgres-1  | 2026-06-13T11:24:47.861669231Z
+postgres-1  | 2026-06-13T11:24:47.879550321Z 2026-06-13 11:24:47.879 UTC [1] LOG:  starting PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres-1  | 2026-06-13T11:24:47.879630315Z 2026-06-13 11:24:47.879 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres-1  | 2026-06-13T11:24:47.879636298Z 2026-06-13 11:24:47.879 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+postgres-1  | 2026-06-13T11:24:47.881241061Z 2026-06-13 11:24:47.881 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1  | 2026-06-13T11:24:47.884618640Z 2026-06-13 11:24:47.884 UTC [64] LOG:  database system was shut down at 2026-06-13 11:24:47 UTC
+postgres-1  | 2026-06-13T11:24:47.889551641Z 2026-06-13 11:24:47.889 UTC [1] LOG:  database system is ready to accept connections
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z gateway-bff
+gateway-bff-1  | 2026-06-13T11:25:11.934896083Z 2026/06/13 11:25:11 gateway-bff listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z identity-authz
+identity-authz-1  | 2026-06-13T11:25:11.914757393Z 2026/06/13 11:25:11 identity-authz listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z lead
+lead-1  | 2026-06-13T11:25:11.945674686Z 2026/06/13 11:25:11 lead listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z account
+account-1  | 2026-06-13T11:25:11.710174309Z 2026/06/13 11:25:11 account listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z opportunity
+opportunity-1  | 2026-06-13T11:25:11.883733849Z 2026/06/13 11:25:11 opportunity listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z commercial
+commercial-1  | 2026-06-13T11:25:11.882257150Z 2026/06/13 11:25:11 commercial listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z work
+work-1  | 2026-06-13T11:25:11.925648380Z 2026/06/13 11:25:11 work listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z audit-history
+audit-history-1  | 2026-06-13T11:25:11.776924956Z 2026/06/13 11:25:11 audit-history listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z reporting
+reporting-1  | 2026-06-13T11:25:11.851618723Z 2026/06/13 11:25:11 reporting listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z import-export
+import-export-1  | 2026-06-13T11:25:11.859805012Z 2026/06/13 11:25:11 import-export listening on :8080
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z frontend-web
+frontend-web-1  | 2026-06-13T11:25:21.092166789Z 127.0.0.1 - - [13/Jun/2026:11:25:21 +0000] "GET /health HTTP/1.1" 200 3 "-" "Wget"
+frontend-web-1  | 2026-06-13T11:25:30.461091413Z 172.19.0.1 - - [13/Jun/2026:11:25:30 +0000] "GET /health HTTP/1.1" 200 3 "-" "curl/8.5.0"
+frontend-web-1  | 2026-06-13T11:25:31.138968927Z 127.0.0.1 - - [13/Jun/2026:11:25:31 +0000] "GET /health HTTP/1.1" 200 3 "-" "Wget"
+frontend-web-1  | 2026-06-13T11:25:41.178515105Z 127.0.0.1 - - [13/Jun/2026:11:25:41 +0000] "GET /health HTTP/1.1" 200 3 "-" "Wget"
+service_log_scan=PASS since=2026-06-13T11:24:46Z evidence=/opt/crm-system/releases/66d2531/evidence/service-logs

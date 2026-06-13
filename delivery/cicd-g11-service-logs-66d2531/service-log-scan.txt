@@ -1,0 +1,1 @@
+service_log_scan=PASS since=2026-06-13T11:24:46Z evidence=/opt/crm-system/releases/66d2531/evidence/service-logs

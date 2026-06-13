@@ -1,8 +1,9 @@
-offhost=srv-aliyun-bj-01 target=118.196.44.193 checked_at=2026-06-13T18:19:02+08:00
-iZ2zehpe1nrfvzzpvxs12aZ
-HTTP/2 200 
+offhost=aliyun-bj-ecs
+2026-06-13T19:27:22+08:00
+--- https-health
+HTTP/2 200
 server: nginx/1.24.0 (Ubuntu)
-date: Sat, 13 Jun 2026 10:19:02 GMT
+date: Sat, 13 Jun 2026 11:27:22 GMT
 content-type: application/json
 content-length: 104
 strict-transport-security: max-age=31536000; includeSubDomains
@@ -10,7 +11,18 @@ x-content-type-options: nosniff
 referrer-policy: strict-origin-when-cross-origin
 content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 
-curl_status=0
-{"service":"gateway-bff","process":"up","database":"not_applicable","timestamp":"2026-06-13T10:19:02Z"}
-tcp_8080_status=124 expected_failure=yes
-tcp_5432_status=124 expected_failure=yes
+https_health_status=0
+--- http-redirect
+HTTP/1.1 301 Moved Permanently
+Server: nginx/1.24.0 (Ubuntu)
+Date: Sat, 13 Jun 2026 11:27:22 GMT
+Content-Type: text/html
+Content-Length: 178
+Connection: keep-alive
+Location: https://118.196.44.193/
+
+http_redirect_status=0
+--- port-8080
+port_8080_status=124
+--- port-5432
+port_5432_status=124

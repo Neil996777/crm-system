@@ -1,0 +1,4 @@
+nginx_502_scan_since=2026-06-13T19:24:46+08:00
+--- access 502 lines since deploy start
+--- error Bad Gateway/connect refused lines since deploy start
+nginx_502_scan=PASS

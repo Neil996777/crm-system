@@ -1,0 +1,2 @@
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z identity-authz
+identity-authz-1  | 2026-06-13T11:25:11.914757393Z 2026/06/13 11:25:11 identity-authz listening on :8080

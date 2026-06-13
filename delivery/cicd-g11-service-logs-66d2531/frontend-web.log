@@ -1,0 +1,5 @@
++ docker compose --env-file /opt/crm-system/releases/66d2531/.env.release -f /opt/crm-system/releases/66d2531/docker-compose.prod.yml logs --no-color --timestamps --since 2026-06-13T11:24:46Z frontend-web
+frontend-web-1  | 2026-06-13T11:25:21.092166789Z 127.0.0.1 - - [13/Jun/2026:11:25:21 +0000] "GET /health HTTP/1.1" 200 3 "-" "Wget"
+frontend-web-1  | 2026-06-13T11:25:30.461091413Z 172.19.0.1 - - [13/Jun/2026:11:25:30 +0000] "GET /health HTTP/1.1" 200 3 "-" "curl/8.5.0"
+frontend-web-1  | 2026-06-13T11:25:31.138968927Z 127.0.0.1 - - [13/Jun/2026:11:25:31 +0000] "GET /health HTTP/1.1" 200 3 "-" "Wget"
+frontend-web-1  | 2026-06-13T11:25:41.178515105Z 127.0.0.1 - - [13/Jun/2026:11:25:41 +0000] "GET /health HTTP/1.1" 200 3 "-" "Wget"
